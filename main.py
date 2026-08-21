@@ -5,15 +5,16 @@ from bs4 import BeautifulSoup
 from markdownify import markdownify as md
 
 app = FastAPI(
-    title="MarkdownScrape API",
+    title="ReClaire API",
     description="Convert web pages into clean Markdown for AI prompts.",
     version="1.0.0"
 )
 
-# Enable CORS for frontend access
+# Fully permit Cross-Origin Resource Sharing (CORS) for frontend clients
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -22,6 +23,7 @@ app.add_middleware(
 def home():
     return {
         "status": "online",
+        "service": "ReClaire API",
         "usage": "Send GET request to /scrape?url=HTTPS_TARGET_URL"
     }
 
