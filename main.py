@@ -1,176 +1,69 @@
-import os
-import json
-import requests
-from fastapi import FastAPI, Request, HTTPException
-from supabase import create_client, Client
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+import httpx
+from bs4 import BeautifulSoup
+from markdownify import markdownify as md
 
-app = FastAPI(title="Pricely AI Agent Backend")
+app = FastAPI(
+    title="MarkdownScrape API",
+    description="Convert web pages into clean Markdown for AI prompts.",
+    version="1.0.0"
+)
 
-# Environment Variables
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-SHOPIFY_STORE_DOMAIN = os.environ.get("SHOPIFY_STORE_DOMAIN")
-SHOPIFY_ACCESS_TOKEN = os.environ.get("SHOPIFY_ACCESS_TOKEN")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
-
-def call_gemini_api(prompt: str) -> dict:
-    """Calls Gemini using direct REST API to eliminate SDK 404/v1beta version mismatches."""
-    if not GEMINI_API_KEY:
-        raise Exception("GEMINI_API_KEY is missing from environment variables.")
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={GEMINI_API_KEY}"
-    headers = {"Content-Type": "application/json"}
-    
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"response_mime_type": "application/json"}
-    }
-
-    response = requests.post(url, headers=headers, json=payload, timeout=30)
-    
-    if response.status_code != 200:
-        raise Exception(f"Gemini API returned HTTP {response.status_code}: {response.text}")
-
-    res_json = response.json()
-    raw_text = res_json['candidates'][0]['content']['parts'][0]['text']
-    return json.loads(raw_text)
-
-
-def update_shopify_price(variant_id: str, new_price: float):
-    """Executes a price mutation on Shopify using GraphQL."""
-    if not SHOPIFY_STORE_DOMAIN or not SHOPIFY_ACCESS_TOKEN:
-        print("Shopify credentials not configured. Skipping live price mutation.")
-        return False
-
-    formatted_gid = variant_id if variant_id.startswith("gid://") else f"gid://shopify/ProductVariant/{variant_id}"
-    url = f"https://{SHOPIFY_STORE_DOMAIN}/admin/api/2026-01/graphql.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN
-    }
-
-    mutation = """
-    mutation productVariantUpdate($input: ProductVariantInput!) {
-      productVariantUpdate(input: $input) {
-        productVariant {
-          id
-          price
-        }
-        userErrors {
-          field
-          message
-        }
-      }
-    }
-    """
-
-    variables = {
-        "input": {
-            "id": formatted_gid,
-            "price": f"{new_price:.2f}"
-        }
-    }
-
-    response = requests.post(url, json={"query": mutation, "variables": variables}, headers=headers)
-    res_data = response.json()
-
-    user_errors = res_data.get("data", {}).get("productVariantUpdate", {}).get("userErrors", [])
-    if user_errors:
-        print(f"Shopify Mutation Error: {user_errors}")
-        return False
-
-    print(f"Successfully updated Shopify price for {formatted_gid} to ${new_price:.2f}")
-    return True
-
+# Enable CORS for frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
-def read_root():
-    return {"status": "Pricely Backend Engine Running"}
+def home():
+    return {
+        "status": "online",
+        "usage": "Send GET request to /scrape?url=HTTPS_TARGET_URL"
+    }
 
-
-@app.post("/webhooks/shopify")
-async def shopify_webhook(request: Request):
-    payload = await request.json()
+@app.get("/scrape")
+async def scrape_to_markdown(url: str = Query(..., description="Target webpage URL")):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     
-    product_id = str(payload.get("id") or payload.get("product_id", ""))
-    title = payload.get("title", "Sample Product")
-    variants = payload.get("variants", [{}])
-    variant = variants[0] if variants else {}
-    variant_id = str(variant.get("id", product_id))
-    current_price = float(variant.get("price", 0.0) or 10.0)
-    cost_price = float(variant.get("cost", 0.0) or (current_price * 0.5))
-    inventory_quantity = int(variant.get("inventory_quantity", 15))
-
-    if not product_id:
-        raise HTTPException(status_code=400, detail="Invalid product ID")
-
-    min_margin = 0.20
-    max_increase = 0.15
-
-    prompt = f"""
-    You are an e-commerce dynamic pricing AI.
-    Product: {title}
-    Current Price: ${current_price}
-    Unit Cost: ${cost_price}
-    Inventory Left: {inventory_quantity}
-
-    Rules:
-    - Minimum Profit Margin: {min_margin * 100}%
-    - Max Single Price Increase: {max_increase * 100}%
-
-    Respond STRICTLY in raw JSON format with these exact keys:
-    {{
-        "should_change_price": true,
-        "proposed_price": 88.0,
-        "reasoning": "Explanation here"
-    }}
-    """
-
-    try:
-        rec = call_gemini_api(prompt)
-    except Exception as e:
-        print(f"CRITICAL GEMINI ERROR: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Gemini Execution Error: {str(e)}")
-
-    proposed_price = float(rec.get("proposed_price", current_price))
-    should_change = bool(rec.get("should_change_price", False))
-    reasoning = str(rec.get("reasoning", ""))
-
-    # Guardrail checks
-    min_allowable = round(cost_price * (1 + min_margin), 2)
-    max_allowable = round(current_price * (1 + max_increase), 2)
-
-    if proposed_price < min_allowable:
-        proposed_price = min_allowable
-    elif proposed_price > max_allowable:
-        proposed_price = max_allowable
-
-    mutation_executed = False
-
-    if should_change and proposed_price != current_price:
-        mutation_executed = update_shopify_price(variant_id, proposed_price)
-
-    if supabase and should_change:
+    # 1. Fetch webpage raw HTML
+    async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
         try:
-            supabase.table("pricing_logs").insert({
-                "product_id": product_id,
-                "product_title": title,
-                "old_price": current_price,
-                "proposed_price": proposed_price,
-                "ai_reasoning": reasoning,
-                "status": "applied" if mutation_executed else "pending"
-            }).execute()
-        except Exception as log_err:
-            print(f"Supabase Log Warning: {log_err}")
+            response = await client.get(url, headers=headers)
+            if response.status_code != 200:
+                raise HTTPException(status_code=400, detail=f"Target URL returned status code {response.status_code}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to fetch URL: {str(e)}")
+
+    # 2. Parse HTML and strip away non-content elements
+    soup = BeautifulSoup(response.text, "html.parser")
+    
+    for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]):
+        tag.decompose()
+
+    # 3. Extract title and main content
+    title = soup.title.string.strip() if soup.title and soup.title.string else "No Title Found"
+    
+    # Target article/main tag if available to minimize boilerplate
+    main_content = soup.find("main") or soup.find("article") or soup.body
+    raw_html = str(main_content) if main_content else str(soup)
+
+    # 4. Convert cleaned HTML to Markdown
+    clean_markdown = md(raw_html, heading_style="ATX", strip=["img"])
 
     return {
-        "status": "success",
+        "success": True,
+        "url": url,
         "title": title,
-        "current_price": current_price,
-        "recommended_price": proposed_price,
-        "should_change": should_change,
-        "price_updated_in_shopify": mutation_executed,
-        "ai_reasoning": reasoning
+        "markdown": clean_markdown.strip()
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    # Runs the server locally on localhost:8000
+    uvicorn.run(app, host="127.0.0.1", port=8000)
