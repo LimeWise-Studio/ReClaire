@@ -1,64 +1,152 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MarkdownScrape API - Web to Markdown for AI</title>
+    <title>ReClaire — Web to Clean Markdown</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Playfair Display for fancy title & Inter for UI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-brand { font-family: 'Playfair Display', serif; }
+        
+        /* Faint CSS Grid Background */
+        .bg-grid {
+            background-size: 30px 30px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+        }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between">
+<body class="bg-white text-zinc-900 bg-grid min-h-screen flex flex-col justify-between selection:bg-zinc-900 selection:text-white">
 
-    <!-- Navbar -->
-    <header class="border-b border-slate-800 p-5 flex justify-between items-center max-w-5xl mx-auto w-full">
-        <h1 class="text-xl font-bold tracking-tight text-emerald-400">⚡ MarkdownScrape</h1>
-        <a href="#pricing" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold px-4 py-2 rounded-lg text-sm transition">Get API Key</a>
+    <!-- Header Section -->
+    <header class="max-w-3xl mx-auto w-full pt-16 px-6 text-center">
+        <div class="inline-block border border-zinc-200 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-[11px] uppercase tracking-widest text-zinc-500 mb-6">
+            Alpha v1.0
+        </div>
+        <h1 class="font-brand text-5xl sm:text-6xl font-semibold tracking-tight text-zinc-950">
+            ReClaire
+        </h1>
+        <p class="text-zinc-500 font-light text-sm sm:text-base mt-3">
+            Refine your prompt with ReClaire
+        </p>
     </header>
 
-    <!-- Hero Section -->
-    <main class="max-w-4xl mx-auto px-5 py-12 text-center">
-        <span class="text-xs font-semibold uppercase tracking-widest text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-3 py-1 rounded-full">FastAPI Powered • Free Tier</span>
-        <h2 class="text-4xl sm:text-5xl font-extrabold mt-6 leading-tight">Clean Web Markdown for Your AI Prompts</h2>
-        <p class="text-slate-400 mt-4 text-lg max-w-2xl mx-auto">Convert noisy web pages, articles, and blogs into pristine, prompt-ready Markdown. Strips ads, scripts, and clutter automatically.</p>
-
-        <!-- Code Preview Box -->
-        <div class="mt-8 bg-slate-900 border border-slate-800 rounded-xl p-4 text-left font-mono text-sm shadow-xl overflow-x-auto">
-            <div class="text-slate-500 mb-2">// Test in your terminal:</div>
-            <code class="text-emerald-300">curl -X GET "https://reclaire-markdown-scraper-api.onrender.com"</code>
-        </div>
-
-        <!-- Pricing Cards -->
-        <div id="pricing" class="grid sm:grid-cols-2 gap-6 mt-16 text-left">
-            <!-- Free Plan -->
-            <div class="border border-slate-800 bg-slate-900/50 p-6 rounded-2xl">
-                <h3 class="text-xl font-bold">Hobby</h3>
-                <p class="text-3xl font-extrabold mt-2">$0 <span class="text-sm text-slate-400 font-normal">/ month</span></p>
-                <ul class="mt-4 space-y-2 text-slate-300 text-sm">
-                    <li>✓ 100 requests / month</li>
-                    <li>✓ Public endpoints</li>
-                    <li>✓ Standard processing speed</li>
-                </ul>
-                <button class="w-full mt-6 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 rounded-lg text-sm transition">Current Default</button>
+    <!-- Main Interactive Web App -->
+    <main class="max-w-2xl mx-auto w-full px-6 my-10">
+        <div class="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+            
+            <label for="target-url" class="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                Target Webpage URL
+            </label>
+            
+            <!-- Input & Scrape Button -->
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input 
+                    id="target-url" 
+                    type="url" 
+                    placeholder="https://example.com/article" 
+                    class="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 transition"
+                />
+                <button 
+                    onclick="convertWebpage()" 
+                    id="scrape-btn"
+                    class="bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-sm px-6 py-3 rounded-xl transition shrink-0 flex items-center justify-center gap-2"
+                >
+                    Extract Markdown
+                </button>
             </div>
 
-            <!-- Pro Plan -->
-            <div class="border-2 border-emerald-500 bg-slate-900 p-6 rounded-2xl relative shadow-lg shadow-emerald-950/50">
-                <span class="absolute -top-3 right-4 bg-emerald-500 text-slate-950 text-xs font-bold px-2 py-0.5 rounded">POPULAR</span>
-                <h3 class="text-xl font-bold">Pro Developer</h3>
-                <p class="text-3xl font-extrabold mt-2">$5 <span class="text-sm text-slate-400 font-normal">/ month</span></p>
-                <ul class="mt-4 space-y-2 text-slate-300 text-sm">
-                    <li>✓ 10,000 requests / month</li>
-                    <li>✓ Priority response rate</li>
-                    <li>✓ Dedicated API Key</li>
-                </ul>
-                <button class="w-full mt-6 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2 rounded-lg text-sm transition">Upgrade to Pro</button>
+            <!-- Output Display Area -->
+            <div class="mt-6">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-medium text-zinc-500 uppercase tracking-wider">Output</span>
+                    <button 
+                        onclick="copyMarkdown()" 
+                        id="copy-btn"
+                        class="text-xs text-zinc-600 hover:text-zinc-900 underline hidden"
+                    >
+                        Copy to Clipboard
+                    </button>
+                </div>
+                
+                <div 
+                    id="output-box" 
+                    class="w-full min-h-[160px] max-h-[350px] overflow-y-auto bg-zinc-50 border border-zinc-200 rounded-xl p-4 font-mono text-xs text-zinc-800 whitespace-pre-wrap leading-relaxed"
+                >Strip noisy HTML, ads, and navigation clutter into clean Markdown formatted for AI prompts. Paste a URL above to test.</div>
+            </div>
+
+        </div>
+
+        <!-- API Example Box for Developers -->
+        <div class="mt-8 text-center">
+            <p class="text-xs text-zinc-400 uppercase tracking-widest mb-3">API cURL Access</p>
+            <div class="bg-zinc-900 text-zinc-100 font-mono text-[11px] p-3 rounded-xl overflow-x-auto text-left shadow-inner">
+                <code>curl -X GET "https://reclaire-markdown-scraper-api.onrender.com/scrape?url=https://example.com"</code>
             </div>
         </div>
     </main>
 
     <!-- Footer -->
-    <footer class="border-t border-slate-800 p-6 text-center text-xs text-slate-500">
-        Built entirely on a mobile device • Powered by FastAPI & Render
+    <footer class="py-8 text-center text-xs text-zinc-400 border-t border-zinc-100 bg-white">
+        ReClaire • Minimalist Web Parser
     </footer>
 
+    <!-- Client-Side JavaScript Logic -->
+    <script>
+        async function convertWebpage() {
+            const urlInput = document.getElementById('target-url').value.trim();
+            const outputBox = document.getElementById('output-box');
+            const scrapeBtn = document.getElementById('scrape-btn');
+            const copyBtn = document.getElementById('copy-btn');
+
+            if (!urlInput) {
+                alert('Please enter a valid website URL.');
+                return;
+            }
+
+            // Set loading state
+            scrapeBtn.disabled = true;
+            scrapeBtn.innerText = 'Extracting...';
+            outputBox.innerText = 'Connecting to ReClaire engine and cleaning web content...';
+            copyBtn.classList.add('hidden');
+
+            try {
+                // YOUR LIVE RENDER URL
+                const renderApiUrl = `https://reclaire-markdown-scraper-api.onrender.com/scrape?url=${encodeURIComponent(urlInput)}`;
+                
+                const response = await fetch(renderApiUrl);
+                const data = await response.json();
+
+                if (data.markdown) {
+                    outputBox.innerText = data.markdown;
+                    copyBtn.classList.remove('hidden');
+                } else {
+                    outputBox.innerText = 'Error: Failed to extract content from the specified URL.';
+                }
+            } catch (err) {
+                outputBox.innerText = 'Connection Error: Unable to reach the ReClaire backend. Make sure your server is running.';
+            } finally {
+                scrapeBtn.disabled = false;
+                scrapeBtn.innerText = 'Extract Markdown';
+            }
+        }
+
+        function copyMarkdown() {
+            const textToCopy = document.getElementById('output-box').innerText;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const copyBtn = document.getElementById('copy-btn');
+                copyBtn.innerText = 'Copied!';
+                setTimeout(() => { copyBtn.innerText = 'Copy to Clipboard'; }, 2000);
+            });
+        }
+    </script>
 </body>
 </html>
