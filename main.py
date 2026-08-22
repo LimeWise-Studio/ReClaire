@@ -105,15 +105,15 @@ async def scrape_engine(
         remove_tags = ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
 
     clean_url = clean_input_url(url)
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     }
 
-    # 1. Handle PDF Documents
+       # 1. Handle PDF Documents
     if clean_url.lower().endswith(".pdf"):
         try:
-            async with httpx.AsyncClient(follow_redirects=True, timeout=20.0) as client:
-                res = await client.get(clean_url, headers=headers)
+            async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True) as client:
+                res = await client.get(clean_url)
                 res.raise_for_status()
                 pdf_md = parse_pdf_bytes(res.content)
                 return {
@@ -131,7 +131,7 @@ async def scrape_engine(
 
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
-            response = await client.get(clean_url, headers=headers)
+            response = await client.get(clean_url, headers=HEADERS)
             
             # Content-Type check for inline PDFs
             if "application/pdf" in response.headers.get("content-type", "").lower():
