@@ -3,3 +3,6 @@ uvicorn
 httpx
 beautifulsoup4
 markdownify
+pypdf
+playwright
+pydantic
