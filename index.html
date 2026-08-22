@@ -296,14 +296,38 @@
             document.getElementById('url-error-alert').classList.add('hidden');
         }
 
-        function isValidURL(string) {
-            try {
-                const url = new URL(string.startsWith('http') ? string : `https://${string}`);
-                return url.hostname.includes('.');
-            } catch (_) {
-                return false;
+        function cleanInputUrl(rawUrl) {
+        if (!rawUrl) return '';
+        rawUrl = rawUrl.trim();
+        
+        // Handle [text](https://example.com) format
+        if (rawUrl.includes('](')) {
+            const parts = rawUrl.split('](');
+            let urlPart = parts[1];
+            if (urlPart.endsWith(')')) {
+                urlPart = urlPart.slice(0, -1);
             }
+            return urlPart.trim();
         }
+        
+        // Handle [https://example.com] format
+        if (rawUrl.startsWith('[') && rawUrl.endsWith(']')) {
+            return rawUrl.slice(1, -1).trim();
+        }
+        
+        return rawUrl;
+    }
+
+    
+        function isValidURL(string) {
+        try {
+            const cleaned = cleanInputUrl(string);
+            const url = new URL(cleaned.startsWith('http') ? cleaned : `https://${cleaned}`);
+            return url.hostname.includes('.');
+        } catch (_) {
+            return false;
+        }
+    }
 
         // --- Core Application Logic ---
         let currentMarkdownText = "";
@@ -311,7 +335,8 @@
 
         async function convertWebpage() {
             hideErrorAlert();
-            const urlInput = document.getElementById('target-url').value.trim();
+            const rawInput = document.getElementById('target-url').value;
+            const urlInput = cleanInputUrl(rawInput);
             const useJs = document.getElementById('opt-js').checked;
             const useMain = document.getElementById('opt-main').checked;
             
