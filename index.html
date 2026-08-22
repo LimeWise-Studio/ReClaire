@@ -1,49 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ReClaire — Web to Clean Markdown</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Playfair Display for fancy title & Inter for UI -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
     
+    <!-- Tailwind Config for Custom Colors and Dark Mode -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        accent: '#D4AA7D'
+                    },
+                    fontFamily: {
+                        brand: ['Playfair Display', 'serif'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .font-brand { font-family: 'Playfair Display', serif; }
-        
-        /* Faint CSS Grid Background */
-        .bg-grid {
-            background-size: 30px 30px;
-            background-image: 
-                linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+        /* Fading CSS Grid Background Mask */
+        .grid-mask {
+            mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+        }
+
+        /* Custom Scrollbar for Output Area */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #e4e4e7;
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #3f3f46;
         }
     </style>
 </head>
-<body class="bg-white text-zinc-900 bg-grid min-h-screen flex flex-col justify-between selection:bg-zinc-900 selection:text-white">
+<body class="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col justify-between selection:bg-accent selection:text-zinc-950 transition-colors duration-300 relative">
+
+    <!-- Fading Grid Layer -->
+    <div class="fixed inset-0 pointer-events-none z-[-1] grid-mask">
+        <!-- Light Mode Grid (Faint Black) -->
+        <div class="absolute inset-0 dark:hidden bg-[length:30px_30px] bg-[linear-gradient(to_right,rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.04)_1px,transparent_1px)]"></div>
+        <!-- Dark Mode Grid (Faint White) -->
+        <div class="absolute inset-0 hidden dark:block bg-[length:30px_30px] bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)]"></div>
+    </div>
+
+    <!-- Theme Toggle Button -->
+    <button onclick="toggleTheme()" class="absolute top-6 right-6 p-2 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-accent dark:hover:text-accent transition">
+        <!-- Sun/Moon SVG -->
+        <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+        </svg>
+    </button>
 
     <!-- Header Section -->
-    <header class="max-w-3xl mx-auto w-full pt-16 px-6 text-center">
-        <div class="inline-block border border-zinc-200 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-[11px] uppercase tracking-widest text-zinc-500 mb-6">
-            Alpha v1.0
+    <header class="max-w-3xl mx-auto w-full pt-20 px-6 text-center">
+        <div class="inline-block border border-accent/30 bg-accent/10 dark:bg-accent/5 backdrop-blur-sm px-3 py-1 rounded-full text-[11px] uppercase tracking-widest text-accent mb-6 font-medium">
+            Alpha UI Activated
         </div>
-        <h1 class="font-brand text-5xl sm:text-6xl font-semibold tracking-tight text-zinc-950">
-            ReClaire
+        <!-- Inverse header colors via Tailwind's dark:text-white -->
+        <h1 class="font-brand text-5xl sm:text-6xl font-semibold tracking-tight text-zinc-950 dark:text-white">
+            <span class="text-accent italic">Re</span>Claire
         </h1>
-        <p class="text-zinc-500 font-light text-sm sm:text-base mt-3">
-            Refine your prompt with ReClaire
+        <p class="text-zinc-500 dark:text-zinc-400 font-light text-sm sm:text-base mt-4">
+            Refine your prompt with the new headless context engine.
         </p>
     </header>
 
     <!-- Main Interactive Web App -->
-    <main class="max-w-2xl mx-auto w-full px-6 my-10">
-        <div class="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+    <main class="max-w-2xl mx-auto w-full px-6 my-12">
+        <div class="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-sm">
             
-            <label for="target-url" class="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
+            <label for="target-url" class="block text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
                 Target Webpage URL
             </label>
             
@@ -52,26 +97,38 @@
                 <input 
                     id="target-url" 
                     type="url" 
-                    placeholder="https://example.com/article" 
-                    class="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 transition"
+                    placeholder="https://example.com/documentation" 
+                    class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition shadow-inner"
                 />
                 <button 
                     onclick="convertWebpage()" 
                     id="scrape-btn"
-                    class="bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-sm px-6 py-3 rounded-xl transition shrink-0 flex items-center justify-center gap-2"
+                    class="bg-zinc-900 dark:bg-zinc-100 hover:bg-accent dark:hover:bg-accent text-white dark:text-zinc-900 font-medium text-sm px-6 py-3 rounded-xl transition-all shrink-0 flex items-center justify-center gap-2 shadow-sm"
                 >
                     Extract Markdown
                 </button>
             </div>
 
+            <!-- New API Configurations (JS Fallback & Content Target) -->
+            <div class="flex flex-wrap items-center gap-5 mt-4 text-xs text-zinc-500 dark:text-zinc-400">
+                <label class="flex items-center gap-1.5 cursor-pointer hover:text-zinc-800 dark:hover:text-zinc-200 transition">
+                    <input type="checkbox" id="opt-js" class="accent-accent w-3.5 h-3.5 rounded-sm" checked>
+                    Use JS Rendering (Playwright)
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer hover:text-zinc-800 dark:hover:text-zinc-200 transition">
+                    <input type="checkbox" id="opt-main" class="accent-accent w-3.5 h-3.5 rounded-sm" checked>
+                    Extract Main Content Only
+                </label>
+            </div>
+
             <!-- Output Display Area -->
-            <div class="mt-6">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-xs font-medium text-zinc-500 uppercase tracking-wider">Output</span>
+            <div class="mt-8">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Markdown Output</span>
                     <button 
                         onclick="copyMarkdown()" 
                         id="copy-btn"
-                        class="text-xs text-zinc-600 hover:text-zinc-900 underline hidden"
+                        class="text-xs text-accent hover:text-zinc-900 dark:hover:text-zinc-100 transition hidden"
                     >
                         Copy to Clipboard
                     </button>
@@ -79,30 +136,57 @@
                 
                 <div 
                     id="output-box" 
-                    class="w-full min-h-[160px] max-h-[350px] overflow-y-auto bg-zinc-50 border border-zinc-200 rounded-xl p-4 font-mono text-xs text-zinc-800 whitespace-pre-wrap leading-relaxed"
+                    class="w-full min-h-[160px] max-h-[350px] overflow-y-auto custom-scrollbar bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800/80 rounded-xl p-5 font-mono text-[13px] text-zinc-800 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed shadow-inner"
                 >Strip noisy HTML, ads, and navigation clutter into clean Markdown formatted for AI prompts. Paste a URL above to test.</div>
             </div>
 
         </div>
 
         <!-- API Example Box for Developers -->
-        <div class="mt-8 text-center">
-            <p class="text-xs text-zinc-400 uppercase tracking-widest mb-3">API cURL Access</p>
-            <div class="bg-zinc-900 text-zinc-100 font-mono text-[11px] p-3 rounded-xl overflow-x-auto text-left shadow-inner">
-                <code>curl -X GET "https://reclaire-markdown-scraper-api.onrender.com/scrape?url=https://example.com"</code>
+        <div class="mt-10 text-center">
+            <p class="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">API cURL Access (POST Endpoint)</p>
+            <div class="bg-zinc-900 dark:bg-black text-zinc-300 font-mono text-[11px] p-4 rounded-xl overflow-x-auto text-left shadow-inner border border-zinc-800">
+                <code>curl -X POST "https://reclaire-backend.onrender.com/scrape" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "use_js_fallback": true}'</code>
             </div>
         </div>
     </main>
 
     <!-- Footer -->
-    <footer class="py-8 text-center text-xs text-zinc-400 border-t border-zinc-100 bg-white">
-        ReClaire • Minimalist Web Parser
+    <footer class="py-8 text-center border-t border-zinc-100 dark:border-zinc-900/50 relative z-10">
+        <p class="text-xs font-medium text-zinc-400 dark:text-zinc-500">ReClaire • v1.1.1 beta</p>
+        <p class="text-[11px] text-zinc-400/70 dark:text-zinc-600 mt-1">This web app is still in development</p>
     </footer>
 
     <!-- Client-Side JavaScript Logic -->
     <script>
+        // --- Theme Toggle Logic ---
+        const htmlRoot = document.documentElement;
+        
+        // Auto-detect system preference or load from storage
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlRoot.classList.add('dark');
+        } else {
+            htmlRoot.classList.remove('dark');
+        }
+
+        function toggleTheme() {
+            if (htmlRoot.classList.contains('dark')) {
+                htmlRoot.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                htmlRoot.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // --- Core Application Logic ---
         async function convertWebpage() {
             const urlInput = document.getElementById('target-url').value.trim();
+            const useJs = document.getElementById('opt-js').checked;
+            const useMain = document.getElementById('opt-main').checked;
+            
             const outputBox = document.getElementById('output-box');
             const scrapeBtn = document.getElementById('scrape-btn');
             const copyBtn = document.getElementById('copy-btn');
@@ -115,24 +199,35 @@
             // Set loading state
             scrapeBtn.disabled = true;
             scrapeBtn.innerText = 'Extracting...';
-            outputBox.innerText = 'Connecting to ReClaire engine and cleaning web content...';
+            outputBox.innerHTML = '<span class="text-accent animate-pulse">Connecting to ReClaire engine & rendering content...</span>';
             copyBtn.classList.add('hidden');
 
             try {
-                // YOUR LIVE RENDER URL
-                const renderApiUrl = `https://reclaire-markdown-scraper-api.onrender.com/scrape?url=${encodeURIComponent(urlInput)}`;
+                // Pointing to your LIVE Docker-based Render URL using the new POST method
+                const renderApiUrl = `https://reclaire-backend.onrender.com/scrape`;
                 
-                const response = await fetch(renderApiUrl);
+                const response = await fetch(renderApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: urlInput,
+                        use_js_fallback: useJs,
+                        only_main_content: useMain
+                    })
+                });
+                
                 const data = await response.json();
 
                 if (data.markdown) {
                     outputBox.innerText = data.markdown;
                     copyBtn.classList.remove('hidden');
                 } else {
-                    outputBox.innerText = 'Error: Failed to extract content from the specified URL.';
+                    outputBox.innerText = `Error: ${data.detail || 'Failed to extract content from the specified URL.'}`;
                 }
             } catch (err) {
-                outputBox.innerText = 'Connection Error: Unable to reach the ReClaire backend. Make sure your server is running.';
+                outputBox.innerText = 'Connection Error: Unable to reach the ReClaire backend. Make sure your Render server is live.';
             } finally {
                 scrapeBtn.disabled = false;
                 scrapeBtn.innerText = 'Extract Markdown';
