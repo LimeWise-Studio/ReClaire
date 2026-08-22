@@ -1,13 +1,22 @@
+import asyncio
+import io
+import xml.etree.ElementTree as ET
+from urllib.parse import urljoin, urlparse
+from typing import List, Optional
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 import httpx
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
+from pypdf import PdfReader
+from playwright.async_api import async_playwright
 
 app = FastAPI(
     title="ReClaire API",
-    description="Convert web pages into clean Markdown for AI prompts.",
-    version="1.0.0"
+    description="High-performance web parser & crawler converting web assets into clean Markdown.",
+    version="1.5.0"
 )
 
 app.add_middleware(
@@ -18,74 +27,263 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Data Models ---
+
+class ScrapeOptions(BaseModel):
+    url: str
+    use_js_fallback: bool = True
+    only_main_content: bool = True
+    remove_tags: List[str] = Field(
+        default_factory=lambda: ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
+    )
+    wait_for_selector: Optional[str] = None
+
+class BatchScrapeRequest(BaseModel):
+    urls: List[str]
+    options: Optional[ScrapeOptions] = None
+
+class MapRequest(BaseModel):
+    url: str
+    limit: int = 100
+
+
+# --- Helpers & Core Engines ---
+
 def clean_input_url(raw_url: str) -> str:
     """Bulletproof URL extractor that fixes broken Markdown links."""
     raw_url = raw_url.strip()
-    
-    # 1. If it's a mangled markdown link: [text](url)
     if "](" in raw_url:
         parts = raw_url.split("](", 1)
         url_part = parts[1]
-        # Remove trailing markdown parenthesis
         if url_part.endswith(")"):
             url_part = url_part[:-1]
         return url_part.strip()
-        
-    # 2. If it's enclosed in brackets: [url]
     if raw_url.startswith("[") and raw_url.endswith("]"):
         return raw_url[1:-1].strip()
-        
-    # 3. Fallback: ensure http:// is present
     if not raw_url.startswith("http"):
         return "https://" + raw_url
-        
     return raw_url
 
-@app.get("/")
-def home():
-    return {"status": "online"}
+def parse_pdf_bytes(pdf_bytes: bytes) -> str:
+    """Extract text pages from PDF binary data and structure as Markdown."""
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    extracted_pages = []
+    for idx, page in enumerate(reader.pages):
+        text = page.extract_text() or ""
+        if text.strip():
+            extracted_pages.append(f"## Page {idx + 1}\n\n{text.strip()}")
+    return "\n\n".join(extracted_pages)
 
-@app.get("/scrape")
-async def scrape_to_markdown(url: str = Query(..., description="Target webpage URL")):
+async def fetch_dynamic_html(url: str, wait_for_selector: Optional[str] = None) -> str:
+    """Fallback browser context using Playwright to handle JavaScript rendering."""
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+        page = await context.new_page()
+        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        
+        if wait_for_selector:
+            try:
+                await page.wait_for_selector(wait_for_selector, timeout=5000)
+            except Exception:
+                pass
+                
+        content = await page.content()
+        await browser.close()
+        return content
+
+async def scrape_engine(
+    url: str,
+    use_js_fallback: bool = True,
+    only_main_content: bool = True,
+    remove_tags: List[str] = None,
+    wait_for_selector: Optional[str] = None
+) -> dict:
+    if remove_tags is None:
+        remove_tags = ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
+
+    clean_url = clean_input_url(url)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-    
-    clean_url = clean_input_url(url)
 
-    # 1. Fetch webpage (Try block ONLY for the network request)
+    # 1. Handle PDF Documents
+    if clean_url.lower().endswith(".pdf"):
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=20.0) as client:
+                res = await client.get(clean_url, headers=headers)
+                res.raise_for_status()
+                pdf_md = parse_pdf_bytes(res.content)
+                return {
+                    "success": True,
+                    "url": clean_url,
+                    "title": clean_url.split("/")[-1],
+                    "markdown": pdf_md
+                }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"PDF extraction error: {str(e)}")
+
+    # 2. Web Scraping with httpx + Playwright Fallback
+    html_content = ""
+    used_fallback = False
+
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
             response = await client.get(clean_url, headers=headers)
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Network error while connecting to the URL: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal system error: {str(e)}")
+            
+            # Content-Type check for inline PDFs
+            if "application/pdf" in response.headers.get("content-type", "").lower():
+                pdf_md = parse_pdf_bytes(response.content)
+                return {
+                    "success": True,
+                    "url": clean_url,
+                    "title": clean_url.split("/")[-1],
+                    "markdown": pdf_md
+                }
 
-    # 2. Check status code OUTSIDE the try block! 
-    # This prevents the server from catching its own 400 errors.
-    if response.status_code != 200:
-        raise HTTPException(status_code=400, detail=f"The website returned an error (Status {response.status_code}).")
+            if response.status_code == 200:
+                html_content = response.text
+            elif use_js_fallback:
+                html_content = await fetch_dynamic_html(clean_url, wait_for_selector)
+                used_fallback = True
+            else:
+                raise HTTPException(status_code=400, detail=f"HTTP Error {response.status_code}")
+    except Exception:
+        if use_js_fallback:
+            try:
+                html_content = await fetch_dynamic_html(clean_url, wait_for_selector)
+                used_fallback = True
+            except Exception as py_err:
+                raise HTTPException(status_code=500, detail=f"Scraping failed: {str(py_err)}")
+        else:
+            raise HTTPException(status_code=500, detail="Network connection failed.")
 
-    # 3. Parse HTML securely
+    # Render check: trigger Playwright if content body is an empty JS skeleton
+    if use_js_fallback and not used_fallback and len(html_content.strip()) < 300:
+        try:
+            html_content = await fetch_dynamic_html(clean_url, wait_for_selector)
+        except Exception:
+            pass
+
+    # 3. HTML Cleanup & Markdown Parsing
     try:
-        soup = BeautifulSoup(response.text, "html.parser")
-        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]):
-            tag.decompose()
+        soup = BeautifulSoup(html_content, "html.parser")
+        for tag in remove_tags:
+            for element in soup.find_all(tag):
+                element.decompose()
 
-        # 4. Extract Markdown
         title = soup.title.string.strip() if soup.title and soup.title.string else "No Title Found"
-        main_content = soup.find("main") or soup.find("article") or soup.body
-        raw_html = str(main_content) if main_content else str(soup)
+        
+        if only_main_content:
+            target_element = soup.find("main") or soup.find("article") or soup.body
+        else:
+            target_element = soup.body or soup
+
+        raw_html = str(target_element) if target_element else str(soup)
         clean_markdown = md(raw_html, heading_style="ATX", strip=["img"])
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error parsing webpage content: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Parsing error: {str(e)}")
 
     return {
         "success": True,
         "url": clean_url,
         "title": title,
         "markdown": clean_markdown.strip()
+    }
+
+
+# --- API Endpoints ---
+
+@app.get("/")
+def home():
+    return {"status": "online", "engine": "ReClaire v1.5.0"}
+
+@app.get("/scrape")
+async def scrape_get(url: str = Query(..., description="Target URL")):
+    """GET endpoint for simple single-page scraping."""
+    return await scrape_engine(url=url)
+
+@app.post("/scrape")
+async def scrape_post(options: ScrapeOptions):
+    """POST endpoint allowing custom scraping configurations."""
+    return await scrape_engine(
+        url=options.url,
+        use_js_fallback=options.use_js_fallback,
+        only_main_content=options.only_main_content,
+        remove_tags=options.remove_tags,
+        wait_for_selector=options.wait_for_selector
+    )
+
+@app.post("/batch")
+async def batch_scrape(payload: BatchScrapeRequest):
+    """Processes multiple URLs concurrently using an async semaphore pool."""
+    semaphore = asyncio.Semaphore(5)  # Limit concurrent tasks to manage memory
+
+    async def worker(target_url: str):
+        async with semaphore:
+            try:
+                opts = payload.options or ScrapeOptions(url=target_url)
+                return await scrape_engine(
+                    url=target_url,
+                    use_js_fallback=opts.use_js_fallback,
+                    only_main_content=opts.only_main_content,
+                    remove_tags=opts.remove_tags,
+                    wait_for_selector=opts.wait_for_selector
+                )
+            except Exception as e:
+                return {"success": False, "url": target_url, "error": str(e)}
+
+    results = await asyncio.gather(*(worker(u) for u in payload.urls))
+    return {
+        "success": True,
+        "total": len(payload.urls),
+        "data": results
+    }
+
+@app.post("/map")
+async def map_domain(payload: MapRequest):
+    """Discovers website endpoints via sitemap.xml or homepage crawling."""
+    clean_url = clean_input_url(payload.url)
+    parsed = urlparse(clean_url)
+    domain_root = f"{parsed.scheme}://{parsed.netloc}"
+    found_urls = set()
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+
+    # Attempt XML Sitemap extraction
+    sitemap_url = urljoin(domain_root, "/sitemap.xml")
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+            res = await client.get(sitemap_url, headers=headers)
+            if res.status_code == 200:
+                root = ET.fromstring(res.text)
+                for elem in root.iter():
+                    if elem.tag.endswith("loc") and elem.text:
+                        found_urls.add(elem.text.strip())
+    except Exception:
+        pass
+
+    # Fallback to homepage anchor parsing if no sitemap was found
+    if not found_urls:
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+                res = await client.get(clean_url, headers=headers)
+                if res.status_code == 200:
+                    soup = BeautifulSoup(res.text, "html.parser")
+                    for tag in soup.find_all("a", href=True):
+                        full_link = urljoin(clean_url, tag["href"])
+                        if urlparse(full_link).netloc == parsed.netloc:
+                            found_urls.add(full_link)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Mapping failed: {str(e)}")
+
+    url_list = list(found_urls)[:payload.limit]
+    return {
+        "success": True,
+        "domain": domain_root,
+        "count": len(url_list),
+        "urls": url_list
     }
 
 if __name__ == "__main__":
