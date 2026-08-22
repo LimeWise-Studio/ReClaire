@@ -9,16 +9,16 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
     
-    <!-- Tailwind Config for Custom Colors and Dark Mode -->
+    <!-- Tailwind Config for Custom Dynamic Colors and Dark Mode -->
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        accent: '#D4AA7D'
+                        accent: 'var(--color-accent)'
                     },
                     fontFamily: {
                         brand: ['Playfair Display', 'serif'],
@@ -30,10 +30,37 @@
     </script>
 
     <style>
+        /* Light & Dark Mode Dynamic Accent Variables */
+        :root {
+            --color-accent: #D4AA7D;
+        }
+        .dark {
+            --color-accent: #EFD09E;
+        }
+
         /* Fading CSS Grid Background Mask */
         .grid-mask {
             mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
             -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+        }
+
+        /* Custom Vibration / Shake Animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* Fade & Slide Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.25s ease-out forwards;
         }
 
         /* Custom Scrollbar for Output Area */
@@ -54,7 +81,7 @@
 </head>
 <body class="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col justify-between selection:bg-accent selection:text-zinc-950 transition-colors duration-300 relative">
 
-    <!-- Fading Grid Layer -->
+    <!-- Fading Grid Layer (Untouched) -->
     <div class="fixed inset-0 pointer-events-none z-[-1] grid-mask">
         <!-- Light Mode Grid (Faint Black) -->
         <div class="absolute inset-0 dark:hidden bg-[length:30px_30px] bg-[linear-gradient(to_right,rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.04)_1px,transparent_1px)]"></div>
@@ -63,31 +90,38 @@
     </div>
 
     <!-- Theme Toggle Button -->
-    <button onclick="toggleTheme()" class="absolute top-6 right-6 p-2 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-accent dark:hover:text-accent transition">
-        <!-- Sun/Moon SVG -->
+    <button onclick="toggleTheme()" class="absolute top-6 right-6 p-2.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-accent transition active:scale-90">
         <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
         </svg>
     </button>
 
     <!-- Header Section -->
-    <header class="max-w-3xl mx-auto w-full pt-20 px-6 text-center">
-        <div class="inline-block border border-accent/30 bg-accent/10 dark:bg-accent/5 backdrop-blur-sm px-3 py-1 rounded-full text-[11px] uppercase tracking-widest text-accent mb-6 font-medium">
+    <header class="max-w-3xl mx-auto w-full pt-16 px-6 text-center">
+        <div class="inline-block border border-accent/30 bg-accent/10 dark:bg-accent/5 backdrop-blur-sm px-3.5 py-1 rounded-full text-[11px] uppercase tracking-widest text-accent mb-6 font-medium">
             Alpha UI Activated
         </div>
-        <!-- Inverse header colors via Tailwind's dark:text-white -->
         <h1 class="font-brand text-5xl sm:text-6xl font-semibold tracking-tight text-zinc-950 dark:text-white">
             <span class="text-accent italic">Re</span>Claire
         </h1>
-        <p class="text-zinc-500 dark:text-zinc-400 font-light text-sm sm:text-base mt-4">
+        <p class="text-zinc-500 dark:text-zinc-400 font-light text-sm sm:text-base mt-3">
             Refine your prompt with the new headless context engine.
         </p>
     </header>
 
     <!-- Main Interactive Web App -->
-    <main class="max-w-2xl mx-auto w-full px-6 my-12">
-        <div class="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-sm">
+    <main class="max-w-2xl mx-auto w-full px-6 my-10">
+        <div class="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-sm transition-all">
             
+            <!-- Error Alert Container (Appears directly above input field) -->
+            <div id="url-error-alert" class="hidden mb-4 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs flex items-center justify-between animate-fade-in">
+                <div class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                    <span id="url-error-text">Please enter a valid HTTP or HTTPS webpage URL.</span>
+                </div>
+                <button onclick="hideErrorAlert()" class="text-red-500 hover:text-red-700 dark:hover:text-red-300 font-bold ml-2">&times;</button>
+            </div>
+
             <label for="target-url" class="block text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
                 Target Webpage URL
             </label>
@@ -98,40 +132,48 @@
                     id="target-url" 
                     type="url" 
                     placeholder="https://example.com/documentation" 
+                    oninput="hideErrorAlert()"
                     class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition shadow-inner"
                 />
                 <button 
                     onclick="convertWebpage()" 
                     id="scrape-btn"
-                    class="bg-zinc-900 dark:bg-zinc-100 hover:bg-accent dark:hover:bg-accent text-white dark:text-zinc-900 font-medium text-sm px-6 py-3 rounded-xl transition-all shrink-0 flex items-center justify-center gap-2 shadow-sm"
+                    class="bg-zinc-900 dark:bg-zinc-100 hover:bg-accent dark:hover:bg-accent text-white dark:text-zinc-900 font-medium text-sm px-6 py-3 rounded-xl transition-all shrink-0 flex items-center justify-center gap-2 shadow-sm active:scale-95"
                 >
                     Extract Markdown
                 </button>
             </div>
 
-            <!-- New API Configurations (JS Fallback & Content Target) -->
-            <div class="flex flex-wrap items-center gap-5 mt-4 text-xs text-zinc-500 dark:text-zinc-400">
-                <label class="flex items-center gap-1.5 cursor-pointer hover:text-zinc-800 dark:hover:text-zinc-200 transition">
-                    <input type="checkbox" id="opt-js" class="accent-accent w-3.5 h-3.5 rounded-sm" checked>
-                    Use JS Rendering (Playwright)
+            <!-- API Configurations in a Clean Surrounding Border Container -->
+            <div class="mt-4 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 bg-zinc-50/50 dark:bg-zinc-950/40 flex flex-wrap items-center justify-between gap-4 text-xs text-zinc-600 dark:text-zinc-400">
+                <label class="flex items-center gap-2 cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition select-none">
+                    <input type="checkbox" id="opt-js" class="accent-accent w-4 h-4 rounded-md cursor-pointer" checked>
+                    <span>Use JS Rendering (Playwright)</span>
                 </label>
-                <label class="flex items-center gap-1.5 cursor-pointer hover:text-zinc-800 dark:hover:text-zinc-200 transition">
-                    <input type="checkbox" id="opt-main" class="accent-accent w-3.5 h-3.5 rounded-sm" checked>
-                    Extract Main Content Only
+                <label class="flex items-center gap-2 cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition select-none">
+                    <input type="checkbox" id="opt-main" class="accent-accent w-4 h-4 rounded-md cursor-pointer" checked>
+                    <span>Extract Main Content Only</span>
                 </label>
             </div>
 
-            <!-- Output Display Area -->
-            <div class="mt-8">
-                <div class="flex justify-between items-center mb-3">
-                    <span class="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Markdown Output</span>
-                    <button 
-                        onclick="copyMarkdown()" 
-                        id="copy-btn"
-                        class="text-xs text-accent hover:text-zinc-900 dark:hover:text-zinc-100 transition hidden"
-                    >
-                        Copy to Clipboard
-                    </button>
+            <!-- Site Metadata Preview Chip (Placed ABOVE Markdown Output) -->
+            <div id="site-chip" class="hidden items-center justify-between bg-zinc-100/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 mt-6 transition-all animate-fade-in">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <img id="chip-favicon" src="" alt="favicon" class="w-5 h-5 rounded-sm shrink-0 bg-white p-0.5 object-contain">
+                    <span id="chip-domain" class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">example.com</span>
+                </div>
+                <a id="chip-link" href="#" target="_blank" rel="noopener noreferrer" class="p-1 text-zinc-400 hover:text-accent transition shrink-0" title="Open original website">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="7" y1="17" x2="17" y2="7"></line>
+                        <polyline points="7 7 17 7 17 17"></polyline>
+                    </svg>
+                </a>
+            </div>
+
+            <!-- Markdown Output Display Area -->
+            <div class="mt-6">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Markdown Output</span>
                 </div>
                 
                 <div 
@@ -140,13 +182,62 @@
                 >Strip noisy HTML, ads, and navigation clutter into clean Markdown formatted for AI prompts. Paste a URL above to test.</div>
             </div>
 
+            <!-- Action Buttons Stack (Placed BELOW Markdown Output) -->
+            <div id="action-buttons-stack" class="hidden flex-col gap-2.5 mt-5 animate-fade-in">
+                <!-- Copy as Markdown Button (Styled like screenshot, rounded-2xl) -->
+                <button 
+                    onclick="copyMarkdown()" 
+                    id="copy-btn"
+                    class="w-full border border-zinc-300 dark:border-zinc-700/80 hover:border-accent dark:hover:border-accent bg-zinc-50/50 dark:bg-zinc-900/40 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 text-zinc-900 dark:text-zinc-100 font-medium text-sm py-3.5 px-5 rounded-2xl transition-all flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.99]"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                    </svg>
+                    <span id="copy-btn-text">Copy as Markdown</span>
+                </button>
+
+                <!-- Save .md File Button (Stacked below Copy button) -->
+                <button 
+                    onclick="downloadMarkdownFile()" 
+                    id="save-md-btn"
+                    class="w-full border border-zinc-200 dark:border-zinc-800/80 hover:border-accent dark:hover:border-accent bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium text-xs py-3 px-5 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span>Save as .md File</span>
+                </button>
+            </div>
+
         </div>
 
+        <!-- Previous Extractions History Section (Stacked Below Main Container) -->
+        <section class="mt-12">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Recent Extractions
+                </h2>
+                <button onclick="clearHistory()" id="clear-history-btn" class="hidden text-xs text-zinc-400 hover:text-red-500 transition">
+                    Clear History
+                </button>
+            </div>
+
+            <!-- History Cards Stack Container -->
+            <div id="history-container" class="flex flex-col gap-3">
+                <p id="empty-history-text" class="text-xs text-zinc-400 dark:text-zinc-600 text-center py-6 italic border border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-2xl">
+                    No saved extractions yet. Convert a webpage above to build your history.
+                </p>
+            </div>
+        </section>
+
         <!-- API Example Box for Developers -->
-        <div class="mt-10 text-center">
+        <div class="mt-12 text-center">
             <p class="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">API cURL Access (POST Endpoint)</p>
             <div class="bg-zinc-900 dark:bg-black text-zinc-300 font-mono text-[11px] p-4 rounded-xl overflow-x-auto text-left shadow-inner border border-zinc-800">
-                <code>curl -X POST "https://reclaire-backend.onrender.com/scrape" \
+                <code>curl -X POST "https://reclaire-markdown-scraper-api.onrender.com/scrape" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://example.com", "use_js_fallback": true}'</code>
             </div>
@@ -164,7 +255,6 @@
         // --- Theme Toggle Logic ---
         const htmlRoot = document.documentElement;
         
-        // Auto-detect system preference or load from storage
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             htmlRoot.classList.add('dark');
         } else {
@@ -181,36 +271,73 @@
             }
         }
 
+        // --- Error Alert & Vibration Helpers ---
+        function showErrorAlert(message) {
+            const alertBox = document.getElementById('url-error-alert');
+            const alertText = document.getElementById('url-error-text');
+            const scrapeBtn = document.getElementById('scrape-btn');
+
+            alertText.innerText = message;
+            alertBox.classList.remove('hidden');
+
+            // Trigger subtle vibration/shake on Extract Markdown button
+            scrapeBtn.classList.remove('animate-shake');
+            void scrapeBtn.offsetWidth; // Trigger reflow
+            scrapeBtn.classList.add('animate-shake');
+            
+            // Native device haptic feedback if supported by browser/mobile
+            if (navigator.vibrate) {
+                navigator.vibrate([40, 30, 40]);
+            }
+        }
+
+        function hideErrorAlert() {
+            document.getElementById('url-error-alert').classList.add('hidden');
+        }
+
+        function isValidURL(string) {
+            try {
+                const url = new URL(string.startsWith('http') ? string : `https://${string}`);
+                return url.hostname.includes('.');
+            } catch (_) {
+                return false;
+            }
+        }
+
         // --- Core Application Logic ---
+        let currentMarkdownText = "";
+        let currentMetadata = null;
+
         async function convertWebpage() {
+            hideErrorAlert();
             const urlInput = document.getElementById('target-url').value.trim();
             const useJs = document.getElementById('opt-js').checked;
             const useMain = document.getElementById('opt-main').checked;
             
             const outputBox = document.getElementById('output-box');
             const scrapeBtn = document.getElementById('scrape-btn');
-            const copyBtn = document.getElementById('copy-btn');
+            const actionButtons = document.getElementById('action-buttons-stack');
+            const siteChip = document.getElementById('site-chip');
 
-            if (!urlInput) {
-                alert('Please enter a valid website URL.');
+            // URL Validation Check
+            if (!urlInput || !isValidURL(urlInput)) {
+                showErrorAlert('Invalid URL. Please enter a complete website link (e.g. https://example.com).');
                 return;
             }
 
-            // Set loading state
+            // Set loading UI state
             scrapeBtn.disabled = true;
             scrapeBtn.innerText = 'Extracting...';
-            outputBox.innerHTML = '<span class="text-accent animate-pulse">Connecting to ReClaire engine & rendering content...</span>';
-            copyBtn.classList.add('hidden');
+            outputBox.innerHTML = '<span class="text-accent animate-pulse">Connecting to ReClaire engine & parsing content...</span>';
+            actionButtons.classList.add('hidden');
+            siteChip.classList.add('hidden');
 
             try {
-                // Pointing to your LIVE Docker-based Render URL using the new POST method
-                const renderApiUrl = `https://reclaire-backend.onrender.com/scrape`;
+                const renderApiUrl = `https://reclaire-markdown-scraper-api.onrender.com/scrape`;
                 
                 const response = await fetch(renderApiUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         url: urlInput,
                         use_js_fallback: useJs,
@@ -221,27 +348,165 @@
                 const data = await response.json();
 
                 if (data.markdown) {
+                    currentMarkdownText = data.markdown;
                     outputBox.innerText = data.markdown;
-                    copyBtn.classList.remove('hidden');
+                    
+                    // Display Site Preview Chip above Output Box
+                    const domain = data.metadata?.domain || new URL(data.url).hostname;
+                    const favicon = data.metadata?.favicon || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                    
+                    document.getElementById('chip-domain').innerText = domain;
+                    document.getElementById('chip-favicon').src = favicon;
+                    document.getElementById('chip-link').href = data.url;
+                    siteChip.classList.remove('hidden');
+
+                    // Show Action Buttons
+                    actionButtons.classList.remove('hidden');
+
+                    // Save to Local History
+                    saveToHistory({
+                        url: data.url,
+                        title: data.title || domain,
+                        domain: domain,
+                        favicon: favicon,
+                        useJs: useJs,
+                        useMain: useMain,
+                        markdown: data.markdown,
+                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    });
+
                 } else {
                     outputBox.innerText = `Error: ${data.detail || 'Failed to extract content from the specified URL.'}`;
                 }
             } catch (err) {
-                outputBox.innerText = 'Connection Error: Unable to reach the ReClaire backend. Make sure your Render server is live.';
+                outputBox.innerText = 'Connection Error: Unable to reach the ReClaire backend. Make sure your server is running.';
             } finally {
                 scrapeBtn.disabled = false;
                 scrapeBtn.innerText = 'Extract Markdown';
             }
         }
 
+        // --- Action Button Logic ---
         function copyMarkdown() {
-            const textToCopy = document.getElementById('output-box').innerText;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                const copyBtn = document.getElementById('copy-btn');
-                copyBtn.innerText = 'Copied!';
-                setTimeout(() => { copyBtn.innerText = 'Copy to Clipboard'; }, 2000);
+            if (!currentMarkdownText) return;
+            navigator.clipboard.writeText(currentMarkdownText).then(() => {
+                const copyText = document.getElementById('copy-btn-text');
+                copyText.innerText = 'Copied to Clipboard!';
+                setTimeout(() => { copyText.innerText = 'Copy as Markdown'; }, 2000);
             });
         }
+
+        function downloadMarkdownFile() {
+            if (!currentMarkdownText) return;
+            const domain = document.getElementById('chip-domain').innerText || 'extracted';
+            const blob = new Blob([currentMarkdownText], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${domain.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // --- History / LocalStorage Logic ---
+        function getHistory() {
+            return JSON.parse(localStorage.getItem('reclaire_history') || '[]');
+        }
+
+        function saveToHistory(item) {
+            let history = getHistory();
+            // Prevent duplicate URL clutter
+            history = history.filter(h => h.url !== item.url);
+            history.unshift(item);
+            localStorage.setItem('reclaire_history', JSON.stringify(history.slice(0, 10))); // keep max 10
+            renderHistory();
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('reclaire_history');
+            renderHistory();
+        }
+
+        function deleteHistoryItem(url) {
+            let history = getHistory().filter(h => h.url !== url);
+            localStorage.setItem('reclaire_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function loadHistoryItem(url) {
+            const history = getHistory();
+            const item = history.find(h => h.url === url);
+            if (!item) return;
+
+            document.getElementById('target-url').value = item.url;
+            document.getElementById('output-box').innerText = item.markdown;
+            currentMarkdownText = item.markdown;
+
+            document.getElementById('chip-domain').innerText = item.domain;
+            document.getElementById('chip-favicon').src = item.favicon;
+            document.getElementById('chip-link').href = item.url;
+            
+            document.getElementById('site-chip').classList.remove('hidden');
+            document.getElementById('action-buttons-stack').classList.remove('hidden');
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderHistory() {
+            const history = getHistory();
+            const container = document.getElementById('history-container');
+            const clearBtn = document.getElementById('clear-history-btn');
+
+            if (history.length === 0) {
+                container.innerHTML = `
+                    <p class="text-xs text-zinc-400 dark:text-zinc-600 text-center py-6 italic border border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-2xl">
+                        No saved extractions yet. Convert a webpage above to build your history.
+                    </p>`;
+                clearBtn.classList.add('hidden');
+                return;
+            }
+
+            clearBtn.classList.remove('hidden');
+            container.innerHTML = history.map(item => `
+                <div class="bg-white/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-zinc-300 dark:hover:border-zinc-700 transition animate-fade-in">
+                    
+                    <!-- Left side: Metadata & Tags -->
+                    <div class="flex items-start gap-3 overflow-hidden">
+                        <img src="${item.favicon}" class="w-5 h-5 rounded-sm shrink-0 mt-0.5 object-contain bg-white p-0.5" alt="icon">
+                        <div class="overflow-hidden">
+                            <h3 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">${item.title}</h3>
+                            <p class="text-[11px] text-zinc-400 dark:text-zinc-500 truncate">${item.domain} • ${item.timestamp}</p>
+                            
+                            <!-- Option Badges -->
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-medium ${item.useJs ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'}">
+                                    JS Render: ${item.useJs ? 'ON' : 'OFF'}
+                                </span>
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-medium ${item.useMain ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'}">
+                                    Main Content: ${item.useMain ? 'ON' : 'OFF'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right side: Quick Actions -->
+                    <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <button onclick="loadHistoryItem('${item.url}')" class="px-3 py-1.5 text-xs font-medium bg-zinc-100 dark:bg-zinc-800 hover:bg-accent dark:hover:bg-accent hover:text-zinc-900 text-zinc-700 dark:text-zinc-300 rounded-lg transition">
+                            Load
+                        </button>
+                        <button onclick="deleteHistoryItem('${item.url}')" class="p-1.5 text-zinc-400 hover:text-red-500 transition" title="Delete from history">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        </button>
+                    </div>
+
+                </div>
+            `).join('');
+        }
+
+        // Initialize history on page load
+        document.addEventListener('DOMContentLoaded', renderHistory);
     </script>
 </body>
 </html>
