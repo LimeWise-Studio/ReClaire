@@ -6,3 +6,4 @@ markdownify
 pypdf
 playwright
 pydantic
+google-genai
