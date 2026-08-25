@@ -1,9 +1,10 @@
-fastapi
-uvicorn
+fastapi==0.110.0
+uvicorn==0.27.1
+pydantic==2.6.3
+requests==2.31.0
+beautifulsoup4==4.12.3
 httpx
-beautifulsoup4
 markdownify
 pypdf
 playwright
-pydantic
 google-genai
