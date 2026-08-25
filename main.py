@@ -2,6 +2,7 @@ import asyncio
 import io
 import os
 import json
+import traceback  # NEW: Added for robust error logging
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin, urlparse
 from typing import List, Optional, Dict, Any
@@ -49,7 +50,7 @@ class ScrapeOptions(BaseModel):
         default_factory=lambda: ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
     )
     wait_for_selector: Optional[str] = None
-    json_schema: Optional[Dict[str, Any]] = None  # NEW: Accepts a JSON schema dictionary
+    json_schema: Optional[Dict[str, Any]] = None 
 
 class BatchScrapeRequest(BaseModel):
     urls: List[str]
@@ -98,15 +99,14 @@ async def fetch_dynamic_html(url: str, wait_for_selector: Optional[str] = None) 
         if wait_for_selector:
             try:
                 await page.wait_for_selector(wait_for_selector, timeout=5000)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Playwright selector wait timeout:\n{traceback.format_exc()}")
                 
         content = await page.content()
         await browser.close()
         return content
 
 def generate_gemini_json(markdown_text: str, schema: dict) -> dict:
-    """Helper function to call Gemini synchronously (will be wrapped in a thread)."""
     if not gemini_client:
         raise ValueError("GEMINI_API_KEY is not set or google-genai is not installed.")
     
@@ -169,6 +169,7 @@ async def scrape_engine(
                     }
                 }
         except Exception as e:
+            print(f"PDF extraction error:\n{traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=f"PDF extraction error: {str(e)}")
     
     else:
@@ -199,23 +200,25 @@ async def scrape_engine(
                     used_fallback = True
                 else:
                     raise HTTPException(status_code=400, detail=f"HTTP Error {response.status_code}")
-        except Exception:
+        except Exception as py_err:
             if use_js_fallback:
                 try:
                     html_content = await fetch_dynamic_html(clean_url, wait_for_selector)
                     used_fallback = True
-                except Exception as py_err:
-                    raise HTTPException(status_code=500, detail=f"Scraping failed: {str(py_err)}")
+                except Exception as js_err:
+                    print(f"JS Fallback Scraping failed:\n{traceback.format_exc()}")
+                    raise HTTPException(status_code=500, detail=f"Scraping failed: {str(js_err)}")
             else:
+                print(f"Network connection failed:\n{traceback.format_exc()}")
                 raise HTTPException(status_code=500, detail="Network connection failed.")
 
         if use_js_fallback and not used_fallback and not result and len(html_content.strip()) < 300:
             try:
                 html_content = await fetch_dynamic_html(clean_url, wait_for_selector)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Secondary JS Fallback failed:\n{traceback.format_exc()}")
 
-        # 3. HTML Cleanup & Markdown Parsing (only if not already parsed as PDF)
+        # 3. HTML Cleanup & Markdown Parsing 
         if not result:
             try:
                 soup = BeautifulSoup(html_content, "html.parser")
@@ -225,8 +228,17 @@ async def scrape_engine(
 
                 title = soup.title.string.strip() if soup.title and soup.title.string else parsed_domain
                 
+                # NEW: Added Wikipedia specific fallbacks and safer resolution
                 if only_main_content:
-                    target_element = soup.find("main") or soup.find("article") or soup.body
+                    target_element = (
+                        soup.find("main") or 
+                        soup.find("article") or 
+                        soup.find("div", {"id": "content"}) or 
+                        soup.find("div", {"id": "bodyContent"}) or 
+                        soup.find("div", {"id": "main-content"}) or 
+                        soup.body or 
+                        soup
+                    )
                 else:
                     target_element = soup.body or soup
 
@@ -247,15 +259,16 @@ async def scrape_engine(
                     }
                 }
             except Exception as e:
+                print(f"BeautifulSoup Parsing error:\n{traceback.format_exc()}")
                 raise HTTPException(status_code=500, detail=f"Parsing error: {str(e)}")
 
-    # --- NEW: JSON Schema Extraction Step ---
+    # 4. JSON Schema Extraction Step 
     if json_schema and result.get("success"):
         try:
-            # We run the synchronous Gemini call in a thread so it doesn't block FastAPI's async loop
             extracted_json = await asyncio.to_thread(generate_gemini_json, result["markdown"], json_schema)
             result["json_data"] = extracted_json
         except Exception as e:
+            print(f"Gemini JSON Extraction error:\n{traceback.format_exc()}")
             result["json_data_error"] = f"JSON extraction failed: {str(e)}"
 
     return result
@@ -269,18 +282,30 @@ def home():
 
 @app.get("/scrape")
 async def scrape_get(url: str = Query(..., description="Target URL")):
-    return await scrape_engine(url=url)
+    try:
+        return await scrape_engine(url=url)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Unhandled error in GET /scrape:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @app.post("/scrape")
 async def scrape_post(options: ScrapeOptions):
-    return await scrape_engine(
-        url=options.url,
-        use_js_fallback=options.use_js_fallback,
-        only_main_content=options.only_main_content,
-        remove_tags=options.remove_tags,
-        wait_for_selector=options.wait_for_selector,
-        json_schema=options.json_schema  # Passed to the engine
-    )
+    try:
+        return await scrape_engine(
+            url=options.url,
+            use_js_fallback=options.use_js_fallback,
+            only_main_content=options.only_main_content,
+            remove_tags=options.remove_tags,
+            wait_for_selector=options.wait_for_selector,
+            json_schema=options.json_schema
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Unhandled error in POST /scrape:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @app.post("/batch")
 async def batch_scrape(payload: BatchScrapeRequest):
@@ -296,9 +321,10 @@ async def batch_scrape(payload: BatchScrapeRequest):
                     only_main_content=opts.only_main_content,
                     remove_tags=opts.remove_tags,
                     wait_for_selector=opts.wait_for_selector,
-                    json_schema=opts.json_schema # Passed to the engine
+                    json_schema=opts.json_schema 
                 )
             except Exception as e:
+                print(f"Error in batch worker for URL {target_url}:\n{traceback.format_exc()}")
                 return {"success": False, "url": target_url, "error": str(e)}
 
     results = await asyncio.gather(*(worker(u) for u in payload.urls))
@@ -310,44 +336,50 @@ async def batch_scrape(payload: BatchScrapeRequest):
 
 @app.post("/map")
 async def map_domain(payload: MapRequest):
-    clean_url = clean_input_url(payload.url)
-    parsed = urlparse(clean_url)
-    domain_root = f"{parsed.scheme}://{parsed.netloc}"
-    found_urls = set()
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-
-    sitemap_url = urljoin(domain_root, "/sitemap.xml")
     try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
-            res = await client.get(sitemap_url, headers=headers)
-            if res.status_code == 200:
-                root = ET.fromstring(res.text)
-                for elem in root.iter():
-                    if elem.tag.endswith("loc") and elem.text:
-                        found_urls.add(elem.text.strip())
-    except Exception:
-        pass
+        clean_url = clean_input_url(payload.url)
+        parsed = urlparse(clean_url)
+        domain_root = f"{parsed.scheme}://{parsed.netloc}"
+        found_urls = set()
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
-    if not found_urls:
+        sitemap_url = urljoin(domain_root, "/sitemap.xml")
         try:
             async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
-                res = await client.get(clean_url, headers=headers)
+                res = await client.get(sitemap_url, headers=headers)
                 if res.status_code == 200:
-                    soup = BeautifulSoup(res.text, "html.parser")
-                    for tag in soup.find_all("a", href=True):
-                        full_link = urljoin(clean_url, tag["href"])
-                        if urlparse(full_link).netloc == parsed.netloc:
-                            found_urls.add(full_link)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Mapping failed: {str(e)}")
+                    root = ET.fromstring(res.text)
+                    for elem in root.iter():
+                        if elem.tag.endswith("loc") and elem.text:
+                            found_urls.add(elem.text.strip())
+        except Exception:
+            pass
 
-    url_list = list(found_urls)[:payload.limit]
-    return {
-        "success": True,
-        "domain": domain_root,
-        "count": len(url_list),
-        "urls": url_list
-    }
+        if not found_urls:
+            try:
+                async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+                    res = await client.get(clean_url, headers=headers)
+                    if res.status_code == 200:
+                        soup = BeautifulSoup(res.text, "html.parser")
+                        for tag in soup.find_all("a", href=True):
+                            full_link = urljoin(clean_url, tag["href"])
+                            if urlparse(full_link).netloc == parsed.netloc:
+                                found_urls.add(full_link)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Mapping failed: {str(e)}")
+
+        url_list = list(found_urls)[:payload.limit]
+        return {
+            "success": True,
+            "domain": domain_root,
+            "count": len(url_list),
+            "urls": url_list
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Unhandled error in POST /map:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
