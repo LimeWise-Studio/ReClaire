@@ -113,7 +113,7 @@ def generate_gemini_json(markdown_text: str, schema: dict) -> dict:
     prompt = f"You are a precise data extraction assistant. Extract data from the following markdown content matching the requested JSON structure.\n\nSchema:\n{json.dumps(schema, indent=2)}\n\nMarkdown Content:\n{markdown_text}"
     
     response = gemini_client.models.generate_content(
-        model='gemini-1.5-flash',
+        model='gemini-2.5-flash',
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
