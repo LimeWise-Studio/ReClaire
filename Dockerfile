@@ -6,6 +6,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Download the Chromium binary needed for JS rendering
+RUN playwright install chromium
+
 # Copy project files
 COPY . .
 
