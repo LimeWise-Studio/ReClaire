@@ -2,6 +2,7 @@ import asyncio
 import io
 import os
 import json
+import base64
 import traceback  # Robust error logging
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin, urlparse
@@ -27,8 +28,8 @@ except ImportError:
 
 app = FastAPI(
     title="ReClaire API",
-    description="High-performance web parser & crawler converting web assets into clean Markdown and Structured JSON.",
-    version="1.6.0"
+    description="High-performance web parser & crawler converting web assets into clean Markdown, Multi-format Outputs, and Structured JSON.",
+    version="1.7.0"
 )
 
 # Robust CORS Configuration to allow cross-origin requests from any frontend
@@ -44,6 +45,10 @@ app.add_middleware(
 
 class ScrapeOptions(BaseModel):
     url: str
+    formats: List[str] = Field(
+        default_factory=lambda: ["markdown"],
+        description="Supported formats: 'markdown', 'html', 'raw_html', 'links', 'images', 'screenshot', 'summary', 'highlights', 'json'"
+    )
     use_js_fallback: bool = True
     only_main_content: bool = True
     remove_tags: List[str] = Field(
@@ -86,7 +91,11 @@ def parse_pdf_bytes(pdf_bytes: bytes) -> str:
             extracted_pages.append(f"## Page {idx + 1}\n\n{text.strip()}")
     return "\n\n".join(extracted_pages)
 
-async def fetch_dynamic_html(url: str, wait_for_selector: Optional[str] = None) -> str:
+async def fetch_dynamic_content(
+    url: str, 
+    wait_for_selector: Optional[str] = None,
+    take_screenshot: bool = False
+) -> dict:
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -103,8 +112,20 @@ async def fetch_dynamic_html(url: str, wait_for_selector: Optional[str] = None) 
                 print(f"Playwright selector wait timeout:\n{traceback.format_exc()}")
                 
         content = await page.content()
+        screenshot_b64 = None
+        if take_screenshot:
+            try:
+                screenshot_bytes = await page.screenshot(full_page=True)
+                screenshot_b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
+            except Exception as e:
+                print(f"Playwright screenshot capture error:\n{traceback.format_exc()}")
+
         await browser.close()
-        return content
+        return {"html": content, "screenshot": screenshot_b64}
+
+async def fetch_dynamic_html(url: str, wait_for_selector: Optional[str] = None) -> str:
+    res = await fetch_dynamic_content(url, wait_for_selector=wait_for_selector, take_screenshot=False)
+    return res["html"]
 
 def generate_gemini_json(markdown_text: str, schema: dict) -> dict:
     if not gemini_client:
@@ -121,16 +142,53 @@ def generate_gemini_json(markdown_text: str, schema: dict) -> dict:
     )
     return json.loads(response.text)
 
+def generate_gemini_summary(markdown_text: str) -> str:
+    if not gemini_client:
+        raise ValueError("GEMINI_API_KEY is not set or google-genai is not installed.")
+    
+    prompt = f"Provide a clear, high-level summary of the key information contained in this webpage content:\n\n{markdown_text}"
+    response = gemini_client.models.generate_content(
+        model='gemini-3.6-flash',
+        contents=prompt,
+    )
+    return response.text.strip()
+
+def generate_gemini_highlights(markdown_text: str) -> List[str]:
+    if not gemini_client:
+        raise ValueError("GEMINI_API_KEY is not set or google-genai is not installed.")
+    
+    prompt = f"Extract 3 to 7 concise bullet point highlights/takeaways from this content. Return ONLY a JSON array of strings.\n\nContent:\n{markdown_text}"
+    response = gemini_client.models.generate_content(
+        model='gemini-3.6-flash',
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+        )
+    )
+    data = json.loads(response.text)
+    if isinstance(data, list):
+        return data
+    elif isinstance(data, dict):
+        for val in data.values():
+            if isinstance(val, list):
+                return val
+    return [str(data)]
+
 async def scrape_engine(
     url: str,
     use_js_fallback: bool = True,
     only_main_content: bool = True,
     remove_tags: List[str] = None,
     wait_for_selector: Optional[str] = None,
-    json_schema: Optional[Dict[str, Any]] = None
+    json_schema: Optional[Dict[str, Any]] = None,
+    formats: Optional[List[str]] = None
 ) -> dict:
     if remove_tags is None:
         remove_tags = ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
+
+    if not formats:
+        formats = ["markdown"]
+    req_formats = [f.lower().strip() for f in formats]
 
     clean_url = clean_input_url(url)
     parsed_domain = urlparse(clean_url).hostname or clean_url
@@ -150,6 +208,7 @@ async def scrape_engine(
     }
 
     result = {}
+    screenshot_b64 = None
 
     # 1. Handle PDF Documents
     if clean_url.lower().endswith(".pdf"):
@@ -200,14 +259,18 @@ async def scrape_engine(
                 elif response.status_code == 200:
                     html_content = response.text
                 elif use_js_fallback:
-                    html_content = await fetch_dynamic_html(clean_url, wait_for_selector)
+                    pw_res = await fetch_dynamic_content(clean_url, wait_for_selector, take_screenshot=("screenshot" in req_formats))
+                    html_content = pw_res["html"]
+                    screenshot_b64 = pw_res["screenshot"]
                     used_fallback = True
                 else:
                     raise HTTPException(status_code=400, detail=f"HTTP Error {response.status_code}")
         except Exception as py_err:
             if use_js_fallback:
                 try:
-                    html_content = await fetch_dynamic_html(clean_url, wait_for_selector)
+                    pw_res = await fetch_dynamic_content(clean_url, wait_for_selector, take_screenshot=("screenshot" in req_formats))
+                    html_content = pw_res["html"]
+                    screenshot_b64 = pw_res["screenshot"]
                     used_fallback = True
                 except Exception as js_err:
                     print(f"JS Fallback Scraping failed:\n{traceback.format_exc()}")
@@ -218,28 +281,58 @@ async def scrape_engine(
 
         if use_js_fallback and not used_fallback and not result and len(html_content.strip()) < 300:
             try:
-                html_content = await fetch_dynamic_html(clean_url, wait_for_selector)
+                pw_res = await fetch_dynamic_content(clean_url, wait_for_selector, take_screenshot=("screenshot" in req_formats))
+                html_content = pw_res["html"]
+                screenshot_b64 = pw_res["screenshot"]
+                used_fallback = True
             except Exception as e:
                 print(f"Secondary JS Fallback failed:\n{traceback.format_exc()}")
 
-        # 3. HTML Cleanup & Markdown Parsing 
+        # Fetch screenshot if explicitly requested and not captured yet
+        if "screenshot" in req_formats and not screenshot_b64 and not result:
+            try:
+                pw_res = await fetch_dynamic_content(clean_url, wait_for_selector, take_screenshot=True)
+                screenshot_b64 = pw_res["screenshot"]
+            except Exception as e:
+                print(f"Screenshot capture fallback failed:\n{traceback.format_exc()}")
+
+        # 3. Format Extraction & HTML Parsing 
         if not result:
             try:
-                soup_base = BeautifulSoup(html_content, "html.parser")
-                
+                soup_raw = BeautifulSoup(html_content, "html.parser")
+
+                # Extract Links and Images from raw HTML before tag decomposition
+                extracted_links = []
+                if "links" in req_formats:
+                    seen_links = set()
+                    for a in soup_raw.find_all("a", href=True):
+                        href = a["href"].strip()
+                        if href and not href.startswith("javascript:") and not href.startswith("#"):
+                            seen_links.add(urljoin(clean_url, href))
+                    extracted_links = list(seen_links)
+
+                extracted_images = []
+                if "images" in req_formats:
+                    seen_imgs = set()
+                    for img in soup_raw.find_all("img", src=True):
+                        src = img["src"].strip()
+                        if src and not src.startswith("data:"):
+                            seen_imgs.add(urljoin(clean_url, src))
+                    extracted_images = list(seen_imgs)
+
                 # Base cleanup: strip scripts and styles
+                soup_base = BeautifulSoup(html_content, "html.parser")
                 for tag in ["script", "style", "noscript", "iframe"]:
                     for element in soup_base.find_all(tag):
                         element.decompose()
 
-                # Attempt aggressive tag cleanup on a working copy
+                # Aggressive tag cleanup copy
                 soup_working = BeautifulSoup(str(soup_base), "html.parser")
                 additional_tags = [t for t in remove_tags if t not in ["script", "style", "noscript", "iframe"]]
                 for tag in additional_tags:
                     for element in soup_working.find_all(tag):
                         element.decompose()
 
-                # Fallback to base soup if aggressive cleanup stripped essential page content (e.g., Google homepage)
                 if len(soup_working.get_text(strip=True)) > 30:
                     soup_final = soup_working
                 else:
@@ -271,24 +364,61 @@ async def scrape_engine(
                     "success": True,
                     "url": clean_url,
                     "title": title,
-                    "markdown": clean_markdown,
                     "metadata": {
                         "domain": parsed_domain,
                         "favicon": f"https://www.google.com/s2/favicons?domain={parsed_domain}&sz=64"
                     }
                 }
+
+                # Attach Formats as requested
+                if "markdown" in req_formats or len(req_formats) == 0:
+                    result["markdown"] = clean_markdown
+                if "html" in req_formats:
+                    result["html"] = raw_html
+                if "raw_html" in req_formats:
+                    result["raw_html"] = html_content
+                if "links" in req_formats:
+                    result["links"] = extracted_links
+                if "images" in req_formats:
+                    result["images"] = extracted_images
+                if "screenshot" in req_formats:
+                    result["screenshot"] = screenshot_b64
+
             except Exception as e:
                 print(f"BeautifulSoup Parsing error:\n{traceback.format_exc()}")
                 raise HTTPException(status_code=500, detail=f"Parsing error: {str(e)}")
 
-    # 4. JSON Schema Extraction Step 
-    if json_schema and result.get("success"):
-        try:
-            extracted_json = await asyncio.to_thread(generate_gemini_json, result["markdown"], json_schema)
-            result["json_data"] = extracted_json
-        except Exception as e:
-            print(f"Gemini JSON Extraction error:\n{traceback.format_exc()}")
-            result["json_data_error"] = f"JSON extraction failed: {str(e)}"
+    # 4. LLM-Based Format Enrichments (Summary, Highlights, Structured JSON)
+    if result.get("success"):
+        markdown_ref = result.get("markdown", clean_markdown if 'clean_markdown' in locals() else "")
+        
+        # Summary Format
+        if "summary" in req_formats:
+            try:
+                summary_text = await asyncio.to_thread(generate_gemini_summary, markdown_ref)
+                result["summary"] = summary_text
+            except Exception as e:
+                print(f"Gemini Summary Error:\n{traceback.format_exc()}")
+                result["summary_error"] = f"Summary generation failed: {str(e)}"
+
+        # Highlights Format
+        if "highlights" in req_formats:
+            try:
+                highlights_list = await asyncio.to_thread(generate_gemini_highlights, markdown_ref)
+                result["highlights"] = highlights_list
+            except Exception as e:
+                print(f"Gemini Highlights Error:\n{traceback.format_exc()}")
+                result["highlights_error"] = f"Highlights extraction failed: {str(e)}"
+
+        # Structured JSON Format
+        if json_schema or "json" in req_formats:
+            if json_schema:
+                try:
+                    extracted_json = await asyncio.to_thread(generate_gemini_json, markdown_ref, json_schema)
+                    result["json_data"] = extracted_json
+                except Exception as e:
+                    print(f"Gemini JSON Extraction error:\n{traceback.format_exc()}")
+                    result["json_data_error"] = f"JSON extraction failed: {str(e)}"
 
     return result
 
@@ -297,12 +427,15 @@ async def scrape_engine(
 
 @app.get("/")
 def home():
-    return {"status": "online", "engine": "ReClaire v1.6.0"}
+    return {"status": "online", "engine": "ReClaire v1.7.0"}
 
 @app.get("/scrape")
-async def scrape_get(url: str = Query(..., description="Target URL")):
+async def scrape_get(
+    url: str = Query(..., description="Target URL"),
+    formats: Optional[List[str]] = Query(None, description="Formats list: markdown, html, raw_html, links, images, screenshot, summary, highlights")
+):
     try:
-        return await scrape_engine(url=url)
+        return await scrape_engine(url=url, formats=formats)
     except HTTPException:
         raise
     except Exception as e:
@@ -318,7 +451,8 @@ async def scrape_post(options: ScrapeOptions):
             only_main_content=options.only_main_content,
             remove_tags=options.remove_tags,
             wait_for_selector=options.wait_for_selector,
-            json_schema=options.json_schema
+            json_schema=options.json_schema,
+            formats=options.formats
         )
     except HTTPException:
         raise
@@ -340,7 +474,8 @@ async def batch_scrape(payload: BatchScrapeRequest):
                     only_main_content=opts.only_main_content,
                     remove_tags=opts.remove_tags,
                     wait_for_selector=opts.wait_for_selector,
-                    json_schema=opts.json_schema 
+                    json_schema=opts.json_schema,
+                    formats=opts.formats
                 )
             except Exception as e:
                 print(f"Error in batch worker for URL {target_url}:\n{traceback.format_exc()}")
