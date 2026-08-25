@@ -2,7 +2,7 @@ import asyncio
 import io
 import os
 import json
-import traceback  # NEW: Added for robust error logging
+import traceback  # Robust error logging
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin, urlparse
 from typing import List, Optional, Dict, Any
@@ -113,7 +113,7 @@ def generate_gemini_json(markdown_text: str, schema: dict) -> dict:
     prompt = f"You are a precise data extraction assistant. Extract data from the following markdown content matching the requested JSON structure.\n\nSchema:\n{json.dumps(schema, indent=2)}\n\nMarkdown Content:\n{markdown_text}"
     
     response = gemini_client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-3.6-flash',
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -156,6 +156,8 @@ async def scrape_engine(
         try:
             async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True) as client:
                 res = await client.get(clean_url)
+                if res.status_code == 403:
+                    raise HTTPException(status_code=403, detail="Access forbidden by target PDF server.")
                 res.raise_for_status()
                 pdf_md = parse_pdf_bytes(res.content)
                 result = {
@@ -168,6 +170,8 @@ async def scrape_engine(
                         "favicon": f"https://www.google.com/s2/favicons?domain={parsed_domain}&sz=64"
                     }
                 }
+        except HTTPException:
+            raise
         except Exception as e:
             print(f"PDF extraction error:\n{traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=f"PDF extraction error: {str(e)}")
@@ -221,28 +225,43 @@ async def scrape_engine(
         # 3. HTML Cleanup & Markdown Parsing 
         if not result:
             try:
-                soup = BeautifulSoup(html_content, "html.parser")
-                for tag in remove_tags:
-                    for element in soup.find_all(tag):
+                soup_base = BeautifulSoup(html_content, "html.parser")
+                
+                # Base cleanup: strip scripts and styles
+                for tag in ["script", "style", "noscript", "iframe"]:
+                    for element in soup_base.find_all(tag):
                         element.decompose()
 
-                title = soup.title.string.strip() if soup.title and soup.title.string else parsed_domain
+                # Attempt aggressive tag cleanup on a working copy
+                soup_working = BeautifulSoup(str(soup_base), "html.parser")
+                additional_tags = [t for t in remove_tags if t not in ["script", "style", "noscript", "iframe"]]
+                for tag in additional_tags:
+                    for element in soup_working.find_all(tag):
+                        element.decompose()
+
+                # Fallback to base soup if aggressive cleanup stripped essential page content (e.g., Google homepage)
+                if len(soup_working.get_text(strip=True)) > 30:
+                    soup_final = soup_working
+                else:
+                    soup_final = soup_base
+
+                title = soup_final.title.string.strip() if soup_final.title and soup_final.title.string else parsed_domain
                 
-                # NEW: Added Wikipedia specific fallbacks and safer resolution
                 if only_main_content:
                     target_element = (
-                        soup.find("main") or 
-                        soup.find("article") or 
-                        soup.find("div", {"id": "content"}) or 
-                        soup.find("div", {"id": "bodyContent"}) or 
-                        soup.find("div", {"id": "main-content"}) or 
-                        soup.body or 
-                        soup
+                        soup_final.find("main") or 
+                        soup_final.find("article") or 
+                        soup_final.find("div", {"id": "content"}) or 
+                        soup_final.find("div", {"id": "bodyContent"}) or 
+                        soup_final.find("div", {"id": "main-content"}) or 
+                        soup_final.find("div", {"id": "main"}) or
+                        soup_final.body or 
+                        soup_final
                     )
                 else:
-                    target_element = soup.body or soup
+                    target_element = soup_final.body or soup_final
 
-                raw_html = str(target_element) if target_element else str(soup)
+                raw_html = str(target_element) if target_element else str(soup_final)
                 clean_markdown = md(raw_html, heading_style="ATX", strip=["img"]).strip()
                 
                 if not clean_markdown:
