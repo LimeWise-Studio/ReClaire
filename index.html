@@ -91,7 +91,7 @@
     </div>
 
     <!-- Theme Toggle Button -->
-    <button onclick="toggleTheme()" class="absolute top-6 right-6 p-2.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-accent transition active:scale-90">
+    <button onclick="toggleTheme()" class="absolute top-6 right-6 p-2.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-accent transition active:scale-90 z-20">
         <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
         </svg>
@@ -148,23 +148,28 @@
                 </button>
             </div>
 
-            <!-- API Configurations -->
-            <div class="mt-4 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 bg-zinc-50/50 dark:bg-zinc-950/40 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-zinc-600 dark:text-zinc-400">
-                <label class="flex items-center gap-2 cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition select-none">
-                    <input type="checkbox" id="opt-js" class="accent-accent w-4 h-4 rounded-md cursor-pointer" checked>
-                    <span>Use JS Rendering (Playwright)</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition select-none">
-                    <input type="checkbox" id="opt-main" class="accent-accent w-4 h-4 rounded-md cursor-pointer" checked>
-                    <span>Extract Main Content Only</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer hover:text-accent dark:hover:text-accent text-zinc-900 dark:text-zinc-100 font-medium transition select-none">
-                    <input type="checkbox" id="opt-json" class="accent-accent w-4 h-4 rounded-md cursor-pointer" onchange="toggleJsonInput()">
-                    <span>Extract Structured JSON</span>
-                </label>
+            <!-- Format Selector Trigger Dropdown (Matching Image 1) -->
+            <div class="mt-4 flex items-center justify-between">
+                <button 
+                    type="button" 
+                    onclick="openFormatModal()"
+                    class="inline-flex items-center gap-2.5 bg-zinc-100/80 dark:bg-zinc-950/70 border border-zinc-300 dark:border-zinc-800 hover:border-accent dark:hover:border-accent text-zinc-800 dark:text-zinc-200 text-sm px-4 py-2.5 rounded-xl transition active:scale-[0.98] shadow-sm select-none"
+                >
+                    <svg class="text-zinc-500 dark:text-zinc-400" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="8" y1="13" x2="16" y2="13"/>
+                        <line x1="8" y1="17" x2="12" y2="17"/>
+                    </svg>
+                    <span class="text-zinc-500 dark:text-zinc-400 font-normal">Format:</span>
+                    <span id="format-trigger-label" class="font-semibold text-zinc-900 dark:text-zinc-100">Markdown</span>
+                    <svg class="text-zinc-400 ml-1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m6 9 6 6 6-6"/>
+                    </svg>
+                </button>
             </div>
 
-            <!-- JSON Schema Input Block (Hidden by Default) -->
+            <!-- JSON Schema Input Block (Shown if JSON format selected) -->
             <div id="json-schema-container" class="hidden mt-4 animate-fade-in">
                 <div class="flex items-center justify-between mb-2">
                     <label class="block text-[11px] font-medium text-accent uppercase tracking-wider">
@@ -174,7 +179,7 @@
                 </div>
                 <textarea 
                     id="json-schema-input" 
-                    rows="5" 
+                    rows="4" 
                     class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 font-mono text-[12px] text-zinc-800 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition shadow-inner custom-scrollbar" 
                     placeholder='{
   "article_title": "String",
@@ -198,15 +203,14 @@
                 </a>
             </div>
 
-            <!-- Output Display Area with Tabs -->
+            <!-- Dynamic Multi-Format Output Display Area with Tabs -->
             <div class="mt-6">
-                <div class="flex justify-between items-center mb-2 h-7">
+                <div class="flex flex-wrap justify-between items-center mb-2 gap-2">
                     <span id="output-label" class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Markdown Output</span>
                     
-                    <!-- Dynamic Output Tabs -->
-                    <div id="output-tabs" class="hidden flex bg-zinc-200/50 dark:bg-zinc-800/50 rounded-lg p-0.5">
-                        <button id="tab-md" onclick="switchOutputTab('md')" class="px-3 py-1 rounded-md text-[11px] font-medium bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm transition-all">Markdown</button>
-                        <button id="tab-json" onclick="switchOutputTab('json')" class="px-3 py-1 rounded-md text-[11px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-all bg-transparent">JSON Data</button>
+                    <!-- Dynamic Output Tabs Container -->
+                    <div id="output-tabs" class="hidden flex flex-wrap gap-1 bg-zinc-200/60 dark:bg-zinc-800/60 rounded-lg p-1">
+                        <!-- Output format tabs dynamically generated via JS -->
                     </div>
                 </div>
                 
@@ -228,7 +232,7 @@
                         <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
                         <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
                     </svg>
-                    <span id="copy-btn-text">Copy as Markdown</span>
+                    <span id="copy-btn-text">Copy Output</span>
                 </button>
 
                 <!-- Save File Button -->
@@ -242,7 +246,7 @@
                         <polyline points="7 10 12 15 17 10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    <span id="save-btn-text">Save as .md File</span>
+                    <span id="save-btn-text">Save as File</span>
                 </button>
             </div>
 
@@ -272,17 +276,128 @@
             <div class="bg-zinc-900 dark:bg-black text-zinc-300 font-mono text-[11px] p-4 rounded-xl overflow-x-auto text-left shadow-inner border border-zinc-800">
                 <code>curl -X POST "https://reclaire-backend.onrender.com/scrape" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com", "use_js_fallback": true}'</code>
+  -d '{"url": "https://example.com", "formats": ["markdown", "html", "summary"]}'</code>
             </div>
         </div>
     </main>
 
     <!-- Footer -->
     <footer class="py-8 text-center border-t border-zinc-100 dark:border-zinc-900/50 relative z-10">
-        <p class="text-xs font-medium text-zinc-400 dark:text-zinc-500">ReClaire • v1.2.0 beta</p>
+        <p class="text-xs font-medium text-zinc-400 dark:text-zinc-500">ReClaire • v1.3.0 beta</p>
         <p class="text-[11px] text-zinc-400/70 dark:text-zinc-600 mt-1">This web app is still in development</p>
         <p class="text-[11px] text-zinc-400/70 dark:text-zinc-600 mt-1">Feedback would be highly appreciated</p>
     </footer>
+
+    <!-- Bottom Sheet Modal Drawer (Matching Image 2 Style) -->
+    <div id="format-modal-backdrop" onclick="closeFormatModal(event)" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex flex-col justify-end">
+        <div id="format-modal-panel" class="bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 rounded-t-3xl p-6 sm:p-8 max-h-[85vh] overflow-y-auto w-full max-w-2xl mx-auto transform translate-y-full transition-transform duration-300 ease-out custom-scrollbar">
+            
+            <!-- Sheet Header -->
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+                <div>
+                    <h3 class="text-lg font-bold text-zinc-900 dark:text-zinc-100">Format Selection</h3>
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Select one or multiple formats to extract simultaneously.</p>
+                </div>
+                <button onclick="closeFormatModalForce()" class="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <!-- Format Grid Cards (Interactive Multi-Select Grid) -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+                <!-- Markdown Card -->
+                <div onclick="toggleFormatSelection('markdown')" id="fmt-card-markdown" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-accent/80 shadow-sm">
+                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
+                        <div class="space-y-1.5 w-full">
+                            <div class="h-2 w-3/4 bg-zinc-400/50 dark:bg-zinc-600/50 rounded"></div>
+                            <div class="h-2 w-1/2 bg-zinc-400/30 dark:bg-zinc-600/30 rounded"></div>
+                            <div class="h-2 w-5/6 bg-zinc-400/40 dark:bg-zinc-600/40 rounded"></div>
+                        </div>
+                        <span id="chk-markdown" class="absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
+                    </div>
+                    <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Markdown</span>
+                </div>
+
+                <!-- Main Content Only Card -->
+                <div onclick="toggleFormatSelection('main_content')" id="fmt-card-main_content" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
+                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
+                        <div class="w-full h-full border border-dashed border-zinc-400 dark:border-zinc-600 rounded p-1 flex flex-col justify-center gap-1">
+                            <div class="h-1.5 w-full bg-zinc-400/50 dark:bg-zinc-600 text-[8px]">Article Only</div>
+                            <div class="h-1.5 w-4/5 bg-zinc-400/30 dark:bg-zinc-600"></div>
+                        </div>
+                        <span id="chk-main_content" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 block">Main Content</span>
+                        <span class="text-[10px] text-zinc-400">Exclude menus & ads</span>
+                    </div>
+                </div>
+
+                <!-- JS Rendering Card -->
+                <div onclick="toggleFormatSelection('js_rendering')" id="fmt-card-js_rendering" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
+                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
+                        <svg class="text-zinc-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><path d="M8 10l-2 2 2 2"/><path d="M12 14l2-2-2-2"/></svg>
+                        <span id="chk-js_rendering" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 block">JS Rendering</span>
+                        <span class="text-[10px] text-zinc-400">Playwright SPA support</span>
+                    </div>
+                </div>
+
+                <!-- Structured JSON Card -->
+                <div onclick="toggleFormatSelection('json')" id="fmt-card-json" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
+                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden font-mono text-[9px] text-zinc-500">
+                        <code>{ "data": "..." }</code>
+                        <span id="chk-json" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
+                    </div>
+                    <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Structured JSON</span>
+                </div>
+
+                <!-- Summary Card -->
+                <div onclick="toggleFormatSelection('summary')" id="fmt-card-summary" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
+                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
+                        <svg class="text-zinc-500" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="3" y2="18"/></svg>
+                        <span id="chk-summary" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
+                    </div>
+                    <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Summary</span>
+                </div>
+
+                <!-- HTML Card -->
+                <div onclick="toggleFormatSelection('html')" id="fmt-card-html" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
+                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden font-mono text-[9px] text-zinc-500">
+                        <code>&lt;html&gt;</code>
+                        <span id="chk-html" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 block">Cleaned HTML</span>
+                        <span class="text-[10px] text-zinc-400">Sanitized raw HTML</span>
+                    </div>
+                </div>
+
+                <!-- Links Card -->
+                <div onclick="toggleFormatSelection('links')" id="fmt-card-links" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
+                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
+                        <svg class="text-zinc-500" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        <span id="chk-links" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
+                    </div>
+                    <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Page Links</span>
+                </div>
+
+            </div>
+
+            <!-- Bottom Modal Apply Button -->
+            <div class="mt-8 pt-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
+                <button 
+                    onclick="closeFormatModalForce()"
+                    class="w-full sm:w-auto bg-zinc-900 dark:bg-zinc-100 hover:bg-accent dark:hover:bg-accent text-white dark:text-zinc-900 font-semibold text-sm px-8 py-3 rounded-xl transition shadow-md"
+                >
+                    Apply Formats
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Client-Side JavaScript Logic -->
     <script>
@@ -302,6 +417,104 @@
             } else {
                 htmlRoot.classList.add('dark');
                 localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // --- Format Selection & Bottom Sheet Modal State ---
+        let selectedFormats = new Set(['markdown']); // Default selected format
+
+        const formatDisplayNames = {
+            'markdown': 'Markdown',
+            'main_content': 'Main Content',
+            'js_rendering': 'JS Rendering',
+            'json': 'JSON',
+            'summary': 'Summary',
+            'html': 'HTML',
+            'links': 'Links'
+        };
+
+        function openFormatModal() {
+            const backdrop = document.getElementById('format-modal-backdrop');
+            const panel = document.getElementById('format-modal-panel');
+            
+            backdrop.classList.remove('pointer-events-none', 'opacity-0');
+            backdrop.classList.add('opacity-100');
+            
+            panel.classList.remove('translate-y-full');
+            panel.classList.add('translate-y-0');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeFormatModal(event) {
+            if (event.target.id === 'format-modal-backdrop') {
+                closeFormatModalForce();
+            }
+        }
+
+        function closeFormatModalForce() {
+            const backdrop = document.getElementById('format-modal-backdrop');
+            const panel = document.getElementById('format-modal-panel');
+            
+            panel.classList.remove('translate-y-0');
+            panel.classList.add('translate-y-full');
+            
+            backdrop.classList.remove('opacity-100');
+            backdrop.classList.add('opacity-0', 'pointer-events-none');
+            document.body.style.overflow = '';
+            
+            updateTriggerLabel();
+            toggleJsonInput();
+        }
+
+        function toggleFormatSelection(formatKey) {
+            if (selectedFormats.has(formatKey)) {
+                if (selectedFormats.size === 1) {
+                    showErrorAlert('At least one format must be selected.');
+                    return;
+                }
+                selectedFormats.delete(formatKey);
+            } else {
+                selectedFormats.add(formatKey);
+            }
+            updateFormatModalUI();
+        }
+
+        function updateFormatModalUI() {
+            Object.keys(formatDisplayNames).forEach(key => {
+                const card = document.getElementById(`fmt-card-${key}`);
+                const chk = document.getElementById(`chk-${key}`);
+                
+                if (selectedFormats.has(key)) {
+                    card.classList.add('border-accent/80', 'dark:border-accent/80');
+                    card.classList.remove('border-zinc-200', 'dark:border-zinc-800');
+                    if (chk) chk.classList.remove('hidden');
+                } else {
+                    card.classList.remove('border-accent/80', 'dark:border-accent/80');
+                    card.classList.add('border-zinc-200', 'dark:border-zinc-800');
+                    if (chk) chk.classList.add('hidden');
+                }
+            });
+        }
+
+        function updateTriggerLabel() {
+            const triggerLabel = document.getElementById('format-trigger-label');
+            const array = Array.from(selectedFormats).map(k => formatDisplayNames[k]);
+            
+            if (array.length === 1) {
+                triggerLabel.innerText = array[0];
+            } else if (array.length === 2) {
+                triggerLabel.innerText = `${array[0]}, ${array[1]}`;
+            } else {
+                triggerLabel.innerText = `${array[0]} +${array.length - 1} formats`;
+            }
+        }
+
+        function toggleJsonInput() {
+            const container = document.getElementById('json-schema-container');
+            if (selectedFormats.has('json')) {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
             }
         }
 
@@ -325,16 +538,6 @@
 
         function hideErrorAlert() {
             document.getElementById('url-error-alert').classList.add('hidden');
-        }
-
-        function toggleJsonInput() {
-            const container = document.getElementById('json-schema-container');
-            const isChecked = document.getElementById('opt-json').checked;
-            if (isChecked) {
-                container.classList.remove('hidden');
-            } else {
-                container.classList.add('hidden');
-            }
         }
 
         function formatJsonInput() {
@@ -387,42 +590,56 @@
             }
         }
 
-        // --- Core Application Logic ---
-        let currentMarkdownText = "";
-        let currentJsonText = "";
-        let activeOutputTab = "md"; // "md" or "json"
+        // --- Multi-Format Output Storage Logic ---
+        let extractedOutputs = {}; // Key: formatKey (e.g. 'markdown', 'json', 'html'), Value: text output string
+        let activeOutputTab = "markdown";
 
-        function switchOutputTab(tab) {
-            activeOutputTab = tab;
-            const outputBox = document.getElementById('output-box');
-            const tabMd = document.getElementById('tab-md');
-            const tabJson = document.getElementById('tab-json');
-            
-            const activeClass = ['bg-white', 'dark:bg-zinc-700', 'text-zinc-900', 'dark:text-zinc-100', 'shadow-sm'];
-            const inactiveClass = ['text-zinc-500', 'dark:text-zinc-400', 'hover:text-zinc-900', 'dark:hover:text-zinc-100', 'bg-transparent'];
+        function renderOutputTabs() {
+            const tabsContainer = document.getElementById('output-tabs');
+            tabsContainer.innerHTML = '';
 
-            if (tab === 'md') {
-                outputBox.innerText = currentMarkdownText;
-                
-                tabMd.classList.add(...activeClass);
-                tabMd.classList.remove(...inactiveClass);
-                tabJson.classList.add(...inactiveClass);
-                tabJson.classList.remove(...activeClass);
-                
-                document.getElementById('output-label').innerText = 'Markdown Output';
-                document.getElementById('copy-btn-text').innerText = 'Copy as Markdown';
-                document.getElementById('save-btn-text').innerText = 'Save as .md File';
+            const keys = Object.keys(extractedOutputs);
+            if (keys.length <= 1) {
+                tabsContainer.classList.add('hidden');
             } else {
-                outputBox.innerText = currentJsonText || "Error: JSON data not available.";
-                
-                tabJson.classList.add(...activeClass);
-                tabJson.classList.remove(...inactiveClass);
-                tabMd.classList.add(...inactiveClass);
-                tabMd.classList.remove(...activeClass);
-                
-                document.getElementById('output-label').innerText = 'Structured JSON';
-                document.getElementById('copy-btn-text').innerText = 'Copy JSON';
-                document.getElementById('save-btn-text').innerText = 'Save as .json File';
+                tabsContainer.classList.remove('hidden');
+            }
+
+            keys.forEach(key => {
+                const isSelected = key === activeOutputTab;
+                const btn = document.createElement('button');
+                btn.onclick = () => switchOutputTab(key);
+                btn.className = `px-3 py-1 rounded-md text-[11px] font-medium transition-all ${
+                    isSelected 
+                        ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' 
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-transparent'
+                }`;
+                btn.innerText = formatDisplayNames[key] || key.toUpperCase();
+                tabsContainer.appendChild(btn);
+            });
+        }
+
+        function switchOutputTab(tabKey) {
+            if (!extractedOutputs[tabKey]) return;
+            activeOutputTab = tabKey;
+            
+            const outputBox = document.getElementById('output-box');
+            outputBox.innerText = extractedOutputs[tabKey];
+            
+            document.getElementById('output-label').innerText = `${formatDisplayNames[tabKey] || tabKey} Output`;
+            document.getElementById('copy-btn-text').innerText = `Copy as ${formatDisplayNames[tabKey] || tabKey}`;
+            document.getElementById('save-btn-text').innerText = `Save as .${getExtForFormat(tabKey)} File`;
+
+            renderOutputTabs();
+        }
+
+        function getExtForFormat(formatKey) {
+            switch(formatKey) {
+                case 'json': return 'json';
+                case 'html': return 'html';
+                case 'links': return 'txt';
+                case 'summary': return 'txt';
+                default: return 'md';
             }
         }
 
@@ -436,13 +653,10 @@
             }
 
             const urlInput = cleaned;
-            const useJs = document.getElementById('opt-js').checked;
-            const useMain = document.getElementById('opt-main').checked;
-            const useJson = document.getElementById('opt-json').checked;
             const jsonSchemaStr = document.getElementById('json-schema-input').value;
             let jsonSchemaObj = null;
 
-            if (useJson && jsonSchemaStr.trim()) {
+            if (selectedFormats.has('json') && jsonSchemaStr.trim()) {
                 try {
                     jsonSchemaObj = JSON.parse(jsonSchemaStr);
                 } catch (e) {
@@ -464,13 +678,12 @@
 
             scrapeBtn.disabled = true;
             scrapeBtn.innerText = 'Extracting...';
-            outputBox.innerHTML = '<span class="text-accent animate-pulse">Connecting to ReClaire engine & parsing content...</span>';
+            outputBox.innerHTML = '<span class="text-accent animate-pulse">Connecting to ReClaire engine & parsing selected formats...</span>';
             actionButtons.classList.add('hidden');
             siteChip.classList.add('hidden');
             outputTabs.classList.add('hidden');
 
             try {
-                // Change to your production URL on Render
                 const renderApiUrl = `https://reclaire-backend.onrender.com/scrape`;
                 
                 const response = await fetch(renderApiUrl, {
@@ -478,45 +691,57 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         url: urlInput,
-                        use_js_fallback: useJs,
-                        only_main_content: useMain,
+                        formats: Array.from(selectedFormats),
+                        use_js_fallback: selectedFormats.has('js_rendering'),
+                        only_main_content: selectedFormats.has('main_content'),
                         json_schema: jsonSchemaObj
                     })
                 });
                 
                 const data = await response.json();
 
-                if (data.markdown) {
-                    currentMarkdownText = data.markdown;
-                    currentJsonText = data.json_data ? JSON.stringify(data.json_data, null, 2) : "";
+                extractedOutputs = {};
+
+                if (data.markdown || data.formats || data.html || data.json_data) {
+                    // Map API responses to distinct format tabs
+                    if (data.markdown) extractedOutputs['markdown'] = data.markdown;
+                    if (data.json_data) extractedOutputs['json'] = JSON.stringify(data.json_data, null, 2);
+                    if (data.html) extractedOutputs['html'] = data.html;
+                    if (data.summary) extractedOutputs['summary'] = data.summary;
+                    if (data.links) extractedOutputs['links'] = Array.isArray(data.links) ? data.links.join('\n') : data.links;
+
+                    // Fallback for custom format payload objects
+                    if (data.formats && typeof data.formats === 'object') {
+                        Object.keys(data.formats).forEach(k => {
+                            extractedOutputs[k] = typeof data.formats[k] === 'object' 
+                                ? JSON.stringify(data.formats[k], null, 2) 
+                                : data.formats[k];
+                        });
+                    }
+
+                    const availableKeys = Object.keys(extractedOutputs);
+                    if (availableKeys.length > 0) {
+                        activeOutputTab = availableKeys[0];
+                        switchOutputTab(activeOutputTab);
+                    }
                     
-                    const domain = data.metadata?.domain || new URL(data.url).hostname;
+                    const domain = data.metadata?.domain || new URL(data.url || urlInput).hostname;
                     const favicon = data.metadata?.favicon || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
                     
                     document.getElementById('chip-domain').innerText = domain;
                     document.getElementById('chip-favicon').src = favicon;
-                    document.getElementById('chip-link').href = data.url;
+                    document.getElementById('chip-link').href = data.url || urlInput;
                     siteChip.classList.remove('hidden');
-
-                    if (currentJsonText) {
-                        outputTabs.classList.remove('hidden');
-                        switchOutputTab('json');
-                    } else {
-                        switchOutputTab('md');
-                    }
 
                     actionButtons.classList.remove('hidden');
 
                     saveToHistory({
-                        url: data.url,
+                        url: data.url || urlInput,
                         title: data.title || domain,
                         domain: domain,
                         favicon: favicon,
-                        useJs: useJs,
-                        useMain: useMain,
-                        hasJson: !!currentJsonText,
-                        markdown: currentMarkdownText,
-                        json: currentJsonText,
+                        selectedFormats: Array.from(selectedFormats),
+                        outputs: extractedOutputs,
                         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     });
 
@@ -533,30 +758,31 @@
 
         // --- Action Button Logic ---
         function copyOutput() {
-            const textToCopy = activeOutputTab === 'json' ? currentJsonText : currentMarkdownText;
+            const textToCopy = extractedOutputs[activeOutputTab];
             if (!textToCopy) return;
             navigator.clipboard.writeText(textToCopy).then(() => {
                 const copyText = document.getElementById('copy-btn-text');
+                const label = formatDisplayNames[activeOutputTab] || activeOutputTab;
                 copyText.innerText = 'Copied to Clipboard!';
                 setTimeout(() => { 
-                    copyText.innerText = activeOutputTab === 'json' ? 'Copy JSON' : 'Copy as Markdown'; 
+                    copyText.innerText = `Copy as ${label}`; 
                 }, 2000);
             });
         }
 
         function downloadFile() {
-            const textToDownload = activeOutputTab === 'json' ? currentJsonText : currentMarkdownText;
+            const textToDownload = extractedOutputs[activeOutputTab];
             if (!textToDownload) return;
             
             const domain = document.getElementById('chip-domain').innerText || 'extracted';
-            const ext = activeOutputTab === 'json' ? 'json' : 'md';
-            const type = activeOutputTab === 'json' ? 'application/json' : 'text/markdown';
+            const ext = getExtForFormat(activeOutputTab);
+            const type = ext === 'json' ? 'application/json' : ext === 'html' ? 'text/html' : 'text/plain';
             
             const blob = new Blob([textToDownload], { type: type });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${domain.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${ext}`;
+            a.download = `${domain.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${activeOutputTab}.${ext}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -600,16 +826,19 @@
             }
 
             document.getElementById('target-url').value = displayUrl;
-            currentMarkdownText = item.markdown;
-            currentJsonText = item.json || "";
+            
+            if (item.selectedFormats) {
+                selectedFormats = new Set(item.selectedFormats);
+                updateFormatModalUI();
+                updateTriggerLabel();
+                toggleJsonInput();
+            }
 
-            const outputTabs = document.getElementById('output-tabs');
-            if (currentJsonText) {
-                outputTabs.classList.remove('hidden');
-                switchOutputTab('json');
-            } else {
-                outputTabs.classList.add('hidden');
-                switchOutputTab('md');
+            extractedOutputs = item.outputs || { markdown: item.markdown };
+            const keys = Object.keys(extractedOutputs);
+            if (keys.length > 0) {
+                activeOutputTab = keys[0];
+                switchOutputTab(activeOutputTab);
             }
 
             document.getElementById('chip-domain').innerText = item.domain;
@@ -647,17 +876,13 @@
                             <h3 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">${item.title}</h3>
                             <p class="text-[11px] text-zinc-400 dark:text-zinc-500 truncate">${item.domain} • ${item.timestamp}</p>
                             
-                            <!-- Option Badges -->
-                            <div class="flex flex-wrap items-center gap-2 mt-2">
-                                <span class="px-2 py-0.5 rounded-md text-[10px] font-medium ${item.hasJson ? 'bg-accent/10 text-accent border border-accent/20' : 'hidden'}">
-                                    JSON Data
-                                </span>
-                                <span class="px-2 py-0.5 rounded-md text-[10px] font-medium ${item.useJs ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'}">
-                                    JS: ${item.useJs ? 'ON' : 'OFF'}
-                                </span>
-                                <span class="px-2 py-0.5 rounded-md text-[10px] font-medium ${item.useMain ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'}">
-                                    Main: ${item.useMain ? 'ON' : 'OFF'}
-                                </span>
+                            <!-- Format Badges -->
+                            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                                ${(item.selectedFormats || ['markdown']).map(fmt => `
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/50">
+                                        ${formatDisplayNames[fmt] || fmt}
+                                    </span>
+                                `).join('')}
                             </div>
                         </div>
                     </div>
@@ -676,9 +901,13 @@
             `).join('');
         }
 
-        document.addEventListener('DOMContentLoaded', renderHistory);
+        document.addEventListener('DOMContentLoaded', () => {
+            renderHistory();
+            updateFormatModalUI();
+            updateTriggerLabel();
+        });
 
-        // --- Placeholder Animation Logic ---
+        // --- Placeholder Typing Animation Logic ---
         const placeholders = ['github.dev/ReClaire', 'techcrunch.com', 'wikipedia.org/wiki', 'example.com/documentation'];
         let phIndex = 0;
         let charIndex = 0;
