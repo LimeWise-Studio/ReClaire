@@ -29,7 +29,7 @@ except ImportError:
 app = FastAPI(
     title="ReClaire API",
     description="High-performance web parser converting web assets into clean Markdown, JSON, and LLM-enriched formats.",
-    version="1.9.0"
+    version="1.9.1"
 )
 
 app.add_middleware(
@@ -115,6 +115,34 @@ def generate_gemini_branding(markdown_text: str, meta: dict) -> dict:
     if not gemini_client:
         raise ValueError("GEMINI_API_KEY is not set.")
     prompt = f"Analyze the content and extract the brand profile. Return a JSON object with keys: 'brand_voice', 'core_messaging', 'value_proposition', and 'target_audience'.\n\nContent:\n{markdown_text[:10000]}"
+    response = gemini_client.models.generate_content(
+        model='gemini-3.6-flash',
+        contents=prompt,
+        config=types.GenerateContentConfig(response_mime_type="application/json")
+    )
+    return json.loads(response.text)
+
+def generate_gemini_summary(markdown_text: str) -> str:
+    if not gemini_client:
+        raise ValueError("GEMINI_API_KEY is not set.")
+    prompt = f"Provide a concise, comprehensive summary of the following webpage content:\n\n{markdown_text[:15000]}"
+    return gemini_client.models.generate_content(model='gemini-3.6-flash', contents=prompt).text.strip()
+
+def generate_gemini_highlights(markdown_text: str) -> Any:
+    if not gemini_client:
+        raise ValueError("GEMINI_API_KEY is not set.")
+    prompt = f"Extract 3 to 5 key bullet-point highlights or takeaways from the following webpage content. Return them as a JSON list of strings.\n\nContent:\n{markdown_text[:10000]}"
+    response = gemini_client.models.generate_content(
+        model='gemini-3.6-flash',
+        contents=prompt,
+        config=types.GenerateContentConfig(response_mime_type="application/json")
+    )
+    return json.loads(response.text)
+
+def generate_gemini_json_schema(markdown_text: str, json_schema: Dict[str, Any]) -> dict:
+    if not gemini_client:
+        raise ValueError("GEMINI_API_KEY is not set.")
+    prompt = f"Extract data from the following content strictly matching this JSON schema: {json.dumps(json_schema)}.\n\nContent:\n{markdown_text[:12000]}"
     response = gemini_client.models.generate_content(
         model='gemini-3.6-flash',
         contents=prompt,
@@ -216,10 +244,23 @@ async def scrape_engine(
             try: result["qa_answer"] = await asyncio.to_thread(generate_gemini_qa, clean_markdown, user_question, web_augmented_qa)
             except Exception as e: result["qa_error"] = str(e)
             
+        if "summary" in req_formats:
+            try: result["summary"] = await asyncio.to_thread(generate_gemini_summary, clean_markdown)
+            except Exception as e: result["summary_error"] = str(e)
+
+        if "highlights" in req_formats:
+            try: result["highlights"] = await asyncio.to_thread(generate_gemini_highlights, clean_markdown)
+            except Exception as e: result["highlights_error"] = str(e)
+
+        if "json" in req_formats:
+            try:
+                schema = json_schema or {"title": "str", "key_takeaways": "list"}
+                result["json_data"] = await asyncio.to_thread(generate_gemini_json_schema, clean_markdown, schema)
+            except Exception as e: result["json_error"] = str(e)
+
         if "branding" in req_formats:
             try:
                 llm_brand = await asyncio.to_thread(generate_gemini_branding, clean_markdown, meta_info)
-                # Combine LLM text analysis with visual DOM assets
                 result["branding"] = {
                     "visual_assets": meta_info,
                     "brand_analysis": llm_brand
