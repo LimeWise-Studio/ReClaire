@@ -163,13 +163,19 @@ def clean_input_url(raw_url: str) -> str:
     return raw_url
 
 
-def safe_text(value: Optional[str]) -> str:
+def safe_text(value: Any) -> str:
     """
     Safely normalize text extracted from HTML.
+    Handles None, strings, and lists (e.g., HTML class attributes).
     """
-
     if not value:
         return ""
+
+    # BeautifulSoup returns lists for multi-valued attributes like 'class'
+    if isinstance(value, list):
+        value = " ".join(str(v) for v in value)
+    else:
+        value = str(value)
 
     return re.sub(r"\s+", " ", value).strip()
 
@@ -1292,11 +1298,20 @@ async def scrape_engine(
         # Branding / metadata BEFORE destructive cleaning
         # ----------------------------------------------------
 
-        branding_assets = extract_branding_assets(
-            soup_raw,
-            clean_url,
-            parsed_domain,
-        )
+        try:
+            branding_assets = extract_branding_assets(
+                soup_raw,
+                clean_url,
+                parsed_domain,
+            )
+        except Exception as e:
+            # Fault tolerance: Fallback to basic domain info without crashing
+            print(f"Branding extraction failed for {clean_url}: {e}")
+            branding_assets = {
+                "domain": parsed_domain,
+                "title": parsed_domain,
+                "meta": {}
+            }
 
         meta_info.update(
             branding_assets
