@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReClaire — Web to Clean Markdown & Multi-Format Extraction</title>
-    <!-- Favicon icon -->
+    <title>ReClaire — Web to Clean Data & Research Engine</title>
     <link rel="icon" type="image/png" href="favicon.png">
     
     <!-- Tailwind CSS CDN -->
@@ -14,7 +13,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
     
-    <!-- Tailwind Config for Custom Dynamic Colors and Dark Mode -->
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -33,469 +31,377 @@
     </script>
 
     <style>
-        /* Light & Dark Mode Dynamic Accent Variables */
         :root {
-            --color-accent: #272727;
+            --color-accent: #000000;
         }
         .dark {
             --color-accent: #EFD09E;
         }
 
-        /* Fading CSS Grid Background Mask */
-        .grid-mask {
-            mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
-            -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+        /* Centered faint blurry shadow behind panels */
+        .panel-shadow {
+            box-shadow: 0 0 25px 0 rgba(0, 0, 0, 0.05);
+        }
+        .dark .panel-shadow {
+            box-shadow: 0 0 25px 0 rgba(239, 208, 158, 0.07);
         }
 
-        /* Custom Vibration / Shake Animation */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-6px); }
-            40%, 80% { transform: translateX(6px); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
         }
         .animate-shake {
-            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+            animation: shake 0.35s cubic-bezier(.36,.07,.19,.97) both;
         }
 
-        /* Fade & Slide Animation */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-8px); }
+            from { opacity: 0; transform: translateY(-6px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in {
             animation: fadeIn 0.25s ease-out forwards;
         }
 
-        /* Custom Scrollbar for Output Area */
         .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
+            width: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
             background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background-color: #e4e4e7;
+            background-color: rgba(0,0,0,0.15);
             border-radius: 10px;
         }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-            background-color: #3f3f46;
+            background-color: rgba(239, 208, 158, 0.25);
         }
     </style>
 </head>
-<body class="bg-[#E1D4C2] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col justify-between selection:bg-accent selection:text-white dark:selection:text-zinc-950 transition-colors duration-300 relative">
+<body class="bg-white dark:bg-black text-black dark:text-[#EFD09E] min-h-screen flex flex-col font-sans selection:bg-black selection:text-white dark:selection:bg-[#EFD09E] dark:selection:text-black transition-colors duration-300">
 
-    <!-- Fading Grid Layer -->
-    <div class="fixed inset-0 pointer-events-none z-[-1] grid-mask">
-        <div class="absolute inset-0 dark:hidden bg-[length:30px_30px] bg-[linear-gradient(to_right,rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.04)_1px,transparent_1px)]"></div>
-        <div class="absolute inset-0 hidden dark:block bg-[length:30px_30px] bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)]"></div>
-    </div>
-
-    <!-- Theme Toggle Button -->
-    <button onclick="toggleTheme()" class="absolute top-6 right-6 p-2.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-accent transition active:scale-90 z-20">
-        <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
-        </svg>
-    </button>
-
-    <!-- Header Section -->
-    <header class="max-w-3xl mx-auto w-full pt-16 px-6 text-center">
-        <div class="inline-block border border-accent/30 bg-accent/10 dark:bg-accent/5 backdrop-blur-sm px-3.5 py-1 rounded-full text-[11px] uppercase tracking-widest text-accent mb-6 font-medium">
-            Welcome Great Dev
+    <!-- Top Navigation Panel -->
+    <header class="h-14 border-b border-black/10 dark:border-[#EFD09E]/20 bg-white dark:bg-black px-4 md:px-6 flex items-center justify-between sticky top-0 z-40 transition-colors duration-300">
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSidebar()" class="md:hidden p-2 rounded-lg hover:bg-black/5 dark:hover:bg-[#EFD09E]/10 text-black dark:text-[#EFD09E] transition active:scale-95" title="Toggle Menu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <span class="font-brand text-2xl font-semibold tracking-tight text-black dark:text-[#EFD09E] select-none">ReClaire</span>
         </div>
-        <h1 class="font-brand text-5xl sm:text-6xl font-semibold tracking-tight text-zinc-950 dark:text-white">
-            <span class="text-accent italic">Re</span>Claire
-        </h1>
-        <p class="text-zinc-500 dark:text-zinc-400 font-light text-sm sm:text-base mt-3">
-            Refine your prompt with ReClaire.
-        </p>
+
+        <button onclick="toggleTheme()" class="p-2 rounded-full border border-black/10 dark:border-[#EFD09E]/30 text-black dark:text-[#EFD09E] hover:bg-black/5 dark:hover:bg-[#EFD09E]/10 transition active:scale-90" title="Toggle Theme">
+            <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+            </svg>
+        </button>
     </header>
 
-    <!-- Main Interactive Web App -->
-    <main class="max-w-2xl mx-auto w-full px-6 my-10">
+    <!-- Main Container Layout -->
+    <div class="flex flex-1 relative overflow-hidden">
         
-        <!-- PROMPTING / INPUT PANEL -->
-        <div id="input-section" class="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-sm transition-all mb-8">
-            
-            <!-- Error Alert Container -->
-            <div id="url-error-alert" class="hidden mb-4 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs flex items-center justify-between animate-fade-in">
-                <div class="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-                    <span id="url-error-text">Please enter a valid HTTP or HTTPS webpage URL.</span>
-                </div>
-                <button onclick="hideErrorAlert()" class="text-red-500 hover:text-red-700 dark:hover:text-red-300 font-bold ml-2">&times;</button>
-            </div>
-
-            <label for="target-url" class="block text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
-                Target Webpage URL
-            </label>
-            
-            <!-- Input & Scrape Button -->
-            <div class="flex flex-col sm:flex-row gap-3">
-                <div class="flex items-center w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition shadow-inner">
-                    <span class="text-zinc-400 dark:text-zinc-500 text-sm shrink-0 mr-1 select-none">https://</span>
-                    <input 
-                        id="target-url" 
-                        type="text" 
-                        placeholder="" 
-                        oninput="handleUrlInput(event)"
-                        class="w-full bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
-                    />
-                </div>
-                <button 
-                    onclick="convertWebpage()" 
-                    id="scrape-btn"
-                    class="bg-zinc-900 dark:bg-zinc-100 hover:bg-accent dark:hover:bg-accent text-white dark:text-zinc-900 font-medium text-sm px-6 py-3 rounded-xl transition-all shrink-0 flex items-center justify-center gap-2 shadow-sm active:scale-95"
-                >
-                    Extract
-                </button>
-            </div>
-
-            <!-- Format Selector Trigger Dropdown -->
-            <div class="mt-4 flex items-center justify-between">
-                <button 
-                    type="button" 
-                    onclick="openFormatModal()"
-                    class="inline-flex items-center gap-2.5 bg-zinc-100/80 dark:bg-zinc-950/70 border border-zinc-300 dark:border-zinc-800 hover:border-accent dark:hover:border-accent text-zinc-800 dark:text-zinc-200 text-sm px-4 py-2.5 rounded-xl transition active:scale-[0.98] shadow-sm select-none"
-                >
-                    <svg class="text-zinc-500 dark:text-zinc-400" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="8" y1="13" x2="16" y2="13"/>
-                        <line x1="8" y1="17" x2="12" y2="17"/>
-                    </svg>
-                    <span class="text-zinc-500 dark:text-zinc-400 font-normal">Format:</span>
-                    <span id="format-trigger-label" class="font-semibold text-zinc-900 dark:text-zinc-100">Markdown</span>
-                    <svg class="text-zinc-400 ml-1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="m6 9 6 6 6-6"/>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- JSON Schema Input Block -->
-            <div id="json-schema-container" class="hidden mt-4 animate-fade-in">
-                <div class="flex items-center justify-between mb-2">
-                    <label class="block text-[11px] font-medium text-accent uppercase tracking-wider">
-                        Define Target JSON Schema
-                    </label>
-                    <button onclick="formatJsonInput()" class="text-[10px] bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded transition">Format JSON</button>
-                </div>
-                <textarea 
-                    id="json-schema-input" 
-                    rows="4" 
-                    class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 font-mono text-[12px] text-zinc-800 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition shadow-inner custom-scrollbar" 
-                    placeholder='{
-  "article_title": "String",
-  "author_name": "String",
-  "key_takeaways": ["String"],
-  "publish_date": "YYYY-MM-DD"
-}'></textarea>
-            </div>
-
-            <!-- Questions Input Block -->
-            <div id="questions-container" class="hidden mt-4 animate-fade-in">
-                <div class="flex items-center justify-between mb-2">
-                    <label class="block text-[11px] font-medium text-accent uppercase tracking-wider">
-                        Ask Specific Questions
-                    </label>
-                    <span class="text-[10px] text-zinc-400">AI Extraction Query</span>
-                </div>
-                <div class="relative w-full">
-                    <input 
-                        id="questions-input" 
-                        type="text" 
-                        placeholder="" 
-                        class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition shadow-inner" 
-                    />
-                </div>
-                <!-- Preset Question Chips -->
-                <div id="qa-suggestions" class="flex flex-wrap gap-1.5 mt-2.5">
-                    <span class="text-[10px] text-zinc-400 flex items-center mr-1">Suggestions:</span>
-                    <button onclick="setQuestion('Who wrote this article?')" type="button" class="text-[10px] bg-zinc-100 dark:bg-zinc-800/80 hover:bg-accent/20 hover:text-accent dark:hover:bg-accent/20 text-zinc-600 dark:text-zinc-300 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700/50 transition">
-                        Who wrote this?
-                    </button>
-                    <button onclick="setQuestion('When was this published?')" type="button" class="text-[10px] bg-zinc-100 dark:bg-zinc-800/80 hover:bg-accent/20 hover:text-accent dark:hover:bg-accent/20 text-zinc-600 dark:text-zinc-300 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700/50 transition">
-                        When was this published?
-                    </button>
-                    <button onclick="setQuestion('What are the key takeaways?')" type="button" class="text-[10px] bg-zinc-100 dark:bg-zinc-800/80 hover:bg-accent/20 hover:text-accent dark:hover:bg-accent/20 text-zinc-600 dark:text-zinc-300 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700/50 transition">
-                        Key takeaways?
-                    </button>
-                    <button onclick="setQuestion('What is the main summary?')" type="button" class="text-[10px] bg-zinc-100 dark:bg-zinc-800/80 hover:bg-accent/20 hover:text-accent dark:hover:bg-accent/20 text-zinc-600 dark:text-zinc-300 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700/50 transition">
-                        Main summary?
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- SEPARATE OUTPUT PANEL -->
-        <div id="output-section" class="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-sm transition-all hidden">
-            <!-- Site Metadata Preview Chip -->
-            <div id="site-chip" class="hidden flex items-center justify-between bg-zinc-100/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 mb-6 transition-all animate-fade-in">
-                <div class="flex items-center gap-3 overflow-hidden">
-                    <img id="chip-favicon" src="" alt="favicon" class="w-5 h-5 rounded-sm shrink-0 bg-white p-0.5 object-contain">
-                    <span id="chip-domain" class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">example.com</span>
-                </div>
-                <a id="chip-link" href="#" target="_blank" rel="noopener noreferrer" class="p-1 text-zinc-400 hover:text-accent transition shrink-0" title="Open original website">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="7" y1="17" x2="17" y2="7"></line>
-                        <polyline points="7 7 17 7 17 17"></polyline>
-                    </svg>
-                </a>
-            </div>
-
-            <!-- Dynamic Multi-Format Output Display Area with Tabs -->
-            <div>
-                <div class="flex flex-wrap justify-between items-center mb-2 gap-2">
-                    <span id="output-label" class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Output</span>
-                    
-                    <!-- Dynamic Output Tabs Container -->
-                    <div id="output-tabs" class="hidden flex flex-wrap gap-1 bg-zinc-200/60 dark:bg-zinc-800/60 rounded-lg p-1">
-                        <!-- Output format tabs dynamically generated via JS -->
-                    </div>
-                </div>
-                
-                <!-- STANDARD CODE/TEXT BOX -->
-                <div 
-                    id="output-box" 
-                    class="w-full min-h-[160px] max-h-[450px] overflow-y-auto custom-scrollbar bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800/80 rounded-xl p-5 font-mono text-[13px] text-zinc-800 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed shadow-inner"
-                ></div>
-                
-                <!-- HUMAN READABLE RICH TEXT BOX (For Q&A) -->
-                <div 
-                    id="rich-text-output-box" 
-                    class="hidden w-full min-h-[160px] max-h-[450px] overflow-y-auto custom-scrollbar bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800/80 rounded-xl p-5 font-sans text-[14px] text-zinc-800 dark:text-zinc-200 whitespace-normal leading-relaxed shadow-inner"
-                ></div>
-
-                <!-- VISUAL OUTPUT BOX (For Branding/Images) -->
-                <div 
-                    id="visual-output-box" 
-                    class="hidden w-full min-h-[160px] max-h-[450px] overflow-y-auto custom-scrollbar bg-zinc-950 border border-zinc-800 rounded-xl p-0 font-sans shadow-inner relative"
-                ></div>
-
-            </div>
-
-            <!-- Action Buttons Stack -->
-            <div id="action-buttons-stack" class="hidden flex flex-col gap-4 mt-5 animate-fade-in">
-                <!-- Copy Button -->
-                <button 
-                    onclick="copyOutput()" 
-                    id="copy-btn"
-                    class="w-full border border-zinc-300 dark:border-zinc-700/80 hover:border-accent dark:hover:border-accent bg-zinc-50/50 dark:bg-zinc-900/40 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 text-zinc-900 dark:text-zinc-100 font-medium text-sm py-3.5 px-5 rounded-2xl transition-all flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.99]"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                    </svg>
-                    <span id="copy-btn-text">Copy Output</span>
-                </button>
-
-                <!-- Save File Button -->
-                <button 
-                    onclick="downloadFile()" 
-                    id="save-md-btn"
-                    class="w-full border border-zinc-200 dark:border-zinc-800/80 hover:border-accent dark:hover:border-accent bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium text-xs py-3 px-5 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    <span id="save-btn-text">Save as File</span>
-                </button>
-            </div>
-
-        </div>
-
-        <!-- Previous Extractions History Section -->
-        <section class="mt-12">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Recent Extractions
-                </h2>
-                <button onclick="clearHistory()" id="clear-history-btn" class="hidden text-xs text-zinc-400 hover:text-red-500 transition">
-                    Clear History
-                </button>
-            </div>
-
-            <div id="history-container" class="flex flex-col gap-3">
-                <p id="empty-history-text" class="text-xs text-zinc-400 dark:text-zinc-600 text-center py-6 italic border border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-2xl">
-                    No saved extractions yet. Convert a webpage above to build your history.
-                </p>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Footer -->
-    <footer class="py-8 text-center border-t border-zinc-100 dark:border-zinc-900/50 relative z-10">
-        <p class="text-xs font-medium text-zinc-400 dark:text-zinc-500">ReClaire • v1.5.0</p>
-        <p class="text-[11px] text-zinc-400/70 dark:text-zinc-600 mt-1">This web app is still in development</p>
-    </footer>
-
-    <!-- Bottom Sheet Modal Drawer -->
-    <div id="format-modal-backdrop" onclick="closeFormatModal(event)" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex flex-col justify-end">
-        <div id="format-modal-panel" class="bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 rounded-t-3xl p-6 sm:p-8 max-h-[85vh] overflow-y-auto w-full max-w-2xl mx-auto transform translate-y-full transition-transform duration-300 ease-out custom-scrollbar">
-            
-            <!-- Sheet Header -->
-            <div class="flex items-center justify-between mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="w-64 border-r border-black/10 dark:border-[#EFD09E]/20 bg-white dark:bg-black fixed md:static top-14 bottom-0 z-30 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col justify-between p-4 shrink-0">
+            <div class="space-y-6">
+                <!-- Playground Section -->
                 <div>
-                    <h3 class="text-lg font-bold text-zinc-900 dark:text-zinc-100">Format Selection</h3>
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Select one or multiple formats to extract simultaneously.</p>
+                    <h3 class="text-[11px] font-bold uppercase tracking-widest text-black/40 dark:text-[#EFD09E]/50 px-3 mb-2">Playground</h3>
+                    <nav class="space-y-1">
+                        <button onclick="setMode('scrape')" id="nav-scrape" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+                            <span>Scrape</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </button>
+                        <button onclick="setMode('crawl')" id="nav-crawl" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+                            <span>Crawl</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
+                        </button>
+                        <button onclick="setMode('map')" id="nav-map" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+                            <span>Map</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+                        </button>
+                        <button onclick="setMode('search')" id="nav-search" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+                            <span>Search</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        </button>
+                    </nav>
                 </div>
-                <button onclick="closeFormatModalForce()" class="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+
+                <!-- Research Preview Section -->
+                <div>
+                    <h3 class="text-[11px] font-bold uppercase tracking-widest text-black/40 dark:text-[#EFD09E]/50 px-3 mb-2">Research Preview</h3>
+                    <nav class="space-y-1">
+                        <button onclick="setMode('agent')" id="nav-agent" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+                            <span>Clara — agent</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                        </button>
+                    </nav>
+                </div>
             </div>
 
-            <!-- Format Grid Cards -->
+            <div class="text-[11px] text-black/40 dark:text-[#EFD09E]/40 px-3 py-2 border-t border-black/10 dark:border-[#EFD09E]/20">
+                ReClaire v1.5.0
+            </div>
+        </aside>
+
+        <!-- Main Workplace Screen -->
+        <main class="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 max-w-4xl mx-auto w-full transition-all">
+            
+            <!-- PLAYGROUND UI WORKSPACE -->
+            <div id="playground-view" class="space-y-8 animate-fade-in">
+                
+                <!-- INPUT PANEL -->
+                <div id="input-section" class="border border-black/10 dark:border-[#EFD09E]/20 rounded-2xl p-6 sm:p-8 panel-shadow transition-all bg-white dark:bg-black">
+                    
+                    <!-- Error Alert -->
+                    <div id="url-error-alert" class="hidden mb-5 p-3.5 rounded-xl border border-black dark:border-[#EFD09E] bg-black/5 dark:bg-[#EFD09E]/10 text-xs flex items-center justify-between animate-fade-in">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                            <span id="url-error-text">Please enter a valid input query.</span>
+                        </div>
+                        <button onclick="hideErrorAlert()" class="font-bold text-base">&times;</button>
+                    </div>
+
+                    <!-- Mode Selection Dropdown -->
+                    <div class="mb-6">
+                        <label class="block text-[11px] font-bold uppercase tracking-widest text-black/50 dark:text-[#EFD09E]/60 mb-2">Mode Selection</label>
+                        <select id="mode-select" onchange="setMode(this.value)" class="w-full bg-white dark:bg-black border border-black/20 dark:border-[#EFD09E]/40 text-black dark:text-[#EFD09E] text-xs font-semibold rounded-xl px-4 py-3 focus:outline-none focus:border-black dark:focus:border-[#EFD09E] transition cursor-pointer">
+                            <optgroup label="DISCOVER">
+                                <option value="search">Search</option>
+                            </optgroup>
+                            <optgroup label="EXTRACT">
+                                <option value="scrape" selected>Scrape</option>
+                            </optgroup>
+                            <optgroup label="CRAWL">
+                                <option value="map">Map</option>
+                                <option value="crawl">Crawl</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- Input Field Directly on Panel -->
+                    <div class="mb-6">
+                        <label id="input-label" for="target-url" class="block text-[11px] font-bold uppercase tracking-widest text-black/50 dark:text-[#EFD09E]/60 mb-2">
+                            Target Webpage URL
+                        </label>
+                        <div class="flex items-center w-full border-b border-black/30 dark:border-[#EFD09E]/40 focus-within:border-black dark:focus-within:border-[#EFD09E] py-2.5 transition-colors">
+                            <span id="url-prefix" class="text-xs font-semibold text-black/50 dark:text-[#EFD09E]/60 shrink-0 mr-1 select-none">https://</span>
+                            <input 
+                                id="target-url" 
+                                type="text" 
+                                placeholder="" 
+                                oninput="handleUrlInput(event)"
+                                class="w-full bg-transparent text-sm font-medium text-black dark:text-[#EFD09E] placeholder:text-black/30 dark:placeholder:text-[#EFD09E]/40 focus:outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Search Filter Buttons (Search Mode Only) -->
+                    <div id="search-filters-container" class="hidden mb-6 flex items-center gap-2">
+                        <button onclick="setSearchCategory('web')" id="filter-web" type="button" class="filter-btn text-xs px-4 py-2 rounded-xl border border-black dark:border-[#EFD09E] bg-black text-white dark:bg-[#EFD09E] dark:text-black font-semibold transition">Web</button>
+                        <button onclick="setSearchCategory('news')" id="filter-news" type="button" class="filter-btn text-xs px-4 py-2 rounded-xl border border-black/20 dark:border-[#EFD09E]/30 font-semibold transition">News</button>
+                        <button onclick="setSearchCategory('images')" id="filter-images" type="button" class="filter-btn text-xs px-4 py-2 rounded-xl border border-black/20 dark:border-[#EFD09E]/30 font-semibold transition">Images</button>
+                    </div>
+
+                    <!-- Format Selector Trigger (Scrape & Crawl Modes Only) -->
+                    <div id="format-trigger-container" class="mb-6">
+                        <button 
+                            type="button" 
+                            onclick="openFormatModal()"
+                            class="inline-flex items-center gap-2 bg-black/5 dark:bg-[#EFD09E]/10 border border-black/20 dark:border-[#EFD09E]/30 hover:border-black dark:hover:border-[#EFD09E] text-xs font-medium px-4 py-2.5 rounded-xl transition active:scale-[0.98]"
+                        >
+                            <svg class="opacity-70" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span class="opacity-60">Format:</span>
+                            <span id="format-trigger-label" class="font-bold">Markdown</span>
+                            <svg class="opacity-40 ml-1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Custom Inputs for Formats (JSON / Questions) -->
+                    <div id="json-schema-container" class="hidden mb-6 animate-fade-in">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-[11px] font-bold uppercase tracking-widest">JSON Schema</label>
+                            <button onclick="formatJsonInput()" class="text-[10px] underline">Format JSON</button>
+                        </div>
+                        <textarea id="json-schema-input" rows="3" class="w-full bg-black/5 dark:bg-[#EFD09E]/5 border border-black/20 dark:border-[#EFD09E]/30 rounded-xl p-3 font-mono text-xs focus:outline-none focus:border-black dark:focus:border-[#EFD09E] transition" placeholder='{ "article_title": "String", "key_takeaways": ["String"] }'></textarea>
+                    </div>
+
+                    <div id="questions-container" class="hidden mb-6 animate-fade-in">
+                        <label class="block text-[11px] font-bold uppercase tracking-widest mb-2">Target Question</label>
+                        <input id="questions-input" type="text" placeholder="" class="w-full bg-black/5 dark:bg-[#EFD09E]/5 border border-black/20 dark:border-[#EFD09E]/30 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-black dark:focus:border-[#EFD09E] transition"/>
+                    </div>
+
+                    <!-- Action Execution Button -->
+                    <button 
+                        onclick="executeAction()" 
+                        id="action-btn"
+                        class="w-full bg-black text-white dark:bg-[#EFD09E] dark:text-black font-semibold text-xs py-3.5 rounded-xl transition-all shadow-sm active:scale-[0.99] flex items-center justify-center gap-2"
+                    >
+                        Extract
+                    </button>
+                </div>
+
+                <!-- OUTPUT PANEL -->
+                <div id="output-section" class="border border-black/10 dark:border-[#EFD09E]/20 rounded-2xl p-6 sm:p-8 panel-shadow transition-all bg-white dark:bg-black hidden">
+                    
+                    <!-- Metadata Site Chip -->
+                    <div id="site-chip" class="hidden flex items-center justify-between border-b border-black/10 dark:border-[#EFD09E]/20 pb-4 mb-6">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <img id="chip-favicon" src="" alt="icon" class="w-4 h-4 rounded object-contain shrink-0">
+                            <span id="chip-domain" class="text-xs font-semibold truncate">example.com</span>
+                        </div>
+                        <a id="chip-link" href="#" target="_blank" rel="noopener noreferrer" class="p-1 hover:opacity-70 transition" title="Open Link">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+                        </a>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-4">
+                        <span id="output-label" class="text-xs font-bold uppercase tracking-widest opacity-60">Output</span>
+                        <div id="output-tabs" class="hidden flex flex-wrap gap-1"></div>
+                    </div>
+
+                    <!-- Direct On-Panel Content Container (Summary, Search, Q&A) -->
+                    <div id="direct-panel-output" class="hidden p-1 text-sm leading-relaxed font-sans animate-fade-in"></div>
+
+                    <!-- Code / Inner Box Container (JSON, HTML, Markdown, etc.) -->
+                    <div id="code-box-output" class="hidden w-full min-h-[160px] max-h-[450px] overflow-y-auto custom-scrollbar border border-black/10 dark:border-[#EFD09E]/20 rounded-xl p-4 font-mono text-xs whitespace-pre-wrap leading-relaxed"></div>
+
+                    <!-- Visual Dashboard Container (Branding, Images) -->
+                    <div id="visual-output-box" class="hidden w-full min-h-[160px] max-h-[450px] overflow-y-auto custom-scrollbar border border-black/10 dark:border-[#EFD09E]/20 rounded-xl p-4 font-sans"></div>
+
+                    <!-- Action Stack (Copy & Download) -->
+                    <div id="action-buttons-stack" class="hidden flex flex-col sm:flex-row gap-3 mt-6">
+                        <button onclick="copyOutput()" id="copy-btn" class="flex-1 border border-black dark:border-[#EFD09E] bg-black text-white dark:bg-[#EFD09E] dark:text-black font-semibold text-xs py-3 px-4 rounded-xl transition active:scale-[0.99] flex items-center justify-center gap-2">
+                            <span id="copy-btn-text">Copy Output</span>
+                        </button>
+                        <button onclick="downloadFile()" id="save-btn" class="flex-1 border border-black/20 dark:border-[#EFD09E]/30 hover:border-black dark:hover:border-[#EFD09E] font-semibold text-xs py-3 px-4 rounded-xl transition active:scale-[0.99] flex items-center justify-center gap-2">
+                            <span id="save-btn-text">Save as File</span>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- EXTRACTION HISTORY SECTION -->
+                <section class="mt-12">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xs font-bold uppercase tracking-widest opacity-60">Recent Extractions</h2>
+                        <button onclick="clearHistory()" id="clear-history-btn" class="hidden text-xs opacity-60 hover:opacity-100 hover:underline transition">Clear History</button>
+                    </div>
+                    <div id="history-container" class="space-y-3">
+                        <p id="empty-history-text" class="text-xs text-center py-6 italic border border-dashed border-black/10 dark:border-[#EFD09E]/20 rounded-2xl">
+                            No saved extractions yet.
+                        </p>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- RESEARCH PREVIEW AGENT CHAT VIEW -->
+            <div id="agent-view" class="hidden space-y-6 animate-fade-in flex flex-col h-[80vh]">
+                <div class="border border-black/10 dark:border-[#EFD09E]/20 rounded-2xl p-6 panel-shadow bg-white dark:bg-black flex-1 flex flex-col overflow-hidden">
+                    <div class="pb-4 border-b border-black/10 dark:border-[#EFD09E]/20 flex items-center justify-between">
+                        <div>
+                            <h2 class="font-bold text-sm">Clara — Autonomous Agent</h2>
+                            <p class="text-[11px] opacity-60">Outputs JSON, Structured Data & SVC web research responses</p>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 border border-black dark:border-[#EFD09E] rounded-full font-semibold">Preview</span>
+                    </div>
+
+                    <!-- Messages Container -->
+                    <div id="chat-messages" class="flex-1 overflow-y-auto custom-scrollbar my-4 space-y-4 pr-2">
+                        <div class="flex gap-3 text-xs">
+                            <div class="w-6 h-6 rounded-full bg-black text-white dark:bg-[#EFD09E] dark:text-black flex items-center justify-center font-bold text-[10px] shrink-0">C</div>
+                            <div class="border border-black/10 dark:border-[#EFD09E]/20 p-3 rounded-2xl max-w-xl">
+                                Hello! I'm Clara. Ask me to extract, structure, or transform web data into JSON or SVC formats.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Prompt Input Bar -->
+                    <div class="pt-3 border-t border-black/10 dark:border-[#EFD09E]/20 flex gap-2">
+                        <input id="chat-input" type="text" onkeydown="if(event.key==='Enter') sendChatMessage()" placeholder="Ask Clara to research or structure web data..." class="flex-1 bg-black/5 dark:bg-[#EFD09E]/5 border border-black/20 dark:border-[#EFD09E]/30 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-black dark:focus:border-[#EFD09E] transition"/>
+                        <button onclick="sendChatMessage()" class="bg-black text-white dark:bg-[#EFD09E] dark:text-black font-semibold text-xs px-5 py-2.5 rounded-xl active:scale-95 transition">Send</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Bottom Sheet Modal Drawer (Format Selection) -->
+    <div id="format-modal-backdrop" onclick="closeFormatModal(event)" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex flex-col justify-end">
+        <div id="format-modal-panel" class="bg-white dark:bg-black border-t border-black/20 dark:border-[#EFD09E]/30 rounded-t-3xl p-6 sm:p-8 max-h-[85vh] overflow-y-auto w-full max-w-2xl mx-auto transform translate-y-full transition-transform duration-300 ease-out custom-scrollbar">
+            
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-black/10 dark:border-[#EFD09E]/20">
+                <div>
+                    <h3 class="text-base font-bold">Format Selection</h3>
+                    <p class="text-xs opacity-60">Choose output formats to extract simultaneously.</p>
+                </div>
+                <button onclick="closeFormatModalForce()" class="p-1 rounded-full text-lg">&times;</button>
+            </div>
+
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-
-                <!-- Markdown Card (ALWAYS ON) -->
-                <div id="fmt-card-markdown" class="format-card border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-accent/80 shadow-sm opacity-80" title="Markdown is always required">
-                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
-                        <div class="space-y-1.5 w-full">
-                            <div class="h-2 w-3/4 bg-zinc-400/50 dark:bg-zinc-600/50 rounded"></div>
-                            <div class="h-2 w-1/2 bg-zinc-400/30 dark:bg-zinc-600/30 rounded"></div>
-                            <div class="h-2 w-5/6 bg-zinc-400/40 dark:bg-zinc-600/40 rounded"></div>
-                        </div>
-                        <span id="chk-markdown" class="absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Markdown</span>
-                        <svg class="text-zinc-400 w-3 h-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    </div>
+                <div id="fmt-card-markdown" class="border-2 rounded-xl p-3 bg-black/5 dark:bg-[#EFD09E]/10 border-black dark:border-[#EFD09E]">
+                    <span class="text-xs font-bold block">Markdown</span>
+                    <span class="text-[10px] opacity-60">Always Enabled</span>
                 </div>
 
-                <!-- Main Content Only Card -->
-                <div onclick="toggleFormatSelection('main_content')" id="fmt-card-main_content" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
-                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
-                        <div class="w-full h-full border border-dashed border-zinc-400/60 dark:border-zinc-600/60 rounded-lg p-2 flex flex-col justify-center gap-1.5">
-                            <span class="text-[9px] font-semibold text-zinc-600 dark:text-zinc-300 tracking-tight leading-none">Article Only</span>
-                            <div class="h-1.5 w-full bg-zinc-400/50 dark:bg-zinc-600/50 rounded"></div>
-                            <div class="h-1.5 w-3/4 bg-zinc-400/30 dark:bg-zinc-600/30 rounded"></div>
-                        </div>
-                        <span id="chk-main_content" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    </div>
-                    <div>
-                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 block">Main Content</span>
-                        <span class="text-[10px] text-zinc-400">Exclude menus & ads</span>
-                    </div>
+                <div onclick="toggleFormatSelection('main_content')" id="fmt-card-main_content" class="cursor-pointer border-2 rounded-xl p-3 transition border-black/10 dark:border-[#EFD09E]/20">
+                    <span class="text-xs font-bold block">Main Content</span>
+                    <span class="text-[10px] opacity-60">Exclude headers & ads</span>
                 </div>
 
-                <!-- JS Rendering Card -->
-                <div onclick="toggleFormatSelection('js_rendering')" id="fmt-card-js_rendering" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
-                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
-                        <svg class="text-zinc-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><path d="M8 10l-2 2 2 2"/><path d="M12 14l2-2-2-2"/></svg>
-                        <span id="chk-js_rendering" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    </div>
-                    <div>
-                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 block">JS Rendering</span>
-                        <span class="text-[10px] text-zinc-400">Playwright SPA support</span>
-                    </div>
+                <div onclick="toggleFormatSelection('js_rendering')" id="fmt-card-js_rendering" class="cursor-pointer border-2 rounded-xl p-3 transition border-black/10 dark:border-[#EFD09E]/20">
+                    <span class="text-xs font-bold block">JS Rendering</span>
+                    <span class="text-[10px] opacity-60">SPA Playwright support</span>
                 </div>
 
-                <!-- Structured JSON Card -->
-                <div onclick="toggleFormatSelection('json')" id="fmt-card-json" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
-                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden font-mono text-[9px] text-zinc-500">
-                        <code>{ "data": "..." }</code>
-                        <span id="chk-json" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    </div>
-                    <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Structured JSON</span>
+                <div onclick="toggleFormatSelection('json')" id="fmt-card-json" class="cursor-pointer border-2 rounded-xl p-3 transition border-black/10 dark:border-[#EFD09E]/20">
+                    <span class="text-xs font-bold block">Structured JSON</span>
+                    <span class="text-[10px] opacity-60">Custom schema data</span>
                 </div>
 
-                <!-- Summary Card -->
-                <div onclick="toggleFormatSelection('summary')" id="fmt-card-summary" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
-                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
-                        <svg class="text-zinc-500" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="3" y2="18"/></svg>
-                        <span id="chk-summary" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    </div>
-                    <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Summary</span>
+                <div onclick="toggleFormatSelection('summary')" id="fmt-card-summary" class="cursor-pointer border-2 rounded-xl p-3 transition border-black/10 dark:border-[#EFD09E]/20">
+                    <span class="text-xs font-bold block">Summary</span>
+                    <span class="text-[10px] opacity-60">AI narrative synthesis</span>
                 </div>
 
-                <!-- Cleaned HTML Card -->
-                <div onclick="toggleFormatSelection('html')" id="fmt-card-html" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
-                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden font-mono text-[9px] text-zinc-500">
-                        <code>&lt;html&gt;</code>
-                        <span id="chk-html" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    </div>
-                    <div>
-                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 block">Cleaned HTML</span>
-                        <span class="text-[10px] text-zinc-400">Sanitized raw HTML</span>
-                    </div>
+                <div onclick="toggleFormatSelection('html')" id="fmt-card-html" class="cursor-pointer border-2 rounded-xl p-3 transition border-black/10 dark:border-[#EFD09E]/20">
+                    <span class="text-xs font-bold block">Cleaned HTML</span>
+                    <span class="text-[10px] opacity-60">Sanitized HTML document</span>
                 </div>
 
-                <!-- Links Card -->
-                <div onclick="toggleFormatSelection('links')" id="fmt-card-links" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
-                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
-                        <svg class="text-zinc-500" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                        <span id="chk-links" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    </div>
-                    <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Page Links</span>
+                <div onclick="toggleFormatSelection('links')" id="fmt-card-links" class="cursor-pointer border-2 rounded-xl p-3 transition border-black/10 dark:border-[#EFD09E]/20">
+                    <span class="text-xs font-bold block">Page Links</span>
+                    <span class="text-[10px] opacity-60">Extracted hyperlink list</span>
                 </div>
 
-                <!-- Images Card -->
-                <div onclick="toggleFormatSelection('images')" id="fmt-card-images" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
-                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
-                        <svg class="text-zinc-500" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        <span id="chk-images" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    </div>
-                    <div>
-                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 block">Extracted Images</span>
-                        <span class="text-[10px] text-zinc-400">URLs & alt metadata</span>
-                    </div>
+                <div onclick="toggleFormatSelection('images')" id="fmt-card-images" class="cursor-pointer border-2 rounded-xl p-3 transition border-black/10 dark:border-[#EFD09E]/20">
+                    <span class="text-xs font-bold block">Extracted Images</span>
+                    <span class="text-[10px] opacity-60">Image URLs & metadata</span>
                 </div>
 
-                <!-- Branding Card -->
-                <div onclick="toggleFormatSelection('branding')" id="fmt-card-branding" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
-                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
-                        <svg class="text-zinc-500" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.72 1.7-1.63 0-.43-.17-.83-.44-1.12-.27-.29-.44-.7-.44-1.14 0-.91.74-1.65 1.65-1.65H16c3.31 0 6-2.69 6-6 0-4.97-4.48-9-10-9z"/></svg>
-                        <span id="chk-branding" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    </div>
-                    <div>
-                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 block">Brand Identity</span>
-                        <span class="text-[10px] text-zinc-400">Logos, colors & fonts</span>
-                    </div>
+                <div onclick="toggleFormatSelection('branding')" id="fmt-card-branding" class="cursor-pointer border-2 rounded-xl p-3 transition border-black/10 dark:border-[#EFD09E]/20">
+                    <span class="text-xs font-bold block">Brand Identity</span>
+                    <span class="text-[10px] opacity-60">Logos, colors & fonts</span>
                 </div>
 
-                <!-- Questions Card -->
-                <div onclick="toggleFormatSelection('questions')" id="fmt-card-questions" class="format-card cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex flex-col justify-between bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800">
-                    <div class="h-20 bg-zinc-200/80 dark:bg-zinc-800/80 rounded-xl mb-3 flex items-center justify-center p-2 relative overflow-hidden">
-                        <svg class="text-zinc-500" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <span id="chk-questions" class="hidden absolute top-2 right-2 w-4 h-4 rounded-full bg-accent text-white dark:text-zinc-950 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    </div>
-                    <div>
-                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 block">Targeted Q&A</span>
-                        <span class="text-[10px] text-zinc-400">Ask specific questions</span>
-                    </div>
+                <div onclick="toggleFormatSelection('questions')" id="fmt-card-questions" class="cursor-pointer border-2 rounded-xl p-3 transition border-black/10 dark:border-[#EFD09E]/20">
+                    <span class="text-xs font-bold block">Targeted Q&A</span>
+                    <span class="text-[10px] opacity-60">Ask specific query</span>
                 </div>
-
             </div>
 
-            <!-- Bottom Modal Apply Button -->
-            <div class="mt-8 pt-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
-                <button 
-                    onclick="closeFormatModalForce()"
-                    class="w-full sm:w-auto bg-zinc-900 dark:bg-zinc-100 hover:bg-accent dark:hover:bg-accent text-white dark:text-zinc-900 font-semibold text-sm px-8 py-3 rounded-xl transition shadow-md"
-                >
-                    Apply Formats
-                </button>
+            <div class="mt-6 pt-4 border-t border-black/10 dark:border-[#EFD09E]/20 flex justify-end">
+                <button onclick="closeFormatModalForce()" class="w-full sm:w-auto bg-black text-white dark:bg-[#EFD09E] dark:text-black font-semibold text-xs px-6 py-2.5 rounded-xl transition">Apply Formats</button>
             </div>
         </div>
     </div>
 
-    <!-- Client-Side JavaScript Logic -->
+    <!-- Script Application Logic -->
     <script>
-        // ============================================================
-        // ReClaire Frontend — API-aligned output/rendering layer
-        // ============================================================
-
         const htmlRoot = document.documentElement;
 
-        // --- Theme ---------------------------------------------------
-        if (
-            localStorage.theme === 'dark' ||
-            (!('theme' in localStorage) &&
-                window.matchMedia('(prefers-color-scheme: dark)').matches)
-        ) {
+        // --- Theme Engine ---
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             htmlRoot.classList.add('dark');
         } else {
             htmlRoot.classList.remove('dark');
@@ -511,7 +417,88 @@
             }
         }
 
-        // --- Format selection ---------------------------------------
+        // --- Navigation & Mode Switcher ---
+        let currentMode = 'scrape';
+        let searchCategory = 'web';
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        function setMode(modeKey) {
+            currentMode = modeKey;
+            
+            // Sync mode dropdown selection
+            const modeSelect = document.getElementById('mode-select');
+            if (modeSelect && modeSelect.value !== modeKey) {
+                modeSelect.value = modeKey;
+            }
+
+            // Sidebar highlight state
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-black', 'text-white', 'dark:bg-[#EFD09E]', 'dark:text-black');
+            });
+            const activeNav = document.getElementById(`nav-${modeKey}`);
+            if (activeNav) {
+                activeNav.classList.add('bg-black', 'text-white', 'dark:bg-[#EFD09E]', 'dark:text-black');
+            }
+
+            // View Switcher (Playground vs Agent)
+            const playgroundView = document.getElementById('playground-view');
+            const agentView = document.getElementById('agent-view');
+
+            if (modeKey === 'agent') {
+                playgroundView.classList.add('hidden');
+                agentView.classList.remove('hidden');
+                return;
+            } else {
+                playgroundView.classList.remove('hidden');
+                agentView.classList.add('hidden');
+            }
+
+            // Input Panel Layout Dynamic Modifications
+            const urlPrefix = document.getElementById('url-prefix');
+            const inputLabel = document.getElementById('input-label');
+            const targetUrlInput = document.getElementById('target-url');
+            const searchFiltersContainer = document.getElementById('search-filters-container');
+            const formatTriggerContainer = document.getElementById('format-trigger-container');
+
+            if (modeKey === 'search') {
+                urlPrefix.classList.add('hidden');
+                inputLabel.innerText = 'Search Query';
+                targetUrlInput.placeholder = 'Search the web...';
+                searchFiltersContainer.classList.remove('hidden');
+                formatTriggerContainer.classList.add('hidden');
+            } else if (modeKey === 'map') {
+                urlPrefix.classList.remove('hidden');
+                inputLabel.innerText = 'Target Webpage URL';
+                searchFiltersContainer.classList.add('hidden');
+                formatTriggerContainer.classList.add('hidden');
+            } else {
+                // Scrape & Crawl Modes
+                urlPrefix.classList.remove('hidden');
+                inputLabel.innerText = 'Target Webpage URL';
+                searchFiltersContainer.classList.add('hidden');
+                formatTriggerContainer.classList.remove('hidden');
+            }
+
+            updateActionButtonText();
+        }
+
+        function setSearchCategory(cat) {
+            searchCategory = cat;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-black', 'text-white', 'dark:bg-[#EFD09E]', 'dark:text-black');
+                btn.classList.add('border-black/20', 'dark:border-[#EFD09E]/30');
+            });
+            const selected = document.getElementById(`filter-${cat}`);
+            if (selected) {
+                selected.classList.add('bg-black', 'text-white', 'dark:bg-[#EFD09E]', 'dark:text-black');
+            }
+        }
+
+        // --- Format Selection Drawer Logic ---
         let selectedFormats = new Set(['markdown']);
 
         const formatDisplayNames = {
@@ -527,47 +514,22 @@
             questions: 'Q&A'
         };
 
-        const processStatusMessages = {
-            markdown: 'Converting to markdown...',
-            main_content: 'Extracting main content...',
-            js_rendering: 'Rendering JavaScript...',
-            json: 'Structuring JSON...',
-            summary: 'Summarising...',
-            html: 'Cleaning HTML...',
-            links: 'Finding links...',
-            images: 'Extracting images...',
-            branding: 'Extracting brand identity...',
-            questions: 'Answering question...'
-        };
-
-        function updateScrapeButtonText() {
-            const btn = document.getElementById('scrape-btn');
-            const formats = Array.from(selectedFormats).filter(f => f !== 'markdown');
-
-            if (!formats.length) {
-                btn.innerText = 'Extract';
-            } else if (formats.length === 1) {
-                const actionMap = {
-                    summary: 'Summarise',
-                    images: 'Extract Images',
-                    questions: 'Ask',
-                    json: 'Structure',
-                    html: 'Clean HTML',
-                    main_content: 'Extract Content',
-                    js_rendering: 'Render & Extract',
-                    links: 'Find Links',
-                    branding: 'Get Brand Info'
-                };
-                btn.innerText = actionMap[formats[0]] || 'Extract';
+        function updateActionButtonText() {
+            const btn = document.getElementById('action-btn');
+            if (currentMode === 'search') {
+                btn.innerText = `Search (${searchCategory.toUpperCase()})`;
+            } else if (currentMode === 'map') {
+                btn.innerText = 'Generate Site Map';
+            } else if (currentMode === 'crawl') {
+                btn.innerText = 'Crawl Website';
             } else {
-                btn.innerText = 'Start Scraping';
+                btn.innerText = 'Extract Data';
             }
         }
 
         function openFormatModal() {
             const backdrop = document.getElementById('format-modal-backdrop');
             const panel = document.getElementById('format-modal-panel');
-
             backdrop.classList.remove('pointer-events-none', 'opacity-0');
             backdrop.classList.add('opacity-100');
             panel.classList.remove('translate-y-full');
@@ -575,36 +537,27 @@
             document.body.style.overflow = 'hidden';
         }
 
-        function closeFormatModal(event) {
-            if (event.target.id === 'format-modal-backdrop') {
-                closeFormatModalForce();
-            }
+        function closeFormatModal(e) {
+            if (e.target.id === 'format-modal-backdrop') closeFormatModalForce();
         }
 
         function closeFormatModalForce() {
             const backdrop = document.getElementById('format-modal-backdrop');
             const panel = document.getElementById('format-modal-panel');
-
             panel.classList.remove('translate-y-0');
             panel.classList.add('translate-y-full');
             backdrop.classList.remove('opacity-100');
             backdrop.classList.add('opacity-0', 'pointer-events-none');
-
             document.body.style.overflow = '';
-
+            
             updateTriggerLabel();
             toggleCustomFormatInputs();
-            updateScrapeButtonText();
         }
 
-        function toggleFormatSelection(formatKey) {
-            if (formatKey === 'markdown') return;
-
-            if (selectedFormats.has(formatKey)) {
-                selectedFormats.delete(formatKey);
-            } else {
-                selectedFormats.add(formatKey);
-            }
+        function toggleFormatSelection(key) {
+            if (key === 'markdown') return;
+            if (selectedFormats.has(key)) selectedFormats.delete(key);
+            else selectedFormats.add(key);
 
             updateFormatModalUI();
         }
@@ -612,1915 +565,313 @@
         function updateFormatModalUI() {
             Object.keys(formatDisplayNames).forEach(key => {
                 const card = document.getElementById(`fmt-card-${key}`);
-                const chk = document.getElementById(`chk-${key}`);
-
                 if (!card) return;
-
                 if (selectedFormats.has(key)) {
-                    card.classList.add('border-accent/80', 'dark:border-accent/80');
-                    card.classList.remove('border-zinc-200', 'dark:border-zinc-800');
-                    if (chk) chk.classList.remove('hidden');
+                    card.classList.add('border-black', 'dark:border-[#EFD09E]', 'bg-black/5', 'dark:bg-[#EFD09E]/10');
+                    card.classList.remove('border-black/10', 'dark:border-[#EFD09E]/20');
                 } else {
-                    card.classList.remove('border-accent/80', 'dark:border-accent/80');
-                    card.classList.add('border-zinc-200', 'dark:border-zinc-800');
-                    if (chk) chk.classList.add('hidden');
+                    card.classList.remove('border-black', 'dark:border-[#EFD09E]', 'bg-black/5', 'dark:bg-[#EFD09E]/10');
+                    card.classList.add('border-black/10', 'dark:border-[#EFD09E]/20');
                 }
             });
         }
 
         function updateTriggerLabel() {
-            const triggerLabel = document.getElementById('format-trigger-label');
-            const array = Array.from(selectedFormats)
-                .map(k => formatDisplayNames[k] || k);
-
-            if (array.length === 1) {
-                triggerLabel.innerText = array[0];
-            } else if (array.length === 2) {
-                triggerLabel.innerText = `${array[0]}, ${array[1]}`;
-            } else {
-                triggerLabel.innerText = `${array[0]} +${array.length - 1} formats`;
-            }
+            const label = document.getElementById('format-trigger-label');
+            const arr = Array.from(selectedFormats).map(k => formatDisplayNames[k] || k);
+            if (arr.length === 1) label.innerText = arr[0];
+            else label.innerText = `${arr[0]} +${arr.length - 1} formats`;
         }
 
         function toggleCustomFormatInputs() {
-            const jsonContainer = document.getElementById('json-schema-container');
-            const questionsContainer = document.getElementById('questions-container');
-
-            jsonContainer.classList.toggle(
-                'hidden',
-                !selectedFormats.has('json')
-            );
-
-            questionsContainer.classList.toggle(
-                'hidden',
-                !selectedFormats.has('questions')
-            );
+            document.getElementById('json-schema-container').classList.toggle('hidden', !selectedFormats.has('json'));
+            document.getElementById('questions-container').classList.toggle('hidden', !selectedFormats.has('questions'));
         }
 
-        function setQuestion(text) {
-            const input = document.getElementById('questions-input');
-            if (!input) return;
-
-            input.value = text;
-            hideErrorAlert();
-
-            const suggestions = document.getElementById('qa-suggestions');
-            if (suggestions) suggestions.classList.add('hidden');
-        }
-
-        // --- Errors --------------------------------------------------
-        function showErrorAlert(message) {
+        function showErrorAlert(msg) {
             const alertBox = document.getElementById('url-error-alert');
-            const alertText = document.getElementById('url-error-text');
-            const scrapeBtn = document.getElementById('scrape-btn');
-
-            alertText.innerText = message;
+            document.getElementById('url-error-text').innerText = msg;
             alertBox.classList.remove('hidden');
-
-            scrapeBtn.classList.remove('animate-shake');
-            void scrapeBtn.offsetWidth;
-            scrapeBtn.classList.add('animate-shake');
-
-            if (navigator.vibrate) {
-                navigator.vibrate([40, 30, 40]);
-            }
         }
-
         function hideErrorAlert() {
             document.getElementById('url-error-alert').classList.add('hidden');
         }
 
-        function formatJsonInput() {
-            const input = document.getElementById('json-schema-input');
-
-            try {
-                if (input.value.trim()) {
-                    input.value = JSON.stringify(
-                        JSON.parse(input.value),
-                        null,
-                        2
-                    );
-                }
-            } catch {
-                showErrorAlert('Cannot format: the JSON you entered is invalid.');
-            }
-        }
-
         function handleUrlInput(e) {
             hideErrorAlert();
-
-            let val = e.target.value.trim();
-
-            if (val.startsWith('https://')) {
-                e.target.value = val.substring(8);
-            } else if (val.startsWith('http://')) {
-                e.target.value = val.substring(7);
+            if (currentMode !== 'search') {
+                let val = e.target.value.trim();
+                if (val.startsWith('https://')) e.target.value = val.substring(8);
+                else if (val.startsWith('http://')) e.target.value = val.substring(7);
             }
         }
 
-        function cleanInputUrl(rawUrl) {
-            if (!rawUrl) return '';
+        // --- Execution Logic & API Normalization ---
+        let extractedOutputs = {};
+        let activeTabKey = 'markdown';
 
-            rawUrl = rawUrl.trim();
+        async function executeAction() {
+            hideErrorAlert();
+            const inputVal = document.getElementById('target-url').value.trim();
+            if (!inputVal) {
+                showErrorAlert('Please enter a valid target input.');
+                return;
+            }
 
-            if (rawUrl.includes('](')) {
-                const parts = rawUrl.split('](');
-                let urlPart = parts[1];
+            const outputSection = document.getElementById('output-section');
+            const directPanel = document.getElementById('direct-panel-output');
+            const codeBox = document.getElementById('code-box-output');
+            const visualBox = document.getElementById('visual-output-box');
+            const actionBtn = document.getElementById('action-btn');
+            const siteChip = document.getElementById('site-chip');
+            const actionStack = document.getElementById('action-buttons-stack');
 
-                if (urlPart.endsWith(')')) {
-                    urlPart = urlPart.slice(0, -1);
+            actionBtn.disabled = true;
+            actionBtn.innerText = 'Processing...';
+
+            outputSection.classList.remove('hidden');
+            siteChip.classList.add('hidden');
+            actionStack.classList.add('hidden');
+            directPanel.classList.add('hidden');
+            visualBox.classList.add('hidden');
+
+            codeBox.classList.remove('hidden');
+            codeBox.innerText = 'Running ReClaire extraction...';
+
+            try {
+                if (currentMode === 'search') {
+                    // Simulated Search Response
+                    extractedOutputs = {
+                        search: `Search Query: "${inputVal}" [Category: ${searchCategory.toUpperCase()}]\n\n1. Result 1: ReClaire AI Documentation\n2. Result 2: Extraction Best Practices & Data Schema`
+                    };
+                } else {
+                    const fullUrl = `https://${inputVal}`;
+                    const renderApiUrl = 'https://reclaire-backend.onrender.com/scrape';
+
+                    const apiFormats = Array.from(selectedFormats).filter(f => f !== 'main_content' && f !== 'js_rendering');
+                    if (!apiFormats.includes('markdown')) apiFormats.unshift('markdown');
+
+                    const response = await fetch(renderApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            url: fullUrl,
+                            formats: apiFormats,
+                            use_js_fallback: selectedFormats.has('js_rendering'),
+                            only_main_content: selectedFormats.has('main_content'),
+                            web_augmented_qa: true
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok || !data.success) throw new Error(data?.detail || 'Extraction failed');
+
+                    extractedOutputs = {
+                        markdown: data.markdown || 'No Markdown extracted.',
+                        ...(data.summary && { summary: data.summary }),
+                        ...(data.json_data && { json: data.json_data }),
+                        ...(data.qa_answer && { questions: data.qa_answer }),
+                        ...(data.branding && { branding: data.branding }),
+                        ...(data.images && { images: data.images })
+                    };
+
+                    document.getElementById('chip-domain').innerText = data.metadata?.domain || inputVal;
+                    document.getElementById('chip-favicon').src = data.metadata?.favicon || `https://www.google.com/s2/favicons?domain=${inputVal}`;
+                    document.getElementById('chip-link').href = fullUrl;
+                    siteChip.classList.remove('hidden');
                 }
 
-                return urlPart.trim();
-            }
+                renderOutputTabs();
+                switchOutputTab(Object.keys(extractedOutputs)[0] || 'markdown');
+                actionStack.classList.remove('hidden');
 
-            if (rawUrl.startsWith('[') && rawUrl.endsWith(']')) {
-                return rawUrl.slice(1, -1).trim();
-            }
+                // Save to History
+                saveToHistory({
+                    url: inputVal,
+                    mode: currentMode,
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    outputs: extractedOutputs
+                });
 
-            return rawUrl;
-        }
-
-        function isValidURL(string) {
-            try {
-                const cleaned = cleanInputUrl(string);
-                const fullUrl = cleaned.startsWith('http')
-                    ? cleaned
-                    : `https://${cleaned}`;
-
-                const url = new URL(fullUrl);
-
-                return !!url.hostname && url.hostname.includes('.');
-            } catch {
-                return false;
+            } catch (err) {
+                codeBox.innerText = `Error: ${err.message}`;
+            } finally {
+                actionBtn.disabled = false;
+                updateActionButtonText();
             }
         }
 
-        // ============================================================
-        // OUTPUT STATE
-        // ============================================================
-
-        let extractedOutputs = {};
-        let rawApiData = null;
-        let activeOutputTab = 'markdown';
-
-        function toDisplayValue(value) {
-            if (value === null || value === undefined) return '';
-
-            if (typeof value === 'string') return value;
-
-            try {
-                return JSON.stringify(value, null, 2);
-            } catch {
-                return String(value);
-            }
-        }
-
+        // --- Output Rendering Modes ---
         function renderOutputTabs() {
             const tabsContainer = document.getElementById('output-tabs');
             tabsContainer.innerHTML = '';
-
             const keys = Object.keys(extractedOutputs);
 
-            tabsContainer.classList.toggle(
-                'hidden',
-                keys.length <= 1
-            );
+            if (keys.length <= 1) {
+                tabsContainer.classList.add('hidden');
+                return;
+            }
+            tabsContainer.classList.remove('hidden');
 
             keys.forEach(key => {
                 const btn = document.createElement('button');
-
-                btn.type = 'button';
+                btn.className = `px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition border ${key === activeTabKey ? 'bg-black text-white dark:bg-[#EFD09E] dark:text-black border-transparent' : 'border-black/10 dark:border-[#EFD09E]/20'}`;
+                btn.innerText = formatDisplayNames[key] || key;
                 btn.onclick = () => switchOutputTab(key);
-
-                btn.className =
-                    `px-3 py-1 rounded-md text-[11px] font-medium transition-all ${
-                        key === activeOutputTab
-                            ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm'
-                            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
-                    }`;
-
-                btn.innerText =
-                    formatDisplayNames[key] || key.toUpperCase();
-
                 tabsContainer.appendChild(btn);
             });
         }
 
-        // ============================================================
-        // SAFE HTML HELPERS
-        // ============================================================
-
-        function escapeHTML(value) {
-            return String(value ?? '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-
-        function safeHttpURL(value) {
-            try {
-                const url = new URL(value);
-
-                if (
-                    url.protocol !== 'http:' &&
-                    url.protocol !== 'https:'
-                ) {
-                    return '';
-                }
-
-                return url.href;
-            } catch {
-                return '';
-            }
-        }
-
-        function safeImageURL(value) {
-            return safeHttpURL(value);
-        }
-
-        // ============================================================
-        // MARKDOWN / TEXT RENDERING
-        // ============================================================
-
-        function renderRichText(markdownRaw) {
-            if (!markdownRaw) {
-                return `
-                    <div class="text-zinc-400">
-                        No answer was returned.
-                    </div>
-                `;
-            }
-
-            // This is intentionally lightweight. It is not intended
-            // to be a full Markdown parser.
-            let html = escapeHTML(markdownRaw);
-
-            html = html
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/(^|[\s])\*(.*?)\*(?=[\s,.!?]|$)/g, '$1<em>$2</em>')
-                .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800">$1</code>')
-                .replace(/\n\n/g, '</p><p class="mt-3">')
-                .replace(/\n/g, '<br>');
-
-            return `<p>${html}</p>`;
-        }
-
-        // ============================================================
-        // IMAGE GALLERY
-        // ============================================================
-
-        function normalizeImages(value) {
-            if (!value) return [];
-
-            let images = value;
-
-            if (typeof images === 'string') {
-                try {
-                    images = JSON.parse(images);
-                } catch {
-                    return [];
-                }
-            }
-
-            if (!Array.isArray(images)) return [];
-
-            return images
-                .map(item => {
-                    if (typeof item === 'string') {
-                        return {
-                            url: item,
-                            alt: ''
-                        };
-                    }
-
-                    if (item && typeof item === 'object') {
-                        return {
-                            url: item.url || item.src || '',
-                            alt: item.alt || '',
-                            title: item.title || '',
-                            width: item.width || '',
-                            height: item.height || ''
-                        };
-                    }
-
-                    return null;
-                })
-                .filter(item => item && safeImageURL(item.url));
-        }
-
-        function buildImagesHTML(images) {
-            const normalized = normalizeImages(images);
-
-            if (!normalized.length) {
-                return `
-                    <div class="p-8 text-center text-zinc-400">
-                        <div class="text-sm font-medium mb-1">
-                            No images found
-                        </div>
-                        <div class="text-xs">
-                            The page did not expose any usable image URLs.
-                        </div>
-                    </div>
-                `;
-            }
-
-            return `
-                <div class="bg-zinc-950 text-white p-4 sm:p-5">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="text-sm font-semibold">Extracted Images</h3>
-                            <p class="text-[11px] text-zinc-500 mt-0.5">
-                                ${normalized.length} image${normalized.length === 1 ? '' : 's'} found
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        ${normalized.map((image, index) => {
-                            const url = safeImageURL(image.url);
-                            const alt = escapeHTML(
-                                image.alt || `Extracted image ${index + 1}`
-                            );
-
-                            return `
-                                <a
-                                    href="${escapeHTML(url)}"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="group block rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 hover:border-zinc-600 transition"
-                                >
-                                    <div class="h-48 bg-white flex items-center justify-center overflow-hidden">
-                                        <img
-                                            src="${escapeHTML(url)}"
-                                            alt="${alt}"
-                                            loading="lazy"
-                                            class="max-w-full max-h-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
-                                            onerror="this.parentElement.innerHTML='<span class=\\'text-xs text-zinc-400 p-4\\'>Image could not be loaded</span>'"
-                                        >
-                                    </div>
-
-                                    <div class="p-3">
-                                        <div class="text-xs text-zinc-300 truncate">
-                                            ${alt}
-                                        </div>
-
-                                        <div class="text-[10px] text-zinc-600 mt-1 break-all line-clamp-2">
-                                            ${escapeHTML(url)}
-                                        </div>
-                                    </div>
-                                </a>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        // ============================================================
-        // BRANDING DASHBOARD
-        // ============================================================
-
-        function normalizeBranding(value) {
-            if (!value) return null;
-
-            if (typeof value === 'string') {
-                try {
-                    return JSON.parse(value);
-                } catch {
-                    return null;
-                }
-            }
-
-            return value;
-        }
-
-        function colorChip(value, label) {
-            if (!value) return '';
-
-            const escaped = escapeHTML(value);
-
-            return `
-                <div class="flex items-center gap-2">
-                    <span
-                        class="w-5 h-5 rounded-md border border-white/10 shrink-0"
-                        style="background:${escaped}"
-                    ></span>
-                    <div class="min-w-0">
-                        <div class="text-[10px] text-zinc-500">
-                            ${escapeHTML(label)}
-                        </div>
-                        <div class="text-xs text-zinc-200 truncate">
-                            ${escaped}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function buildBrandingHTML(value) {
-            const branding = normalizeBranding(value);
-
-            if (!branding) {
-                return `
-                    <div class="p-8 text-center text-zinc-400">
-                        Branding data could not be parsed.
-                    </div>
-                `;
-            }
-
-            const assets = branding.visual_assets || {};
-            const analysis = branding.brand_analysis || {};
-
-            const logo =
-                safeImageURL(assets.logo) ||
-                (
-                    Array.isArray(assets.logo_candidates)
-                        ? safeImageURL(assets.logo_candidates[0])
-                        : ''
-                );
-
-            const favicon = safeImageURL(assets.favicon);
-            const ogImage = safeImageURL(assets.og_image || assets.hero_image);
-            const twitterImage = safeImageURL(assets.twitter_image);
-
-            const colors = Array.isArray(analysis.color_palette)
-                ? analysis.color_palette
-                : [];
-
-            const fonts = Array.isArray(analysis.typography)
-                ? analysis.typography
-                : (
-                    Array.isArray(assets.fonts)
-                        ? assets.fonts
-                        : []
-                );
-
-            const cssVariables = assets.css_variables || {};
-
-            return `
-                <div class="bg-zinc-950 text-white p-5 sm:p-6">
-
-                    <div class="flex items-start justify-between gap-4 pb-5 border-b border-zinc-800">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center overflow-hidden shrink-0">
-                                ${
-                                    logo
-                                        ? `<img src="${escapeHTML(logo)}" class="max-w-full max-h-full object-contain" alt="Logo">`
-                                        : favicon
-                                            ? `<img src="${escapeHTML(favicon)}" class="w-8 h-8 object-contain" alt="Favicon">`
-                                            : `<span class="text-zinc-500 text-xs">No logo</span>`
-                                }
-                            </div>
-
-                            <div class="min-w-0">
-                                <h3 class="text-base font-semibold truncate">
-                                    ${escapeHTML(
-                                        analysis.brand_name ||
-                                        assets.site_name ||
-                                        assets.title ||
-                                        assets.domain ||
-                                        'Brand Identity'
-                                    )}
-                                </h3>
-
-                                <p class="text-[11px] text-zinc-500 truncate">
-                                    ${escapeHTML(assets.domain || '')}
-                                </p>
-                            </div>
-                        </div>
-
-                        ${
-                            assets.theme_color
-                                ? `
-                                    <div class="flex items-center gap-2 shrink-0">
-                                        <span class="text-[10px] text-zinc-500">
-                                            Theme
-                                        </span>
-                                        <span
-                                            class="w-6 h-6 rounded-lg border border-white/10"
-                                            style="background:${escapeHTML(assets.theme_color)}"
-                                        ></span>
-                                    </div>
-                                `
-                                : ''
-                        }
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
-
-                        <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-3">
-                                Favicon
-                            </div>
-
-                            <div class="h-20 bg-white rounded-lg flex items-center justify-center overflow-hidden">
-                                ${
-                                    favicon
-                                        ? `<img src="${escapeHTML(favicon)}" class="w-12 h-12 object-contain" alt="Favicon">`
-                                        : `<span class="text-xs text-zinc-400">Not detected</span>`
-                                }
-                            </div>
-                        </div>
-
-                        <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-3">
-                                Logo
-                            </div>
-
-                            <div class="h-20 bg-white rounded-lg flex items-center justify-center overflow-hidden">
-                                ${
-                                    logo
-                                        ? `<img src="${escapeHTML(logo)}" class="max-w-[85%] max-h-[70px] object-contain" alt="Logo">`
-                                        : `<span class="text-xs text-zinc-400">Not detected</span>`
-                                }
-                            </div>
-                        </div>
-
-                        <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-3">
-                                OG Image
-                            </div>
-
-                            <div class="h-20 bg-white rounded-lg flex items-center justify-center overflow-hidden">
-                                ${
-                                    ogImage
-                                        ? `<img src="${escapeHTML(ogImage)}" class="w-full h-full object-contain" alt="OG image">`
-                                        : `<span class="text-xs text-zinc-400">Not detected</span>`
-                                }
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-
-                        <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                            <h4 class="text-sm font-medium mb-3">
-                                Brand Profile
-                            </h4>
-
-                            <div class="space-y-3 text-xs">
-
-                                <div>
-                                    <div class="text-zinc-500 mb-1">Voice</div>
-                                    <div class="text-zinc-200">
-                                        ${escapeHTML(
-                                            analysis.brand_voice ||
-                                            'Not detected'
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div class="text-zinc-500 mb-1">Value Proposition</div>
-                                    <div class="text-zinc-200">
-                                        ${escapeHTML(
-                                            analysis.value_proposition ||
-                                            'Not detected'
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div class="text-zinc-500 mb-1">Target Audience</div>
-                                    <div class="text-zinc-200">
-                                        ${escapeHTML(
-                                            analysis.target_audience ||
-                                            'Not detected'
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div class="text-zinc-500 mb-1">Visual Style</div>
-                                    <div class="text-zinc-200">
-                                        ${escapeHTML(
-                                            analysis.visual_style ||
-                                            'Not detected'
-                                        )}
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-
-                        <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                            <h4 class="text-sm font-medium mb-3">
-                                Colors
-                            </h4>
-
-                            <div class="space-y-3">
-
-                                ${
-                                    assets.theme_color
-                                        ? colorChip(
-                                            assets.theme_color,
-                                            'Theme Color'
-                                        )
-                                        : ''
-                                }
-
-                                ${
-                                    colors.length
-                                        ? colors.map((color, i) => {
-                                            const value =
-                                                typeof color === 'string'
-                                                    ? color
-                                                    : color?.hex || color?.value || '';
-
-                                            return colorChip(
-                                                value,
-                                                `Palette ${i + 1}`
-                                            );
-                                        }).join('')
-                                        : `<div class="text-xs text-zinc-500">No palette was detected.</div>`
-                                }
-
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-
-                        <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                            <h4 class="text-sm font-medium mb-3">
-                                Typography
-                            </h4>
-
-                            ${
-                                fonts.length
-                                    ? `
-                                        <div class="flex flex-wrap gap-2">
-                                            ${fonts.map(font => `
-                                                <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">
-                                                    ${escapeHTML(
-                                                        typeof font === 'string'
-                                                            ? font
-                                                            : JSON.stringify(font)
-                                                    )}
-                                                </span>
-                                            `).join('')}
-                                        </div>
-                                    `
-                                    : `<div class="text-xs text-zinc-500">No font information detected.</div>`
-                            }
-                        </div>
-
-                        <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                            <h4 class="text-sm font-medium mb-3">
-                                Design Notes
-                            </h4>
-
-                            <p class="text-xs text-zinc-300 leading-relaxed">
-                                ${escapeHTML(
-                                    analysis.design_observations ||
-                                    'No additional design observations were returned.'
-                                )}
-                            </p>
-                        </div>
-
-                    </div>
-
-                    ${
-                        assets.description
-                            ? `
-                                <div class="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                                    <h4 class="text-sm font-medium mb-2">
-                                        Site Description
-                                    </h4>
-                                    <p class="text-xs text-zinc-400 leading-relaxed">
-                                        ${escapeHTML(assets.description)}
-                                    </p>
-                                </div>
-                            `
-                            : ''
-                    }
-
-                    ${
-                        twitterImage
-                            ? `
-                                <div class="mt-4 text-[10px] text-zinc-600 break-all">
-                                    Twitter image: ${escapeHTML(twitterImage)}
-                                </div>
-                            `
-                            : ''
-                    }
-
-                    ${
-                        Object.keys(cssVariables).length
-                            ? `
-                                <details class="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                                    <summary class="cursor-pointer text-xs text-zinc-400">
-                                        Detected CSS variables
-                                    </summary>
-
-                                    <pre class="mt-3 text-[10px] text-zinc-500 whitespace-pre-wrap overflow-x-auto">${escapeHTML(
-                                        JSON.stringify(cssVariables, null, 2)
-                                    )}</pre>
-                                </details>
-                            `
-                            : ''
-                    }
-
-                </div>
-            `;
-        }
-
-        // ============================================================
-        // TAB SWITCHING
-        // ============================================================
-
         function switchOutputTab(tabKey) {
-            if (!extractedOutputs[tabKey]) return;
-
-            activeOutputTab = tabKey;
-
-            const standardBox =
-                document.getElementById('output-box');
-
-            const richTextBox =
-                document.getElementById('rich-text-output-box');
-
-            const visualBox =
-                document.getElementById('visual-output-box');
-
-            standardBox.classList.add('hidden');
-            richTextBox.classList.add('hidden');
-            visualBox.classList.add('hidden');
-
-            if (tabKey === 'branding') {
-
-                visualBox.innerHTML =
-                    buildBrandingHTML(
-                        extractedOutputs[tabKey]
-                    );
-
-                visualBox.classList.remove('hidden');
-
-            } else if (tabKey === 'images') {
-
-                visualBox.innerHTML =
-                    buildImagesHTML(
-                        extractedOutputs[tabKey]
-                    );
-
-                visualBox.classList.remove('hidden');
-
-            } else if (
-                tabKey === 'questions' ||
-                tabKey === 'summary'
-            ) {
-
-                richTextBox.innerHTML =
-                    renderRichText(
-                        extractedOutputs[tabKey]
-                    );
-
-                richTextBox.classList.remove('hidden');
-
-            } else {
-
-                standardBox.innerText =
-                    toDisplayValue(
-                        extractedOutputs[tabKey]
-                    );
-
-                standardBox.classList.remove('hidden');
-            }
-
-            document.getElementById(
-                'output-label'
-            ).innerText =
-                `${formatDisplayNames[tabKey] || tabKey} Output`;
-
-            document.getElementById(
-                'copy-btn-text'
-            ).innerText =
-                `Copy as ${formatDisplayNames[tabKey] || tabKey}`;
-
-            document.getElementById(
-                'save-btn-text'
-            ).innerText =
-                `Save as .${getExtForFormat(tabKey)} File`;
-
+            activeTabKey = tabKey;
             renderOutputTabs();
-        }
 
-        function getExtForFormat(formatKey) {
-            switch (formatKey) {
-                case 'json':
-                case 'images':
-                case 'branding':
-                    return 'json';
+            const directPanel = document.getElementById('direct-panel-output');
+            const codeBox = document.getElementById('code-box-output');
+            const visualBox = document.getElementById('visual-output-box');
 
-                case 'html':
-                    return 'html';
-
-                case 'links':
-                case 'summary':
-                case 'questions':
-                    return 'txt';
-
-                default:
-                    return 'md';
-            }
-        }
-
-        // ============================================================
-        // RESPONSE NORMALIZATION
-        // ============================================================
-
-        function buildExtractedOutputs(data) {
-            const outputs = {};
-
-            if (data.markdown) {
-                outputs.markdown = data.markdown;
-            }
-
-            if (data.json_data !== undefined) {
-                outputs.json = data.json_data;
-            }
-
-            if (data.html) {
-                outputs.html = data.html;
-            }
-
-            if (data.summary) {
-                outputs.summary = data.summary;
-            }
-
-            if (data.links) {
-                outputs.links = Array.isArray(data.links)
-                    ? data.links.join('\n')
-                    : data.links;
-            }
-
-            if (data.images) {
-                outputs.images = data.images;
-            }
-
-            if (data.branding) {
-                outputs.branding = data.branding;
-            }
-
-            // IMPORTANT: this is the backend's real Q&A field.
-            if (data.qa_answer) {
-                outputs.questions = data.qa_answer;
-            }
-
-            // Expose backend errors instead of silently inventing
-            // successful content.
-            if (
-                data.qa_error &&
-                selectedFormats.has('questions')
-            ) {
-                outputs.questions =
-                    `Q&A Error:\n${data.qa_error}`;
-            }
-
-            if (
-                data.summary_error &&
-                selectedFormats.has('summary')
-            ) {
-                outputs.summary =
-                    `Summary Error:\n${data.summary_error}`;
-            }
-
-            if (
-                data.branding_error &&
-                selectedFormats.has('branding') &&
-                !outputs.branding
-            ) {
-                outputs.branding =
-                    JSON.stringify(
-                        {
-                            error: data.branding_error
-                        },
-                        null,
-                        2
-                    );
-            }
-
-            if (
-                data.images_error &&
-                selectedFormats.has('images') &&
-                !outputs.images
-            ) {
-                outputs.images = [];
-            }
-
-            // Preserve explicitly requested formats that returned
-            // no data without pretending that extraction succeeded.
-            selectedFormats.forEach(fmt => {
-                if (fmt === 'main_content' || fmt === 'js_rendering') {
-                    return;
-                }
-
-                if (
-                    !Object.prototype.hasOwnProperty.call(
-                        outputs,
-                        fmt
-                    )
-                ) {
-                    if (fmt === 'images') {
-                        outputs.images = [];
-                    } else if (fmt === 'branding') {
-                        outputs.branding = {
-                            status: 'No branding data returned.'
-                        };
-                    } else if (fmt === 'questions') {
-                        outputs.questions =
-                            'No Q&A answer was returned by the API.';
-                    } else {
-                        outputs[fmt] =
-                            `No ${formatDisplayNames[fmt] || fmt} output was returned.`;
-                    }
-                }
-            });
-
-            return outputs;
-        }
-
-        // ============================================================
-        // MAIN SCRAPE
-        // ============================================================
-
-        async function convertWebpage() {
-            hideErrorAlert();
-
-            const rawInput =
-                document.getElementById('target-url').value;
-
-            let cleaned =
-                cleanInputUrl(rawInput);
-
-            if (
-                cleaned &&
-                !cleaned.startsWith('http')
-            ) {
-                cleaned = `https://${cleaned}`;
-            }
-
-            const urlInput = cleaned;
-
-            const jsonSchemaStr =
-                document.getElementById(
-                    'json-schema-input'
-                ).value;
-
-            const questionStr =
-                document.getElementById(
-                    'questions-input'
-                ).value;
-
-            let jsonSchemaObj = null;
-
-            if (
-                selectedFormats.has('json') &&
-                jsonSchemaStr.trim()
-            ) {
-                try {
-                    jsonSchemaObj =
-                        JSON.parse(jsonSchemaStr);
-                } catch {
-                    showErrorAlert(
-                        'Invalid JSON Schema. Please make sure it is valid JSON.'
-                    );
-                    return;
-                }
-            }
-
-            if (
-                !urlInput ||
-                !isValidURL(urlInput)
-            ) {
-                showErrorAlert(
-                    'Invalid URL. Please enter a complete website link (e.g. example.com).'
-                );
-                return;
-            }
-
-            const outputSection =
-                document.getElementById(
-                    'output-section'
-                );
-
-            const standardBox =
-                document.getElementById(
-                    'output-box'
-                );
-
-            const richTextBox =
-                document.getElementById(
-                    'rich-text-output-box'
-                );
-
-            const visualBox =
-                document.getElementById(
-                    'visual-output-box'
-                );
-
-            const scrapeBtn =
-                document.getElementById(
-                    'scrape-btn'
-                );
-
-            const actionButtons =
-                document.getElementById(
-                    'action-buttons-stack'
-                );
-
-            const siteChip =
-                document.getElementById(
-                    'site-chip'
-                );
-
-            const outputTabs =
-                document.getElementById(
-                    'output-tabs'
-                );
-
-            scrapeBtn.disabled = true;
-            scrapeBtn.innerText = 'Processing...';
-
-            outputSection.classList.remove('hidden');
-            actionButtons.classList.add('hidden');
-            siteChip.classList.add('hidden');
-            outputTabs.classList.add('hidden');
-
-            richTextBox.classList.add('hidden');
+            directPanel.classList.add('hidden');
+            codeBox.classList.add('hidden');
             visualBox.classList.add('hidden');
-            standardBox.classList.remove('hidden');
 
-            outputSection.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
+            const val = extractedOutputs[tabKey];
 
-            try {
-
-                // Small visual progress sequence.
-                for (const fmt of selectedFormats) {
-
-                    standardBox.innerHTML = `
-                        <span class="text-accent animate-pulse font-sans">
-                            ${escapeHTML(
-                                processStatusMessages[fmt] ||
-                                `Processing ${fmt}...`
-                            )}
-                        </span>
-                    `;
-
-                    await new Promise(
-                        resolve => setTimeout(resolve, 250)
-                    );
-                }
-
-                standardBox.innerHTML = `
-                    <span class="text-accent animate-pulse font-sans">
-                        Finalizing extraction...
-                    </span>
-                `;
-
-                const renderApiUrl =
-                    'https://reclaire-backend.onrender.com/scrape';
-
-                // IMPORTANT:
-                // These are backend OPTIONS, not output formats.
-                // main_content -> only_main_content
-                // js_rendering -> use_js_fallback
-                //
-                // We therefore do NOT send those UI-only options
-                // as formats to the backend.
-                const apiFormats =
-                    Array.from(selectedFormats)
-                        .filter(fmt =>
-                            fmt !== 'main_content' &&
-                            fmt !== 'js_rendering'
-                        );
-
-                // Ensure Markdown is requested.
-                if (!apiFormats.includes('markdown')) {
-                    apiFormats.unshift('markdown');
-                }
-
-                const requestBody = {
-                    url: urlInput,
-
-                    formats: apiFormats,
-
-                    use_js_fallback:
-                        selectedFormats.has('js_rendering'),
-
-                    only_main_content:
-                        selectedFormats.has('main_content'),
-
-                    json_schema:
-                        jsonSchemaObj,
-
-                    // IMPORTANT:
-                    // Backend expects user_question, NOT question.
-                    user_question:
-                        selectedFormats.has('questions')
-                            ? (
-                                questionStr.trim() ||
-                                'Who wrote this?'
-                            )
-                            : null,
-
-                    web_augmented_qa: true
-                };
-
-                const response = await fetch(
-                    renderApiUrl,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type':
-                                'application/json'
-                        },
-                        body: JSON.stringify(
-                            requestBody
-                        )
-                    }
-                );
-
-                let data;
-
-                try {
-                    data = await response.json();
-                } catch {
-                    throw new Error(
-                        `API returned an invalid response (${response.status}).`
-                    );
-                }
-
-                // Never silently replace backend errors with fake data.
-                if (!response.ok) {
-                    throw new Error(
-                        data?.detail ||
-                        `API request failed with HTTP ${response.status}.`
-                    );
-                }
-
-                if (!data || data.success === false) {
-                    throw new Error(
-                        data?.detail ||
-                        'The API reported that extraction failed.'
-                    );
-                }
-
-                rawApiData = data;
-
-                extractedOutputs =
-                    buildExtractedOutputs(data);
-
-                const availableKeys =
-                    Object.keys(
-                        extractedOutputs
-                    );
-
-                if (!availableKeys.length) {
-                    throw new Error(
-                        'The API returned successfully, but no output data was found.'
-                    );
-                }
-
-                activeOutputTab =
-                    availableKeys.includes('markdown')
-                        ? 'markdown'
-                        : availableKeys[0];
-
-                switchOutputTab(
-                    activeOutputTab
-                );
-
-                // ----------------------------------------------------
-                // Site chip
-                // ----------------------------------------------------
-
-                const domain =
-                    data.metadata?.domain ||
-                    new URL(
-                        data.url || urlInput
-                    ).hostname;
-
-                const favicon =
-                    data.metadata?.favicon ||
-                    `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-
-                document.getElementById(
-                    'chip-domain'
-                ).innerText = domain;
-
-                document.getElementById(
-                    'chip-favicon'
-                ).src = favicon;
-
-                document.getElementById(
-                    'chip-link'
-                ).href =
-                    data.url || urlInput;
-
-                siteChip.classList.remove(
-                    'hidden'
-                );
-
-                actionButtons.classList.remove(
-                    'hidden'
-                );
-
-                // ----------------------------------------------------
-                // History
-                // ----------------------------------------------------
-
-                saveToHistory({
-                    url: data.url || urlInput,
-                    title:
-                        data.title ||
-                        data.metadata?.site_name ||
-                        domain,
-                    domain,
-                    favicon,
-                    selectedFormats:
-                        Array.from(
-                            selectedFormats
-                        ),
-                    outputs:
-                        extractedOutputs,
-                    timestamp:
-                        new Date().toLocaleTimeString(
-                            [],
-                            {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            }
-                        )
-                });
-
-                outputSection.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'nearest'
-                });
-
-            } catch (err) {
-
-                console.error(
-                    'ReClaire extraction error:',
-                    err
-                );
-
-                extractedOutputs = {};
-
-                standardBox.classList.remove(
-                    'hidden'
-                );
-
-                richTextBox.classList.add(
-                    'hidden'
-                );
-
-                visualBox.classList.add(
-                    'hidden'
-                );
-
-                standardBox.innerHTML = `
-                    <div class="text-red-500 dark:text-red-400 font-sans">
-                        <div class="font-semibold mb-1">
-                            Extraction failed
-                        </div>
-                        <div class="text-xs opacity-80 leading-relaxed">
-                            ${escapeHTML(
-                                err.message ||
-                                'Something went wrong while contacting the API.'
-                            )}
-                        </div>
-                    </div>
-                `;
-
-                outputTabs.classList.add(
-                    'hidden'
-                );
-
-            } finally {
-
-                scrapeBtn.disabled = false;
-                updateScrapeButtonText();
+            // Render on Panel directly for Summary, Search, or Questions
+            if (tabKey === 'summary' || tabKey === 'search' || tabKey === 'questions') {
+                directPanel.innerText = typeof val === 'object' ? JSON.stringify(val, null, 2) : val;
+                directPanel.classList.remove('hidden');
+            } else if (tabKey === 'branding') {
+                visualBox.innerHTML = renderBrandingUI(val);
+                visualBox.classList.remove('hidden');
+            } else {
+                codeBox.innerText = typeof val === 'object' ? JSON.stringify(val, null, 2) : val;
+                codeBox.classList.remove('hidden');
             }
         }
 
-        // ============================================================
-        // COPY / DOWNLOAD
-        // ============================================================
-
-        function getActiveOutputText() {
-            const value =
-                extractedOutputs[
-                    activeOutputTab
-                ];
-
-            return toDisplayValue(value);
+        function renderBrandingUI(data) {
+            if (!data) return '<p class="text-xs opacity-60">No branding data</p>';
+            return `
+                <div class="space-y-4">
+                    <h4 class="font-bold text-xs uppercase tracking-widest border-b border-black/10 dark:border-[#EFD09E]/20 pb-2">Brand Identity Analysis</h4>
+                    <pre class="text-[11px] font-mono leading-relaxed">${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
         }
 
         function copyOutput() {
-            const textToCopy =
-                getActiveOutputText();
-
-            if (!textToCopy) return;
-
-            navigator.clipboard
-                .writeText(textToCopy)
-                .then(() => {
-
-                    const copyText =
-                        document.getElementById(
-                            'copy-btn-text'
-                        );
-
-                    const label =
-                        formatDisplayNames[
-                            activeOutputTab
-                        ] ||
-                        activeOutputTab;
-
-                    copyText.innerText =
-                        'Copied to Clipboard!';
-
-                    setTimeout(() => {
-                        copyText.innerText =
-                            `Copy as ${label}`;
-                    }, 2000);
-                })
-                .catch(() => {
-                    showErrorAlert(
-                        'Clipboard access was blocked by the browser.'
-                    );
-                });
+            const val = extractedOutputs[activeTabKey];
+            const text = typeof val === 'object' ? JSON.stringify(val, null, 2) : val;
+            navigator.clipboard.writeText(text);
+            document.getElementById('copy-btn-text').innerText = 'Copied!';
+            setTimeout(() => document.getElementById('copy-btn-text').innerText = 'Copy Output', 2000);
         }
 
         function downloadFile() {
-            const textToDownload =
-                getActiveOutputText();
-
-            if (!textToDownload) return;
-
-            const domain =
-                document.getElementById(
-                    'chip-domain'
-                ).innerText ||
-                'extracted';
-
-            const ext =
-                getExtForFormat(
-                    activeOutputTab
-                );
-
-            const type =
-                ext === 'json'
-                    ? 'application/json'
-                    : ext === 'html'
-                        ? 'text/html'
-                        : 'text/plain';
-
-            const blob =
-                new Blob(
-                    [textToDownload],
-                    { type }
-                );
-
-            const blobUrl =
-                URL.createObjectURL(blob);
-
-            const a =
-                document.createElement('a');
-
-            a.href = blobUrl;
-            a.download =
-                `${domain.replace(
-                    /[^a-z0-9]/gi,
-                    '_'
-                ).toLowerCase()}_${activeOutputTab}.${ext}`;
-
-            document.body.appendChild(a);
+            const val = extractedOutputs[activeTabKey];
+            const text = typeof val === 'object' ? JSON.stringify(val, null, 2) : val;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `reclaire_${activeTabKey}.txt`;
             a.click();
-            a.remove();
-
-            URL.revokeObjectURL(
-                blobUrl
-            );
         }
 
-        // ============================================================
-        // HISTORY
-        // ============================================================
+        // --- Clara Agent Chat Script ---
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const query = input.value.trim();
+            if (!query) return;
 
+            const messages = document.getElementById('chat-messages');
+            
+            // User Message
+            messages.innerHTML += `
+                <div class="flex gap-3 text-xs justify-end">
+                    <div class="bg-black text-white dark:bg-[#EFD09E] dark:text-black p-3 rounded-2xl max-w-xl">
+                        ${query}
+                    </div>
+                </div>
+            `;
+
+            input.value = '';
+
+            // Simulated Agent Response
+            setTimeout(() => {
+                messages.innerHTML += `
+                    <div class="flex gap-3 text-xs">
+                        <div class="w-6 h-6 rounded-full bg-black text-white dark:bg-[#EFD09E] dark:text-black flex items-center justify-center font-bold text-[10px] shrink-0">C</div>
+                        <div class="border border-black/10 dark:border-[#EFD09E]/20 p-3 rounded-2xl max-w-xl space-y-2">
+                            <p>Here is the structured payload response:</p>
+                            <pre class="bg-black/5 dark:bg-[#EFD09E]/10 p-2 rounded-lg font-mono text-[10px]">{ "status": 200, "agent": "Clara", "query": "${query}", "format": "SVC_JSON" }</pre>
+                        </div>
+                    </div>
+                `;
+                messages.scrollTop = messages.scrollHeight;
+            }, 600);
+        }
+
+        // --- History Logic Fix ---
         function getHistory() {
             try {
-                return JSON.parse(
-                    localStorage.getItem(
-                        'reclaire_history'
-                    ) || '[]'
-                );
-            } catch {
-                return [];
-            }
+                return JSON.parse(localStorage.getItem('reclaire_history') || '[]');
+            } catch { return []; }
         }
 
         function saveToHistory(item) {
-            let history = getHistory();
-
-            history =
-                history.filter(
-                    h => h.url !== item.url
-                );
-
+            let history = getHistory().filter(h => h.url !== item.url);
             history.unshift(item);
-
-            localStorage.setItem(
-                'reclaire_history',
-                JSON.stringify(
-                    history.slice(0, 10)
-                )
-            );
-
+            localStorage.setItem('reclaire_history', JSON.stringify(history.slice(0, 10)));
             renderHistory();
         }
 
         function clearHistory() {
-            localStorage.removeItem(
-                'reclaire_history'
-            );
-
+            localStorage.removeItem('reclaire_history');
             renderHistory();
-        }
-
-        function deleteHistoryItem(url) {
-            const history =
-                getHistory().filter(
-                    h => h.url !== url
-                );
-
-            localStorage.setItem(
-                'reclaire_history',
-                JSON.stringify(history)
-            );
-
-            renderHistory();
-        }
-
-        function loadHistoryItem(url) {
-            const history =
-                getHistory();
-
-            const item =
-                history.find(
-                    h => h.url === url
-                );
-
-            if (!item) return;
-
-            let displayUrl =
-                item.url;
-
-            if (
-                displayUrl.startsWith(
-                    'https://'
-                )
-            ) {
-                displayUrl =
-                    displayUrl.substring(8);
-            } else if (
-                displayUrl.startsWith(
-                    'http://'
-                )
-            ) {
-                displayUrl =
-                    displayUrl.substring(7);
-            }
-
-            document.getElementById(
-                'target-url'
-            ).value = displayUrl;
-
-            if (item.selectedFormats) {
-
-                selectedFormats =
-                    new Set(
-                        item.selectedFormats
-                    );
-
-                selectedFormats.add(
-                    'markdown'
-                );
-
-                updateFormatModalUI();
-                updateTriggerLabel();
-                toggleCustomFormatInputs();
-                updateScrapeButtonText();
-            }
-
-            extractedOutputs =
-                item.outputs || {
-                    markdown:
-                        item.markdown || ''
-                };
-
-            rawApiData = null;
-
-            document.getElementById(
-                'output-section'
-            ).classList.remove(
-                'hidden'
-            );
-
-            const keys =
-                Object.keys(
-                    extractedOutputs
-                );
-
-            if (keys.length) {
-
-                activeOutputTab =
-                    keys.includes('markdown')
-                        ? 'markdown'
-                        : keys[0];
-
-                switchOutputTab(
-                    activeOutputTab
-                );
-            }
-
-            document.getElementById(
-                'chip-domain'
-            ).innerText =
-                item.domain || '';
-
-            document.getElementById(
-                'chip-favicon'
-            ).src =
-                item.favicon || '';
-
-            document.getElementById(
-                'chip-link'
-            ).href =
-                item.url || '#';
-
-            document.getElementById(
-                'site-chip'
-            ).classList.remove(
-                'hidden'
-            );
-
-            document.getElementById(
-                'action-buttons-stack'
-            ).classList.remove(
-                'hidden'
-            );
-
-            document.getElementById(
-                'output-section'
-            ).scrollIntoView({
-                top: 0,
-                behavior: 'smooth'
-            });
         }
 
         function renderHistory() {
-            const history =
-                getHistory();
-
-            const container =
-                document.getElementById(
-                    'history-container'
-                );
-
-            const clearBtn =
-                document.getElementById(
-                    'clear-history-btn'
-                );
+            const history = getHistory();
+            const container = document.getElementById('history-container');
+            const clearBtn = document.getElementById('clear-history-btn');
 
             if (!history.length) {
-
-                container.innerHTML = `
-                    <p class="text-xs text-zinc-400 dark:text-zinc-600 text-center py-6 italic border border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-2xl">
-                        No saved extractions yet. Convert a webpage above to build your history.
-                    </p>
-                `;
-
-                clearBtn.classList.add(
-                    'hidden'
-                );
-
+                container.innerHTML = `<p class="text-xs text-center py-6 italic border border-dashed border-black/10 dark:border-[#EFD09E]/20 rounded-2xl">No saved extractions yet.</p>`;
+                clearBtn.classList.add('hidden');
                 return;
             }
 
-            clearBtn.classList.remove(
-                'hidden'
-            );
-
-            container.innerHTML =
-                history.map(
-                    (item, index) => {
-
-                        const safeUrl =
-                            escapeHTML(
-                                item.url || ''
-                            );
-
-                        const safeTitle =
-                            escapeHTML(
-                                item.title ||
-                                item.domain ||
-                                'Extraction'
-                            );
-
-                        const safeDomain =
-                            escapeHTML(
-                                item.domain || ''
-                            );
-
-                        const favicon =
-                            safeImageURL(
-                                item.favicon || ''
-                            );
-
-                        return `
-                            <div class="bg-white/80 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-zinc-300 dark:hover:border-zinc-700 transition animate-fade-in">
-
-                                <div class="flex items-start gap-3 overflow-hidden">
-
-                                    <img
-                                        src="${escapeHTML(favicon)}"
-                                        class="w-5 h-5 rounded-sm shrink-0 mt-0.5 object-contain bg-white p-0.5"
-                                        alt="icon"
-                                        onerror="this.style.visibility='hidden'"
-                                    >
-
-                                    <div class="overflow-hidden">
-
-                                        <h3 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                                            ${safeTitle}
-                                        </h3>
-
-                                        <p class="text-[11px] text-zinc-400 dark:text-zinc-500 truncate">
-                                            ${safeDomain} • ${escapeHTML(item.timestamp || '')}
-                                        </p>
-
-                                        <div class="flex flex-wrap items-center gap-1.5 mt-2">
-
-                                            ${(item.selectedFormats || ['markdown'])
-                                                .map(fmt => `
-                                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/50">
-                                                        ${escapeHTML(
-                                                            formatDisplayNames[fmt] ||
-                                                            fmt
-                                                        )}
-                                                    </span>
-                                                `)
-                                                .join('')
-                                            }
-
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
-
-                                    <button
-                                        onclick="loadHistoryItem(${JSON.stringify(item.url)})"
-                                        class="px-3 py-1.5 text-xs font-medium bg-zinc-100 dark:bg-zinc-800 hover:bg-accent dark:hover:bg-accent hover:text-zinc-900 text-zinc-700 dark:text-zinc-300 rounded-lg transition"
-                                    >
-                                        Load
-                                    </button>
-
-                                    <button
-                                        onclick="deleteHistoryItem(${JSON.stringify(item.url)})"
-                                        class="p-1.5 text-zinc-400 hover:text-red-500 transition"
-                                        title="Delete from history"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M3 6h18"/>
-                                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-2-2-2V6"/>
-                                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                                        </svg>
-                                    </button>
-
-                                </div>
-                            </div>
-                        `;
-                    }
-                ).join('');
+            clearBtn.classList.remove('hidden');
+            container.innerHTML = history.map(item => `
+                <div class="border border-black/10 dark:border-[#EFD09E]/20 rounded-xl p-3.5 flex items-center justify-between text-xs bg-white dark:bg-black">
+                    <div class="truncate">
+                        <span class="font-bold block truncate">${item.url}</span>
+                        <span class="text-[10px] opacity-60 uppercase">${item.mode} • ${item.timestamp}</span>
+                    </div>
+                    <button onclick="loadHistoryItem('${item.url}')" class="px-3 py-1 rounded-lg border border-black dark:border-[#EFD09E] font-semibold text-[10px]">Load</button>
+                </div>
+            `).join('');
         }
 
-        // ============================================================
-        // INITIALIZATION
-        // ============================================================
+        function loadHistoryItem(url) {
+            const history = getHistory();
+            const item = history.find(h => h.url === url);
+            if (!item) return;
 
-        document.addEventListener(
-            'DOMContentLoaded',
-            () => {
-
-                renderHistory();
-                updateFormatModalUI();
-                updateTriggerLabel();
-                toggleCustomFormatInputs();
-                updateScrapeButtonText();
-
-                startURLPlaceholderAnimation();
-                startQuestionPlaceholderAnimation();
-            }
-        );
-
-        // ============================================================
-        // PLACEHOLDER ANIMATIONS
-        // ============================================================
-
-        const placeholders = [
-            'github.dev/ReClaire',
-            'techcrunch.com',
-            'wikipedia.org/wiki',
-            'example.com/documentation'
-        ];
-
-        let phIndex = 0;
-        let charIndex = 0;
-        let isDeleting = false;
-
-        function startURLPlaceholderAnimation() {
-
-            const inputField =
-                document.getElementById(
-                    'target-url'
-                );
-
-            if (!inputField) return;
-
-            function tick() {
-
-                const currentText =
-                    placeholders[phIndex];
-
-                if (isDeleting) {
-
-                    inputField.placeholder =
-                        currentText.substring(
-                            0,
-                            charIndex - 1
-                        );
-
-                    charIndex--;
-
-                } else {
-
-                    inputField.placeholder =
-                        currentText.substring(
-                            0,
-                            charIndex + 1
-                        );
-
-                    charIndex++;
-                }
-
-                let speed =
-                    isDeleting
-                        ? 40
-                        : 80;
-
-                if (
-                    !isDeleting &&
-                    charIndex ===
-                        currentText.length
-                ) {
-
-                    speed = 2000;
-                    isDeleting = true;
-
-                } else if (
-                    isDeleting &&
-                    charIndex === 0
-                ) {
-
-                    isDeleting = false;
-                    phIndex =
-                        (phIndex + 1) %
-                        placeholders.length;
-
-                    speed = 500;
-                }
-
-                setTimeout(
-                    tick,
-                    speed
-                );
-            }
-
-            setTimeout(
-                tick,
-                500
-            );
+            document.getElementById('target-url').value = item.url;
+            setMode(item.mode || 'scrape');
+            extractedOutputs = item.outputs || {};
+            
+            document.getElementById('output-section').classList.remove('hidden');
+            renderOutputTabs();
+            switchOutputTab(Object.keys(extractedOutputs)[0] || 'markdown');
         }
 
-        const questionPlaceholders = [
-            'Who wrote this?',
-            'When was this published?',
-            'What are the key takeaways?',
-            'What is the main summary?'
-        ];
-
-        let qPhIndex = 0;
-        let qCharIndex = 0;
-        let qIsDeleting = false;
-
-        function startQuestionPlaceholderAnimation() {
-
-            const qInput =
-                document.getElementById(
-                    'questions-input'
-                );
-
-            if (!qInput) return;
-
-            function tick() {
-
-                if (qInput.value.trim()) {
-
-                    setTimeout(
-                        tick,
-                        1000
-                    );
-
-                    return;
-                }
-
-                const currentText =
-                    questionPlaceholders[
-                        qPhIndex
-                    ];
-
-                if (qIsDeleting) {
-
-                    qInput.placeholder =
-                        currentText.substring(
-                            0,
-                            qCharIndex - 1
-                        );
-
-                    qCharIndex--;
-
-                } else {
-
-                    qInput.placeholder =
-                        currentText.substring(
-                            0,
-                            qCharIndex + 1
-                        );
-
-                    qCharIndex++;
-                }
-
-                let speed =
-                    qIsDeleting
-                        ? 40
-                        : 75;
-
-                if (
-                    !qIsDeleting &&
-                    qCharIndex ===
-                        currentText.length
-                ) {
-
-                    speed = 2200;
-                    qIsDeleting = true;
-
-                } else if (
-                    qIsDeleting &&
-                    qCharIndex === 0
-                ) {
-
-                    qIsDeleting = false;
-
-                    qPhIndex =
-                        (qPhIndex + 1) %
-                        questionPlaceholders.length;
-
-                    speed = 400;
-                }
-
-                setTimeout(
-                    tick,
-                    speed
-                );
-            }
-
-            setTimeout(
-                tick,
-                800
-            );
-        }
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            renderHistory();
+            setMode('scrape');
+        });
     </script>
 </body>
 </html>
