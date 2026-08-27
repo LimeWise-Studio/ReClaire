@@ -8,3 +8,5 @@ markdownify
 pypdf
 playwright
 google-genai
+ddg-search
+
