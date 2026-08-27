@@ -1535,14 +1535,14 @@ async def search_web(options: SearchOptions):
         )
         
     try:
-    with DDGS() as ddgs:
-        cat = getattr(options, "category", "web")
-        if cat == "news":
-            results = list(ddgs.news(options.query, max_results=options.limit))
-        elif cat == "images":
-            results = list(ddgs.images(options.query, max_results=options.limit))
-        else:
-            results = list(ddgs.text(options.query, max_results=options.limit))
+        with DDGS() as ddgs:
+            cat = getattr(options, "category", "web")
+            if cat == "news":
+                results = list(ddgs.news(options.query, max_results=options.limit))
+            elif cat == "images":
+                results = list(ddgs.images(options.query, max_results=options.limit))
+            else:
+                results = list(ddgs.text(options.query, max_results=options.limit))
 
     return {
         "success": True,
