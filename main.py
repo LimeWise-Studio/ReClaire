@@ -123,6 +123,26 @@ class BatchScrapeRequest(BaseModel):
     urls: List[str]
     options: Optional[ScrapeOptions] = None
 
+class MapOptions(BaseModel):
+    url: str
+    limit: int = Field(100, description="Maximum number of links to map.")
+    include_subdomains: bool = False
+
+class CrawlOptions(BaseModel):
+    url: str
+    limit: int = Field(5, description="Maximum number of pages to recursively crawl.")
+    scrape_options: Optional[ScrapeOptions] = None
+
+class SearchOptions(BaseModel):
+    query: str
+    limit: int = Field(5, description="Number of links to return.")
+
+class AgentOptions(BaseModel):
+    prompt: str
+    urls: Optional[List[str]] = Field(None, description="Provide seed URLs, otherwise Clara searches the web automatically.")
+    output_format: str = Field("json", description="Choose 'json' or 'csv'")
+    json_schema: Optional[Dict[str, Any]] = None
+
 
 # ============================================================
 # CONSTANTS
@@ -1632,6 +1652,175 @@ async def scrape_engine(
     result["requested_formats"] = req_formats
 
     return result
+
+# ============================================================
+# MAP, CRAWL, SEARCH & AGENT (CLARA)
+# ============================================================
+
+@app.post("/map")
+async def map_url(options: MapOptions):
+    """
+    Crawls the target URL and maps out internal links.
+    """
+    clean_url = clean_input_url(options.url)
+    parsed_base = urlparse(clean_url)
+    
+    try:
+        async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=15.0) as client:
+            res = await client.get(clean_url)
+            res.raise_for_status()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Map failed to fetch URL: {exc}")
+
+    soup = BeautifulSoup(res.text, "html.parser")
+    links = set()
+    
+    for a in soup.find_all("a", href=True):
+        absolute = absolute_url(clean_url, a["href"])
+        if absolute:
+            parsed_link = urlparse(absolute)
+            if options.include_subdomains:
+                if parsed_link.hostname and parsed_base.hostname in parsed_link.hostname:
+                    links.add(absolute)
+            else:
+                if parsed_link.hostname == parsed_base.hostname:
+                    links.add(absolute)
+                    
+    return {
+        "success": True, 
+        "url": clean_url, 
+        "links": list(links)[:options.limit]
+    }
+
+
+@app.post("/crawl")
+async def crawl_url(options: CrawlOptions):
+    """
+    Discovers links via /map, then concurrently scrapes them up to the limit.
+    """
+    map_res = await map_url(MapOptions(url=options.url, limit=options.limit))
+    target_urls = map_res["links"]
+    
+    if not target_urls:
+        target_urls = [clean_input_url(options.url)]
+        
+    tasks = []
+    scrape_opts = options.scrape_options or ScrapeOptions(url="")
+    
+    # Handle Pydantic v1 vs v2 dict conversion
+    base_opts_dict = scrape_opts.model_dump() if hasattr(scrape_opts, "model_dump") else scrape_opts.dict()
+    
+    for u in target_urls:
+        opts_dict = base_opts_dict.copy()
+        opts_dict["url"] = u
+        tasks.append(scrape_engine(**opts_dict))
+        
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    successful = [r for r in results if isinstance(r, dict) and r.get("success")]
+    errors = [str(r) for r in results if isinstance(r, Exception)]
+    
+    return {
+        "success": True, 
+        "crawled": len(successful), 
+        "data": successful, 
+        "errors": errors
+    }
+
+
+@app.post("/search")
+async def search_web(options: SearchOptions):
+    """
+    Queries the web and returns top matching links and snippets.
+    """
+    try:
+        from duckduckgo_search import DDGS
+    except ImportError:
+        raise HTTPException(
+            status_code=500, 
+            detail="Package missing. Please run: pip install duckduckgo-search"
+        )
+        
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(options.query, max_results=options.limit))
+            
+        return {
+            "success": True, 
+            "query": options.query, 
+            "results": results
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Search failed: {exc}")
+
+
+@app.post("/agent")
+async def clara_agent(options: AgentOptions):
+    """
+    Clara: Autonomous Web Agent for ReClaire. Searches, scrapes, and outputs JSON or CSV.
+    """
+    require_gemini()
+    target_urls = options.urls or []
+    
+    # 1. Autonomous Search (If no URLs provided)
+    if not target_urls:
+        search_res = await search_web(SearchOptions(query=options.prompt, limit=3))
+        target_urls = [r.get("href") for r in search_res.get("results", []) if r.get("href")]
+        
+    if not target_urls:
+        raise HTTPException(status_code=400, detail="Clara could not find any relevant URLs to research.")
+        
+    # 2. Concurrent Scraping
+    tasks = [scrape_engine(url=u, formats=["markdown"], only_main_content=True) for u in target_urls[:3]]
+    scraped_results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    valid_contexts = [
+        f"Source: {res['url']}\n\n{res.get('markdown', '')}" 
+        for res in scraped_results if isinstance(res, dict) and res.get("success")
+    ]
+            
+    aggregated_context = "\n\n---\n\n".join(valid_contexts)
+    
+    # 3. CSV Output (Svc)
+    if options.output_format.lower() == "csv":
+        prompt = f"""
+You are Clara, an autonomous research agent for ReClaire.
+Extract the information requested by the user and format it STRICTLY as valid CSV.
+Return ONLY the raw CSV text, including headers. Do not use markdown wrappers.
+
+User Request: {options.prompt}
+Gathered Web Sources:
+{aggregated_context[:30000]}
+"""
+        response = gemini_client.models.generate_content(model="gemini-3.6-flash", contents=prompt)
+        csv_text = response.text.strip()
+        
+        # Strip markdown formatting if Gemini includes it
+        csv_text = re.sub(r"^```(?:csv)?\s*", "", csv_text, flags=re.IGNORECASE)
+        csv_text = re.sub(r"\s*```$", "", csv_text)
+        
+        return {"agent": "Clara", "format": "csv", "data": csv_text}
+        
+    # 4. JSON Output
+    else:
+        schema = options.json_schema or {"result": "string"}
+        prompt = f"""
+You are Clara, an autonomous research agent for ReClaire.
+Synthesize the gathered web content to fulfill the user's request.
+
+User Request: {options.prompt}
+Gathered Web Sources:
+{aggregated_context[:30000]}
+
+You MUST return valid JSON adhering strictly to this schema:
+{json.dumps(schema, ensure_ascii=False)}
+"""
+        response = gemini_client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
+        )
+        return {"agent": "Clara", "format": "json", "data": parse_json_response(response.text)}
 
 
 # ============================================================
