@@ -136,6 +136,7 @@ class CrawlOptions(BaseModel):
 class SearchOptions(BaseModel):
     query: str
     limit: int = Field(5, ge=1, le=25, description="Number of links to return.")
+    category: str = "web"
 
 class AgentOptions(BaseModel):
     prompt: str
@@ -1534,27 +1535,37 @@ async def search_web(options: SearchOptions):
         )
         
     try:
-        with DDGS() as ddgs:
+    with DDGS() as ddgs:
+        cat = getattr(options, "category", "web")
+        if cat == "news":
+            results = list(ddgs.news(options.query, max_results=options.limit))
+        elif cat == "images":
+            results = list(ddgs.images(options.query, max_results=options.limit))
+        else:
             results = list(ddgs.text(options.query, max_results=options.limit))
-            
-        return {
-            "success": True, 
-            "query": options.query, 
-            "results": results
-        }
+
+    return {
+        "success": True,
+        "query": options.query,
+        "results": results
+    }
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Search failed: {exc}")
+
+class AgentOptions(BaseModel):
+    prompt: str
+    output_format: str = "json"
+    urls: List[str] = []
+    json_schema: Optional[dict] = None
 
 
 @app.post("/agent")
 async def clara_agent(options: AgentOptions):
-    """
-    Clara: Autonomous Web Agent for ReClaire. Searches, scrapes, and outputs JSON or CSV.
-    """
+    """Clara: Autonomous Web Agent for ReClaire."""
     require_gemini()
     target_urls = options.urls or []
-    
-    # 1. Autonomous Search (If no URLs provided)
+
+    # 1. Autonomous Search (if no URLs provided)
     if not target_urls:
         search_res = await search_web(SearchOptions(query=options.prompt, limit=3))
         target_urls = [r.get("href") for r in search_res.get("results", []) if r.get("href")]
