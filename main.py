@@ -209,15 +209,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.get("/", response_class=FileResponse)
-async def read_root():
-    return FileResponse("signup.html")
-
-@app.get("/signup", response_class=FileResponse)
-async def read_signup():
-    return FileResponse("signup.html")
-
+# Add this right after app.add_middleware(...)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ============================================================
 # PYDANTIC MODELS
