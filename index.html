@@ -1167,7 +1167,7 @@
               </button>
               <div class="url-shell">
                 <span class="url-prefix">https://</span>
-                <input id="urlInput" class="url-input" value="${escapeHtml(state.url.replace(/^https?:\\/\\//,''))}" placeholder="example.com/article" />
+                <input id="urlInput" class="url-input" value="${escapeHtml(state.url.replace(/^https?:\/\//,''))}" placeholder="example.com/article" />
               </div>
               ${isMap ? "" : `<button class="format-trigger" data-action="open-format">${icons.file}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Format: ${escapeHtml(selectedFormatsLabel())}</span>${icons.chevron}</button>`}
               ${isMap ? `<button class="execute" data-action="execute">Map</button>` : ""}
