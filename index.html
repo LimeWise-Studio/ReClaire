@@ -718,7 +718,7 @@
 (() => {
   "use strict";
 
-  const API_BASE = localStorage.getItem("reclaire_api_base") || "http://localhost:8000";
+  let API_BASE = localStorage.getItem("reclaire_api_base") || "http://localhost:8000";
   const state = {
     screen: "landing",
     page: "playground",
@@ -789,8 +789,7 @@
     {id:"screenshot", label:"Screenshot", desc:"Full-page capture"},
     {id:"json", label:"Structured JSON", desc:"Schema-driven extraction"},
     {id:"branding", label:"Branding", desc:"Brand profile + assets"},
-    {id:"highlights", label:"Highlights", desc:"Key points"},
-    {id:"questions", label:"Questions", desc:"AI answer to your question"}
+    {id:"highlights", label:"Highlights", desc:"Key points"}
   ];
 
   function logoImg(cls="") {
@@ -893,7 +892,25 @@
     state.page = "playground";
     state.recentTransactions = [{amount:100, action:"Registration Bonus", timestamp:new Date().toISOString()}];
     render();
+    await loadMe();
     notify("Congratulations!", "You have received 100 tokens.");
+  }
+
+  async function updateApiBase(newBase) {
+    const cleaned = (newBase || "").trim().replace(/\/+$/, "");
+    if (!cleaned) { notify("Backend URL required", "Enter a backend URL, for example http://localhost:8000."); return; }
+    API_BASE = cleaned;
+    localStorage.setItem("reclaire_api_base", cleaned);
+    if (state.screen === "app") {
+      const ok = await loadMe();
+      if (!ok) {
+        notify("Backend updated", `Now pointing at ${cleaned}. Your session token didn't validate against it — please sign in again.`);
+        logout();
+        return;
+      }
+    }
+    notify("Backend updated", `Now pointing at ${cleaned}.`);
+    render();
   }
 
   function logout() {
@@ -1454,6 +1471,12 @@
           <div class="setting-row"><span>Username</span><strong>${escapeHtml(state.user?.username || "—")}</strong></div>
           <div class="setting-row"><span>Token balance</span><strong>${Number(state.user?.tokens||0)}</strong></div>
         </section>
+        <section class="settings-card"><h3>API connection</h3><p>Requests are currently sent to <strong class="mono">${escapeHtml(API_BASE)}</strong>. Change this if your backend isn't running on localhost.</p>
+          <div class="setting-row" style="gap:10px">
+            <input id="apiBaseInput" class="input" style="flex:1" value="${escapeHtml(API_BASE)}" placeholder="http://localhost:8000" />
+            <button class="btn primary" data-action="save-api-base">Save</button>
+          </div>
+        </section>
       </div>
     </div></div>`;
   }
@@ -1637,6 +1660,7 @@
     $$("[data-theme-set]").forEach(btn=>btn.addEventListener("click",()=>{setTheme(btn.dataset.themeSet);render();}));
     $$("[data-side-set]").forEach(btn=>btn.addEventListener("click",()=>{state.sidebarSide=btn.dataset.sideSet;localStorage.setItem("reclaire_sidebar_side",state.sidebarSide);state.sidebarOpen=false;render();}));
     $$("[data-action='topup-demo']").forEach(btn=>btn.addEventListener("click",()=>notify("Top-up unavailable","The supplied backend exposes /auth/topup, but no payment flow. Use the backend endpoint only with a trusted amount source.")));
+    $("[data-action='save-api-base']")?.addEventListener("click", () => updateApiBase($("#apiBaseInput")?.value));
 
     // Clara
     $$("[data-clara-format]").forEach(btn=>btn.addEventListener("click",()=>{state.claraFormat=btn.dataset.claraFormat;localStorage.setItem("reclaire_clara_format",state.claraFormat);render();}));
