@@ -24,8 +24,6 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 
 # ============================================================
 # CONFIGURATION & CONSTANTS
@@ -209,8 +207,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Add this right after app.add_middleware(...)
-#app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 # ============================================================
 # PYDANTIC MODELS
@@ -990,20 +987,15 @@ Provide a conversational, insightful response as Clara:
 # SYSTEM HEALTH & ROOT ENDPOINTS
 # ============================================================
 
-#@app.get("/")
-#async def root():
-    #return {
-        #"name": "ReClaire API",
-        #"version": "2.2.0",
-        #"status": "online",
-        #"docs": "/docs",
-        #"endpoints": ["/auth/register", "/auth/login", "/auth/me", "/scrape", "/map", "/crawl", "/search", "/agent"]
-    #}
-
-@app.get("/", response_class=FileResponse)
+@app.get("/")
 async def root():
-    return FileResponse("signup.html")
-
+    return {
+        "name": "ReClaire API",
+        "version": "2.2.0",
+        "status": "online",
+        "docs": "/docs",
+        "endpoints": ["/auth/register", "/auth/login", "/auth/me", "/scrape", "/map", "/crawl", "/search", "/agent"]
+    }
 
 @app.get("/health")
 async def health():
