@@ -997,15 +997,20 @@ Provide a conversational, insightful response as Clara:
 # SYSTEM HEALTH & ROOT ENDPOINTS
 # ============================================================
 
-@app.get("/")
+#@app.get("/")
+#async def root():
+    #return {
+        #"name": "ReClaire API",
+        #"version": "2.2.0",
+        #"status": "online",
+        #"docs": "/docs",
+        #"endpoints": ["/auth/register", "/auth/login", "/auth/me", "/scrape", "/map", "/crawl", "/search", "/agent"]
+    #}
+
+@app.get("/", response_class=FileResponse)
 async def root():
-    return {
-        "name": "ReClaire API",
-        "version": "2.2.0",
-        "status": "online",
-        "docs": "/docs",
-        "endpoints": ["/auth/register", "/auth/login", "/auth/me", "/scrape", "/map", "/crawl", "/search", "/agent"]
-    }
+    return FileResponse("signup.html")
+
 
 @app.get("/health")
 async def health():
