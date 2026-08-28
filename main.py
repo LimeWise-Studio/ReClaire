@@ -24,6 +24,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 # ============================================================
 # CONFIGURATION & CONSTANTS
@@ -207,6 +209,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/", response_class=FileResponse)
+async def read_root():
+    return FileResponse("signup.html")
+
+@app.get("/signup", response_class=FileResponse)
+async def read_signup():
+    return FileResponse("signup.html")
 
 
 # ============================================================
