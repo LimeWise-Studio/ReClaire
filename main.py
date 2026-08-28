@@ -1544,20 +1544,13 @@ async def search_web(options: SearchOptions):
             else:
                 results = list(ddgs.text(options.query, max_results=options.limit))
 
-    return {
-        "success": True,
-        "query": options.query,
-        "results": results
-    }
+        return {
+            "success": True,
+            "query": options.query,
+            "results": results
+        }
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Search failed: {exc}")
-
-class AgentOptions(BaseModel):
-    prompt: str
-    output_format: str = "json"
-    urls: List[str] = []
-    json_schema: Optional[dict] = None
-
 
 @app.post("/agent")
 async def clara_agent(options: AgentOptions):
