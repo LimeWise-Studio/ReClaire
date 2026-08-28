@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ReClaire — Web to Clean Data & Research Engine</title>
-    <link rel="icon" type="image/svg" href="favicon.svg">
+    <link rel="icon" type="image/png" href="favicon.png">
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -431,9 +431,8 @@
 
     <!-- Script Application Logic -->
     <script>
-        const htmlRoot = document.documentElement;
-
         // --- Theme & Layout Settings ---
+        const htmlRoot = document.documentElement;
         const appLayout = document.getElementById('app-layout');
         const sidebar = document.getElementById('sidebar');
 
@@ -682,6 +681,17 @@
             }
         }
 
+        function formatJsonInput() {
+            const input = document.getElementById('json-schema-input');
+            const raw = input.value.trim();
+            if (!raw) return;
+            try {
+                input.value = JSON.stringify(JSON.parse(raw), null, 2);
+            } catch {
+                showErrorAlert('Your JSON Schema is not valid JSON.');
+            }
+        }
+
         // --- API Helpers ---
         const API_BASE = 'https://reclaire-backend.onrender.com';
 
@@ -772,7 +782,7 @@
                     const data = await fetchJson('/search', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({query: inputVal, limit: 10})
+                        body: JSON.stringify({query: inputVal, limit: 10, category: searchCategory})
                     });
                     extractedOutputs = { search: data.results || [] };
                 } else if (currentMode === 'map') {
@@ -1174,15 +1184,16 @@
             container.innerHTML = history.map(item => `
                 <div class="border border-black/10 dark:border-white/20 rounded-xl p-3.5 flex items-center justify-between text-xs bg-white dark:bg-black">
                     <div class="truncate">
-                        <span class="font-bold block truncate">${item.url}</span>
-                        <span class="text-[10px] opacity-60 uppercase">${item.mode} • ${item.timestamp}</span>
+                        <span class="font-bold block truncate">${escapeHtml(item.url)}</span>
+                        <span class="text-[10px] opacity-60 uppercase">${escapeHtml(item.mode)} • ${escapeHtml(item.timestamp)}</span>
                     </div>
-                    <button onclick="loadHistoryItem('${item.url}')" class="px-3 py-1 rounded-lg border border-black dark:border-white font-semibold text-[10px]">Load</button>
+                    <button onclick="loadHistoryItem('${encodeURIComponent(item.url)}')" class="px-3 py-1 rounded-lg border border-black dark:border-white font-semibold text-[10px]">Load</button>
                 </div>
             `).join('');
         }
 
-        function loadHistoryItem(url) {
+        function loadHistoryItem(encodedUrl) {
+            const url = decodeURIComponent(encodedUrl);
             const history = getHistory();
             const item = history.find(h => h.url === url);
             if (!item) return;
@@ -1190,8 +1201,13 @@
             document.getElementById('target-url').value = item.url;
             setMode(item.mode || 'scrape');
             extractedOutputs = item.outputs || {};
-            
+
+            // Metadata (favicon/domain chip) wasn't saved with history, so keep it hidden
+            // rather than show stale/incorrect info.
+            document.getElementById('site-chip').classList.add('hidden');
+
             document.getElementById('output-section').classList.remove('hidden');
+            document.getElementById('action-buttons-stack').classList.remove('hidden');
             renderOutputTabs();
             switchOutputTab(Object.keys(extractedOutputs)[0] || 'markdown');
         }
