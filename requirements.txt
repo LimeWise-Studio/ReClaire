@@ -7,4 +7,4 @@ pypdf
 playwright
 google-genai
 PyJWT
-duckduckgo-search
+supabase
