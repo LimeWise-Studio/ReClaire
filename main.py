@@ -32,11 +32,10 @@ from supabase import create_client, Client
 SUPABASE_URL = os.environ.get("SUPABASE_URL")  # <--- Replace or set ENV
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")  # <--- Replace or set ENV
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # <--- Replace or set ENV
-SUPABASE_PROJECT_ID = os.environ.get("SUPABASE_PROJECT_ID")
 
 # Initialize Supabase Client
 supabase: Client = None
-if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and SUPABASE_PROJECT_ID not in SUPABASE_URL:
+if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     except Exception as e:
@@ -44,7 +43,7 @@ if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and SUPABASE_PROJECT_ID not in SUP
 
 # Initialize Gemini 2026 Client
 gemini_client = None
-if GEMINI_API_KEY and "YOUR_GEMINI_API_KEY" not in GEMINI_API_KEY:
+if GEMINI_API_KEY:
     try:
         gemini_client = genai.Client(api_key=GEMINI_API_KEY)
     except Exception as e:
