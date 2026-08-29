@@ -2,39 +2,53 @@ import asyncio
 import io
 import os
 import json
-import base64
 import re
-import sqlite3
 import hashlib
-import secrets
 import traceback
-from datetime import datetime, timedelta, timezone
-from urllib.parse import urljoin, urlparse
 from typing import List, Optional, Dict, Any
+from urllib.parse import urljoin, urlparse
 
 import httpx
-import jwt
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
 from pypdf import PdfReader
 from playwright.async_api import async_playwright
 
-from fastapi import FastAPI, HTTPException, Depends, Security, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import FastAPI, HTTPException, Header, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+# 2026 SDK Imports
+from google import genai
+from google.genai import types
+from supabase import create_client, Client
+
 
 # ============================================================
-# CONFIGURATION & CONSTANTS
+# CONFIGURATION & API KEYS
 # ============================================================
 
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "reclaire-super-secret-jwt-key-2026")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-DB_PATH = os.environ.get("RECLAIRE_DB_PATH", "reclaire.db")
+# === [KEYS REQUIRED: ADD YOUR CREDENTIALS HERE OR IN YOUR .ENV FILE] ===
+SUPABASE_URL = os.environ.get("SUPABASE_URL")  # <--- Replace or set ENV
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")  # <--- Replace or set ENV
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # <--- Replace or set ENV
+SUPABASE_PROJECT_ID = os.environ.get("SUPABASE_PROJECT_ID")
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+# Initialize Supabase Client
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and SUPABASE_PROJECT_ID not in SUPABASE_URL:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    except Exception as e:
+        print(f"Warning: Failed to initialize Supabase client: {e}")
+
+# Initialize Gemini 2026 Client
+gemini_client = None
+if GEMINI_API_KEY and "YOUR_GEMINI_API_KEY" not in GEMINI_API_KEY:
+    try:
+        gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+    except Exception as e:
+        print(f"Warning: Failed to initialize Gemini client: {e}")
 
 DEFAULT_HEADERS = {
     "User-Agent": (
@@ -42,162 +56,104 @@ DEFAULT_HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/126.0.0.0 Safari/537.36"
     ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
 }
 
 
 # ============================================================
-# GEMINI SETUP
+# AUTHENTICATION & TOKEN LEDGER (SUPABASE)
 # ============================================================
 
-try:
-    from google import genai
-    from google.genai import types
+def hash_api_key(key: str) -> str:
+    """Hashes API key before checking against Supabase storage."""
+    return hashlib.sha256(key.strip().encode("utf-8")).hexdigest()
 
-    gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
-except ImportError:
-    genai = None
-    types = None
-    gemini_client = None
-
-
-# ============================================================
-# DATABASE & TOKEN LEDGER SETUP (SQLite)
-# ============================================================
-
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    # Users Table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        tokens INTEGER NOT NULL DEFAULT 100,
-        created_at TEXT NOT NULL
-    )
-    """)
-    
-    # Token Audit Transactions
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS token_transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        amount INTEGER NOT NULL,
-        action TEXT NOT NULL,
-        timestamp TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id)
-    )
-    """)
-    
-    conn.commit()
-    conn.close()
-
-init_db()
-
-
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-
-# ============================================================
-# AUTHENTICATION HELPERS
-# ============================================================
-
-security = HTTPBearer(auto_error=False)
-
-def hash_password(password: str) -> str:
-    salt = secrets.token_hex(16)
-    pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
-    return f"{salt}:{pwd_hash.hex()}"
-
-def verify_password(password: str, stored_hash: str) -> bool:
-    try:
-        salt, original_hash = stored_hash.split(":")
-        pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
-        return pwd_hash.hex() == original_hash
-    except Exception:
-        return False
-
-def create_access_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-def get_current_user(
-    auth: Optional[HTTPAuthorizationCredentials] = Security(security),
-    conn: sqlite3.Connection = Depends(get_db)
+async def authenticate_and_deduct_tokens(
+    cost: int,
+    endpoint: str,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None),
 ) -> dict:
-    if not auth:
+    """
+    Validates API key from header, checks token balance in Supabase,
+    and deducts tokens atomically per request.
+    """
+    raw_key = x_api_key
+    if not raw_key and authorization:
+        if authorization.startswith("Bearer "):
+            raw_key = authorization.replace("Bearer ", "").strip()
+        else:
+            raw_key = authorization.strip()
+
+    if not raw_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required. Please provide a Bearer token in the Authorization header.",
+            detail="Missing API Key. Include 'X-API-Key' or 'Authorization: Bearer <key>' in request headers."
         )
-    try:
-        payload = jwt.decode(auth.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid auth token payload.")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired access token.")
 
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, username, email, tokens FROM users WHERE id = ?", (user_id,))
-    user = cursor.fetchone()
-    
-    if not user:
-        raise HTTPException(status_code=401, detail="User account not found.")
-        
-    return dict(user)
-
-
-def deduct_tokens(user_id: int, cost: int, action: str, conn: sqlite3.Connection):
-    """Deduct tokens atomically or throw an HTTP 402 exception."""
-    cursor = conn.cursor()
-    cursor.execute("SELECT tokens FROM users WHERE id = ?", (user_id,))
-    res = cursor.fetchone()
-    
-    if not res:
-        raise HTTPException(status_code=404, detail="User not found.")
-        
-    current_tokens = res["tokens"]
-    
-    if current_tokens < cost:
+    if not supabase:
         raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail=f"Insufficient tokens. Required: {cost}, Available: {current_tokens}. Top up your balance to proceed."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Supabase credentials not configured on backend."
         )
+
+    hashed_key = hash_api_key(raw_key)
+
+    # Query API Key and joined Profile from Supabase
+    try:
+        key_response = supabase.table("api_keys") \
+            .select("id, user_id, is_active, profiles(id, token_balance)") \
+            .eq("hashed_key", hashed_key) \
+            .eq("is_active", True) \
+            .execute()
         
-    new_balance = current_tokens - cost
-    now_iso = datetime.now(timezone.utc).isoformat()
-    
-    cursor.execute("UPDATE users SET tokens = ? WHERE id = ?", (new_balance, user_id))
-    cursor.execute(
-        "INSERT INTO token_transactions (user_id, amount, action, timestamp) VALUES (?, ?, ?, ?)",
-        (user_id, -cost, action, now_iso)
-    )
-    conn.commit()
-    return new_balance
+        if not key_response.data or len(key_response.data) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or revoked API Key."
+            )
+
+        key_record = key_response.data[0]
+        profile = key_record.get("profiles")
+        user_id = key_record["user_id"]
+        current_balance = profile.get("token_balance", 0) if profile else 0
+
+        if current_balance < cost:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Insufficient token balance ({current_balance} tokens remaining, {cost} required). Please top up."
+            )
+
+        new_balance = current_balance - cost
+
+        # Deduct balance & log usage
+        supabase.table("profiles").update({"token_balance": new_balance}).eq("id", user_id).execute()
+        supabase.table("usage_logs").insert({
+            "user_id": user_id,
+            "endpoint": endpoint,
+            "tokens_deducted": cost
+        }).execute()
+
+        return {"user_id": user_id, "tokens_remaining": new_balance, "cost": cost}
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Authentication check failed: {str(exc)}"
+        )
 
 
 # ============================================================
-# FASTAPI APP
+# FASTAPI APP SETUP
 # ============================================================
 
 app = FastAPI(
-    title="ReClaire API",
-    description="Micro-SaaS Web Scraping, AI Extraction, and Autonomous Agent Engine",
-    version="2.2.0",
+    title="ReClaire Web Intelligence API",
+    description="High-performance URL Scraper, Crawler, and Site Mapper Engine",
+    version="3.0.0",
 )
 
 app.add_middleware(
@@ -210,26 +166,14 @@ app.add_middleware(
 
 
 # ============================================================
-# PYDANTIC MODELS
+# PYDANTIC SCHEMAS
 # ============================================================
-
-class UserRegister(BaseModel):
-    username: str
-    email: str
-    password: str
-
-class UserLogin(BaseModel):
-    username_or_email: str
-    password: str
-
-class TopupRequest(BaseModel):
-    amount: int = Field(..., ge=10, le=10000, description="Tokens to add")
 
 class ScrapeOptions(BaseModel):
     url: str
     formats: List[str] = Field(
         default_factory=lambda: ["markdown"],
-        description="markdown, html, raw_html, links, images, screenshot, summary, highlights, json, questions, branding"
+        description="Supported formats: markdown, html, raw_html, summary, questions, json"
     )
     use_js_fallback: bool = True
     only_main_content: bool = True
@@ -239,109 +183,41 @@ class ScrapeOptions(BaseModel):
     wait_for_selector: Optional[str] = None
     json_schema: Optional[Dict[str, Any]] = None
     user_question: Optional[str] = None
-    web_augmented_qa: bool = True
-
-class BatchScrapeRequest(BaseModel):
-    urls: List[str]
-    options: Optional[ScrapeOptions] = None
 
 class MapOptions(BaseModel):
     url: str
-    limit: int = Field(100, ge=1, le=500)
+    limit: int = Field(100, ge=1, le=1000)
     include_subdomains: bool = False
 
 class CrawlOptions(BaseModel):
     url: str
-    limit: int = Field(5, ge=1, le=25)
+    limit: int = Field(5, ge=1, le=50)
     scrape_options: Optional[ScrapeOptions] = None
-
-class SearchOptions(BaseModel):
-    query: str
-    limit: int = Field(5, ge=1, le=25)
-    category: str = "web"
-
-class ChatMessage(BaseModel):
-    role: str = Field(..., description="'user' or 'assistant'")
-    content: str
-
-class AgentOptions(BaseModel):
-    prompt: str
-    urls: Optional[List[str]] = Field(None, description="Seed URLs for Clara")
-    output_format: str = Field("chat", description="'chat', 'json', or 'csv'")
-    json_schema: Optional[Dict[str, Any]] = None
-    chat_history: Optional[List[ChatMessage]] = Field(default_factory=list, description="Previous dialogue turns")
 
 
 # ============================================================
-# GENERAL UTILITIES & EXTRACTION HELPERS
+# UTILITIES & IMPROVED PLAYWRIGHT ENGINE
 # ============================================================
 
 def clean_input_url(raw_url: str) -> str:
     if not raw_url:
         return ""
     raw_url = raw_url.strip().strip("<>")
-    if not raw_url:
-        return ""
     if not raw_url.startswith(("http://", "https://")):
         raw_url = "https://" + raw_url
     return raw_url
 
-def safe_text(value: Any) -> str:
-    if not value:
-        return ""
-    if isinstance(value, list):
-        value = " ".join(str(v) for v in value)
-    else:
-        value = str(value)
-    return re.sub(r"\s+", " ", value).strip()
-
-def unique_list(values: List[str]) -> List[str]:
-    seen = set()
-    result = []
-    for value in values:
-        if value and value not in seen:
-            seen.add(value)
-            result.append(value)
-    return result
-
-def absolute_url(base_url: str, value: Optional[str]) -> Optional[str]:
-    if not value or value.startswith(("data:", "blob:", "javascript:", "mailto:", "tel:")):
-        return None
-    return urljoin(base_url, value.strip())
-
-def is_http_url(value: Optional[str]) -> bool:
-    if not value:
-        return False
-    try:
-        parsed = urlparse(value)
-        return parsed.scheme in {"http", "https"} and bool(parsed.hostname)
-    except Exception:
-        return False
-
 def parse_json_response(text: str) -> Any:
     if not text:
-        raise ValueError("Gemini returned an empty response.")
-    text = text.strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
-        text = re.sub(r"\s*```$", "", text)
-    return json.loads(text)
+        raise ValueError("Empty LLM response.")
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    return json.loads(cleaned)
 
-def parse_pdf_bytes(pdf_bytes: bytes) -> str:
-    reader = PdfReader(io.BytesIO(pdf_bytes))
-    extracted = []
-    for idx, page in enumerate(reader.pages):
-        text = page.extract_text() or ""
-        if text.strip():
-            extracted.append(f"## Page {idx + 1}\n\n{text.strip()}")
-    return "\n\n".join(extracted)
-
-
-# ============================================================
-# PLAYWRIGHT ENGINE
-# ============================================================
-
-async def fetch_dynamic_content(url: str, wait_for_selector: Optional[str] = None, take_screenshot: bool = False) -> dict:
+async def fetch_dynamic_content(url: str, wait_for_selector: Optional[str] = None) -> str:
+    """Improved Playwright fetcher with lazy-load scrolling and network idle handling."""
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -350,9 +226,9 @@ async def fetch_dynamic_content(url: str, wait_for_selector: Optional[str] = Non
         )
         page = await context.new_page()
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            await page.goto(url, wait_until="domcontentloaded", timeout=25000)
             try:
-                await page.wait_for_load_state("networkidle", timeout=8000)
+                await page.wait_for_load_state("networkidle", timeout=5000)
             except Exception:
                 pass
 
@@ -362,427 +238,166 @@ async def fetch_dynamic_content(url: str, wait_for_selector: Optional[str] = Non
                 except Exception:
                     pass
 
-            content = await page.content()
-            screenshot_b64 = None
-            if take_screenshot:
-                try:
-                    shot_bytes = await page.screenshot(full_page=True)
-                    screenshot_b64 = base64.b64encode(shot_bytes).decode("utf-8")
-                except Exception:
-                    screenshot_b64 = None
+            # Scroll to trigger lazy-loaded dynamic content
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2);")
+            await asyncio.sleep(0.5)
 
-            return {"html": content, "screenshot": screenshot_b64}
+            return await page.content()
         finally:
             await browser.close()
 
 
 # ============================================================
-# MEDIA & BRANDING EXTRACTION
+# BASE PIPELINE: SCRAPE & LLM TRANSFORMATIONS
 # ============================================================
 
-def _srcset_urls(value: Optional[str], base_url: str) -> List[str]:
-    if not value:
-        return []
-    urls = []
-    for candidate in str(value).split(","):
-        candidate = candidate.strip()
-        if candidate:
-            url = absolute_url(base_url, candidate.split()[0])
-            if url and is_http_url(url):
-                urls.append(url)
-    return urls
-
-def _image_candidates(img, base_url: str) -> List[str]:
-    candidates = []
-    for attr in ("src", "data-src", "data-lazy-src", "data-original", "data-image", "data-url"):
-        val = img.get(attr)
-        if val:
-            url = absolute_url(base_url, val)
-            if url and is_http_url(url):
-                candidates.append(url)
-    candidates.extend(_srcset_urls(img.get("srcset"), base_url))
-    candidates.extend(_srcset_urls(img.get("data-srcset"), base_url))
-    return unique_list(candidates)
-
-def extract_image_metadata(soup: BeautifulSoup, base_url: str) -> List[Dict[str, Any]]:
-    results = []
-    for img in soup.find_all("img"):
-        candidates = _image_candidates(img, base_url)
-        if candidates:
-            results.append({
-                "url": candidates[0],
-                "src_candidates": candidates[:6],
-                "alt": safe_text(img.get("alt")),
-                "title": safe_text(img.get("title")),
-                "width": img.get("width"),
-                "height": img.get("height"),
-            })
-    seen = set()
-    cleaned = []
-    for item in results:
-        if item["url"] not in seen:
-            seen.add(item["url"])
-            cleaned.append(item)
-    return cleaned
-
-def extract_branding_assets(soup: BeautifulSoup, base_url: str, domain: str) -> Dict[str, Any]:
-    assets = {
-        "domain": domain, "site_name": None, "title": None, "description": None,
-        "favicon": None, "apple_touch_icon": None, "logo": None, "logo_type": None,
-        "logo_candidates": [], "hero_image": None, "og_image": None, "theme_color": None, "meta": {}
-    }
-    if soup.title:
-        assets["title"] = safe_text(soup.title.get_text())
-
-    def get_meta(name=None, property_name=None):
-        tag = soup.find("meta", attrs={"name": name}) if name else soup.find("meta", attrs={"property": property_name})
-        return safe_text(tag.get("content")) if tag else None
-
-    assets["description"] = get_meta(name="description") or get_meta(property_name="og:description")
-    assets["site_name"] = get_meta(property_name="og:site_name") or get_meta(name="application-name")
-    assets["og_image"] = absolute_url(base_url, get_meta(property_name="og:image"))
-    assets["hero_image"] = assets["og_image"]
-    assets["theme_color"] = get_meta(name="theme-color")
-
-    for link in soup.find_all("link"):
-        rel = link.get("rel", [])
-        rel_set = {str(r).lower() for r in (rel if isinstance(rel, list) else [rel])}
-        href = link.get("href")
-        if href and ("icon" in rel_set or "apple-touch-icon" in rel_set):
-            icon_url = absolute_url(base_url, href)
-            if icon_url and is_http_url(icon_url):
-                if "apple-touch-icon" in rel_set:
-                    assets["apple_touch_icon"] = icon_url
-                if not assets["favicon"]:
-                    assets["favicon"] = icon_url
-
-    if not assets["favicon"]:
-        assets["favicon"] = f"[https://www.google.com/s2/favicons?domain=](https://www.google.com/s2/favicons?domain=){domain}&sz=64"
-
-    return assets
-
-
-# ============================================================
-# GEMINI SERVICE CALLS
-# ============================================================
-
-def require_gemini():
-    if not gemini_client:
-        raise HTTPException(
-            status_code=500,
-            detail="GEMINI_API_KEY is not configured on the server."
-        )
-
-def generate_gemini_qa(markdown_text: str, user_question: str, web_augmented: bool) -> str:
-    require_gemini()
-    prompt = f"""
-Answer the user question based on this content:
-Question: {user_question}
-
-Content:
-{markdown_text[:20000]}
-"""
-    res = gemini_client.models.generate_content(model="gemini-3.6-flash", contents=prompt)
-    return res.text.strip() if res.text else ""
-
-def generate_gemini_branding(markdown_text: str, branding_assets: Dict[str, Any]) -> Dict[str, Any]:
-    require_gemini()
-    prompt = f"""
-Create a brand profile from these assets:
-{json.dumps(branding_assets)[:10000]}
-
-Page Markdown:
-{markdown_text[:10000]}
-"""
-    res = gemini_client.models.generate_content(
-        model="gemini-3.6-flash", contents=prompt,
-        config=types.GenerateContentConfig(response_mime_type="application/json")
-    )
-    return parse_json_response(res.text)
-
-def generate_gemini_summary(markdown_text: str) -> str:
-    require_gemini()
-    prompt = f"Provide a concise summary of this webpage:\n\n{markdown_text[:20000]}"
-    res = gemini_client.models.generate_content(model="gemini-3.6-flash", contents=prompt)
-    return res.text.strip() if res.text else ""
-
-def generate_gemini_highlights(markdown_text: str) -> Any:
-    require_gemini()
-    prompt = f"Extract 3-5 key highlights as a JSON list of strings from:\n\n{markdown_text[:15000]}"
-    res = gemini_client.models.generate_content(
-        model="gemini-3.6-flash", contents=prompt,
-        config=types.GenerateContentConfig(response_mime_type="application/json")
-    )
-    return parse_json_response(res.text)
-
-def generate_gemini_json_schema(markdown_text: str, json_schema: Dict[str, Any]) -> dict:
-    require_gemini()
-    prompt = f"Extract JSON according to this schema:\n{json.dumps(json_schema)}\n\nContent:\n{markdown_text[:15000]}"
-    res = gemini_client.models.generate_content(
-        model="gemini-3.6-flash", contents=prompt,
-        config=types.GenerateContentConfig(response_mime_type="application/json")
-    )
-    return parse_json_response(res.text)
-
-
-# ============================================================
-# CORE SCRAPING ENGINE
-# ============================================================
-
-async def scrape_engine(
+async def base_scrape_pipeline(
     url: str,
     use_js_fallback: bool = True,
     only_main_content: bool = True,
-    remove_tags: List[str] = None,
-    wait_for_selector: Optional[str] = None,
-    json_schema: Optional[Dict[str, Any]] = None,
-    formats: Optional[List[str]] = None,
-    user_question: Optional[str] = None,
-    web_augmented_qa: bool = True,
-) -> dict:
-    if remove_tags is None:
-        remove_tags = ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
-
-    req_formats = list(dict.fromkeys([str(f).lower().strip() for f in (formats or ["markdown"])]))
+    remove_tags: List[str] = None
+) -> Dict[str, Any]:
+    """Pipeline Step 1: Always scrape and convert URL to Markdown before formatting."""
     clean_url = clean_input_url(url)
     if not clean_url:
-        raise HTTPException(status_code=400, detail="A valid URL is required.")
+        raise HTTPException(status_code=400, detail="Invalid URL provided.")
 
-    parsed = urlparse(clean_url)
-    parsed_domain = parsed.hostname or "unknown"
-    result = {"success": True, "url": clean_url}
-    
-    screenshot_b64, clean_markdown, html_content = None, "", ""
-    meta_info = {"domain": parsed_domain, "favicon": f"[https://www.google.com/s2/favicons?domain=](https://www.google.com/s2/favicons?domain=){parsed_domain}&sz=64"}
+    html_content = ""
 
-    # Handle PDF
+    # Check for PDF
     if clean_url.lower().split("?")[0].endswith(".pdf"):
-        try:
-            async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=30.0) as client:
-                res = await client.get(clean_url)
-                res.raise_for_status()
-                clean_markdown = parse_pdf_bytes(res.content)
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"Failed to fetch PDF: {exc}")
-    else:
-        # Handle Webpage
         try:
             async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=20.0) as client:
                 res = await client.get(clean_url)
-                if res.status_code == 200:
-                    html_content = res.text
-                elif use_js_fallback:
-                    pw = await fetch_dynamic_content(clean_url, wait_for_selector, "screenshot" in req_formats)
-                    html_content, screenshot_b64 = pw["html"], pw["screenshot"]
-        except Exception:
-            if use_js_fallback:
-                try:
-                    pw = await fetch_dynamic_content(clean_url, wait_for_selector, "screenshot" in req_formats)
-                    html_content, screenshot_b64 = pw["html"], pw["screenshot"]
-                except Exception as exc:
-                    raise HTTPException(status_code=502, detail=f"Web fetch failed: {exc}")
+                res.raise_for_status()
+                reader = PdfReader(io.BytesIO(res.content))
+                extracted = [page.extract_text() or "" for page in reader.pages]
+                return {"clean_url": clean_url, "raw_html": "", "markdown": "\n\n".join(extracted)}
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Failed to extract PDF: {str(e)}")
 
-        if not html_content:
-            raise HTTPException(status_code=502, detail="Unable to retrieve HTML content.")
+    # Fetch standard HTTP HTML
+    try:
+        async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=15.0) as client:
+            res = await client.get(clean_url)
+            if res.status_code == 200 and len(res.text.strip()) > 200:
+                html_content = res.text
+            elif use_js_fallback:
+                html_content = await fetch_dynamic_content(clean_url)
+    except Exception:
+        if use_js_fallback:
+            try:
+                html_content = await fetch_dynamic_content(clean_url)
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail=f"Failed to fetch content from URL: {str(exc)}")
+        else:
+            raise HTTPException(status_code=502, detail="Failed to fetch page using standard HTTP.")
 
-        soup_raw = BeautifulSoup(html_content, "html.parser")
-        branding_assets = extract_branding_assets(soup_raw, clean_url, parsed_domain)
-        meta_info.update(branding_assets)
-        result["title"] = branding_assets.get("title") or parsed_domain
+    if not html_content:
+        raise HTTPException(status_code=502, detail="Empty content received from site.")
 
-        if "links" in req_formats:
-            links = [absolute_url(clean_url, a.get("href")) for a in soup_raw.find_all("a", href=True)]
-            result["links"] = unique_list([l for l in links if l])
+    # Parse HTML and convert to Markdown
+    soup = BeautifulSoup(html_content, "html.parser")
+    for tag in (remove_tags or ["script", "style", "nav", "footer", "header", "aside", "form"]):
+        for el in soup.find_all(tag):
+            el.decompose()
 
-        image_meta = extract_image_metadata(soup_raw, clean_url)
-        if "images" in req_formats or "branding" in req_formats:
-            result["images"] = image_meta
-            meta_info["extracted_images"] = image_meta[:10]
+    target = (soup.find("main") or soup.find("article") or soup.body or soup) if only_main_content else (soup.body or soup)
+    markdown_text = md(str(target), heading_style="ATX").strip()
 
-        soup_content = BeautifulSoup(str(soup_raw), "html.parser")
-        for tag in set(["script", "style", "noscript", "iframe"] + remove_tags):
-            for el in soup_content.find_all(tag):
-                try:
-                    el.decompose()
-                except Exception:
-                    pass
+    return {
+        "clean_url": clean_url,
+        "raw_html": html_content,
+        "clean_html": str(target),
+        "markdown": markdown_text or "No readable text found on page."
+    }
 
-        target = (soup_content.find("main") or soup_content.find("article") or soup_content.body or soup_content) if only_main_content else (soup_content.body or soup_content)
-        clean_markdown = md(str(target), heading_style="ATX").strip() or "No readable content extracted."
 
-        if "html" in req_formats:
-            result["html"] = str(target)
-        if "raw_html" in req_formats:
-            result["raw_html"] = html_content
-        if "screenshot" in req_formats and screenshot_b64:
-            result["screenshot"] = f"data:image/png;base64,{screenshot_b64}"
+def run_gemini_transform(prompt: str, response_json: bool = False) -> Any:
+    """Executes Gemini LLM transformations using the 2026 google-genai SDK."""
+    if not gemini_client:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured on the server.")
 
-    result["metadata"] = meta_info
+    config = types.GenerateContentConfig(response_mime_type="application/json") if response_json else None
+    res = gemini_client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config=config
+    )
+    return parse_json_response(res.text) if response_json else res.text.strip()
+
+
+# ============================================================
+# API ENDPOINTS: SCRAPE, MAP, CRAWL
+# ============================================================
+
+@app.post("/v1/scrape")
+async def scrape_endpoint(
+    options: ScrapeOptions,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None)
+):
+    # Calculate Token Cost (Base: 1-3 tokens, +2 per AI transformation)
+    base_cost = 3 if options.use_js_fallback else 1
+    ai_requested = [f.lower() for f in options.formats if f.lower() in ["summary", "questions", "json"]]
+    total_cost = base_cost + (len(ai_requested) * 2)
+
+    auth_data = await authenticate_and_deduct_tokens(
+        cost=total_cost, endpoint="/v1/scrape", x_api_key=x_api_key, authorization=authorization
+    )
+
+    # Pipeline Step 1: Always scrape to Markdown first
+    scrape_base = await base_scrape_pipeline(
+        url=options.url,
+        use_js_fallback=options.use_js_fallback,
+        only_main_content=options.only_main_content,
+        remove_tags=options.remove_tags
+    )
+
+    result = {
+        "success": True,
+        "url": scrape_base["clean_url"],
+        "tokens_deducted": total_cost,
+        "tokens_remaining": auth_data["tokens_remaining"]
+    }
+
+    req_formats = [f.lower() for f in options.formats]
+    markdown = scrape_base["markdown"]
+
     if "markdown" in req_formats or not req_formats:
-        result["markdown"] = clean_markdown
+        result["markdown"] = markdown
+    if "html" in req_formats:
+        result["html"] = scrape_base["clean_html"]
+    if "raw_html" in req_formats:
+        result["raw_html"] = scrape_base["raw_html"]
 
-    # LLM Transformations
-    if clean_markdown:
-        if "questions" in req_formats and user_question:
-            try:
-                result["qa_answer"] = await asyncio.to_thread(generate_gemini_qa, clean_markdown, user_question, web_augmented_qa)
-            except Exception as e:
-                result["qa_error"] = str(e)
-        if "summary" in req_formats:
-            try:
-                result["summary"] = await asyncio.to_thread(generate_gemini_summary, clean_markdown)
-            except Exception as e:
-                result["summary_error"] = str(e)
-        if "highlights" in req_formats:
-            try:
-                result["highlights"] = await asyncio.to_thread(generate_gemini_highlights, clean_markdown)
-            except Exception as e:
-                result["highlights_error"] = str(e)
-        if "json" in req_formats:
-            try:
-                result["json_data"] = await asyncio.to_thread(generate_gemini_json_schema, clean_markdown, json_schema or {"title": "str"})
-            except Exception as e:
-                result["json_error"] = str(e)
-        if "branding" in req_formats:
-            try:
-                result["branding"] = {
-                    "visual_assets": meta_info,
-                    "brand_analysis": await asyncio.to_thread(generate_gemini_branding, clean_markdown, meta_info)
-                }
-            except Exception as e:
-                result["branding_error"] = str(e)
+    # Pipeline Step 2: Formats & LLM Transformations
+    if "summary" in req_formats:
+        prompt = f"Provide a concise, comprehensive summary of this page in Markdown:\n\n{markdown[:20000]}"
+        result["summary"] = run_gemini_transform(prompt)
 
-    result["requested_formats"] = req_formats
+    if "questions" in req_formats and options.user_question:
+        prompt = f"Answer this question strictly using the text provided.\nQuestion: {options.user_question}\n\nContent:\n{markdown[:20000]}"
+        result["answer"] = run_gemini_transform(prompt)
+
+    if "json" in req_formats:
+        schema_desc = json.dumps(options.json_schema or {"summary": "string", "key_facts": "list"})
+        prompt = f"Extract data matching this JSON schema:\n{schema_desc}\n\nContent:\n{markdown[:20000]}"
+        result["json"] = run_gemini_transform(prompt, response_json=True)
+
     return result
 
 
-# ============================================================
-# AUTHENTICATION ENDPOINTS
-# ============================================================
-
-@app.post("/auth/register")
-async def register(user: UserRegister, conn: sqlite3.Connection = Depends(get_db)):
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE username = ? OR email = ?", (user.username, user.email))
-    if cursor.fetchone():
-        raise HTTPException(status_code=400, detail="Username or email is already registered.")
-
-    pwd_hash = hash_password(user.password)
-    now_iso = datetime.now(timezone.utc).isoformat()
-    initial_tokens = 100
-
-    cursor.execute(
-        "INSERT INTO users (username, email, password_hash, tokens, created_at) VALUES (?, ?, ?, ?, ?)",
-        (user.username, user.email, pwd_hash, initial_tokens, now_iso)
-    )
-    user_id = cursor.lastrowid
-    cursor.execute(
-        "INSERT INTO token_transactions (user_id, amount, action, timestamp) VALUES (?, ?, ?, ?)",
-        (user_id, initial_tokens, "Registration Bonus", now_iso)
-    )
-    conn.commit()
-
-    token = create_access_token({"sub": user_id, "username": user.username})
-    return {
-        "success": True,
-        "message": "Account created successfully.",
-        "access_token": token,
-        "token_type": "bearer",
-        "user": {"id": user_id, "username": user.username, "tokens": initial_tokens}
-    }
-
-
-@app.post("/auth/login")
-async def login(user_data: UserLogin, conn: sqlite3.Connection = Depends(get_db)):
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT id, username, password_hash, tokens FROM users WHERE username = ? OR email = ?",
-        (user_data.username_or_email, user_data.username_or_email)
-    )
-    user = cursor.fetchone()
-
-    if not user or not verify_password(user_data.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid username/email or password.")
-
-    token = create_access_token({"sub": user["id"], "username": user["username"]})
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "user": {"id": user["id"], "username": user["username"], "tokens": user["tokens"]}
-    }
-
-
-@app.get("/auth/me")
-async def get_me(
-    current_user: dict = Depends(get_current_user),
-    conn: sqlite3.Connection = Depends(get_db)
-):
-    cursor = conn.cursor()
-    cursor.execute("SELECT amount, action, timestamp FROM token_transactions WHERE user_id = ? ORDER BY id DESC LIMIT 10", (current_user["id"],))
-    txs = [dict(r) for r in cursor.fetchall()]
-    
-    return {
-        "user": current_user,
-        "recent_transactions": txs
-    }
-
-
-@app.post("/auth/topup")
-async def topup_tokens(
-    req: TopupRequest,
-    current_user: dict = Depends(get_current_user),
-    conn: sqlite3.Connection = Depends(get_db)
-):
-    cursor = conn.cursor()
-    new_balance = current_user["tokens"] + req.amount
-    now_iso = datetime.now(timezone.utc).isoformat()
-    
-    cursor.execute("UPDATE users SET tokens = ? WHERE id = ?", (new_balance, current_user["id"]))
-    cursor.execute(
-        "INSERT INTO token_transactions (user_id, amount, action, timestamp) VALUES (?, ?, ?, ?)",
-        (current_user["id"], req.amount, "Manual Top-up", now_iso)
-    )
-    conn.commit()
-    
-    return {
-        "success": True,
-        "message": f"Successfully added {req.amount} tokens.",
-        "tokens_remaining": new_balance
-    }
-
-
-# ============================================================
-# API ENDPOINTS (PROTECTED BY TOKEN SYSTEM)
-# ============================================================
-
-@app.post("/scrape")
-async def scrape_post(
-    options: ScrapeOptions,
-    current_user: dict = Depends(get_current_user),
-    conn: sqlite3.Connection = Depends(get_db)
-):
-    # Calculate Token Cost
-    base_cost = 3 if options.use_js_fallback else 1
-    ai_features = ["summary", "highlights", "json", "questions", "branding"]
-    ai_cost = sum(2 for f in options.formats if f.lower() in ai_features)
-    total_cost = base_cost + ai_cost
-
-    new_balance = deduct_tokens(current_user["id"], total_cost, f"Scrape: {options.url[:30]}", conn)
-
-    data = options.model_dump() if hasattr(options, "model_dump") else options.dict()
-    res = await scrape_engine(**data)
-    res["tokens_deducted"] = total_cost
-    res["tokens_remaining"] = new_balance
-    return res
-
-
-@app.post("/map")
-async def map_url(
+@app.post("/v1/map")
+async def map_endpoint(
     options: MapOptions,
-    current_user: dict = Depends(get_current_user),
-    conn: sqlite3.Connection = Depends(get_db)
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None)
 ):
-    new_balance = deduct_tokens(current_user["id"], 1, f"Map: {options.url[:30]}", conn)
+    auth_data = await authenticate_and_deduct_tokens(
+        cost=1, endpoint="/v1/map", x_api_key=x_api_key, authorization=authorization
+    )
+
     clean_url = clean_input_url(options.url)
     parsed_base = urlparse(clean_url)
 
@@ -791,224 +406,101 @@ async def map_url(
             res = await client.get(clean_url)
             res.raise_for_status()
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Map fetch failed: {exc}")
+        raise HTTPException(status_code=502, detail=f"Site mapping failed: {str(exc)}")
 
     soup = BeautifulSoup(res.text, "html.parser")
-    links = set()
+    found_links = set()
 
     for a in soup.find_all("a", href=True):
-        abs_l = absolute_url(clean_url, a["href"])
-        if abs_l:
-            p = urlparse(abs_l)
-            if options.include_subdomains and p.hostname and parsed_base.hostname in p.hostname:
-                links.add(abs_l)
-            elif p.hostname == parsed_base.hostname:
-                links.add(abs_l)
+        href = a["href"].strip()
+        if href.startswith(("javascript:", "mailto:", "tel:", "#")):
+            continue
+        abs_link = urljoin(clean_url, href)
+        p = urlparse(abs_link)
+
+        if options.include_subdomains and p.hostname and parsed_base.hostname in p.hostname:
+            found_links.add(abs_link)
+        elif p.hostname == parsed_base.hostname:
+            found_links.add(abs_link)
+
+    limited_links = list(found_links)[:options.limit]
 
     return {
         "success": True,
         "url": clean_url,
-        "links": list(links)[:options.limit],
-        "tokens_remaining": new_balance
+        "links_count": len(limited_links),
+        "links": limited_links,
+        "tokens_deducted": 1,
+        "tokens_remaining": auth_data["tokens_remaining"]
     }
 
 
-@app.post("/crawl")
-async def crawl_url(
+@app.post("/v1/crawl")
+async def crawl_endpoint(
     options: CrawlOptions,
-    current_user: dict = Depends(get_current_user),
-    conn: sqlite3.Connection = Depends(get_db)
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None)
 ):
-    map_res = await map_url(MapOptions(url=options.url, limit=options.limit), current_user=current_user, conn=conn)
-    target_urls = map_res["links"] or [clean_input_url(options.url)]
+    # Step 1: Map base URL to gather target links
+    map_opts = MapOptions(url=options.url, limit=options.limit)
+    clean_url = clean_input_url(options.url)
+    parsed_base = urlparse(clean_url)
 
-    total_cost = len(target_urls)
-    new_balance = deduct_tokens(current_user["id"], total_cost, f"Crawl {len(target_urls)} pages", conn)
+    try:
+        async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=15.0) as client:
+            res = await client.get(clean_url)
+            soup = BeautifulSoup(res.text, "html.parser")
+            target_links = {urljoin(clean_url, a["href"]) for a in soup.find_all("a", href=True) if urlparse(urljoin(clean_url, a["href"])).hostname == parsed_base.hostname}
+            urls_to_crawl = list(target_links)[:options.limit] or [clean_url]
+    except Exception:
+        urls_to_crawl = [clean_url]
+
+    total_cost = len(urls_to_crawl)
+    auth_data = await authenticate_and_deduct_tokens(
+        cost=total_cost, endpoint="/v1/crawl", x_api_key=x_api_key, authorization=authorization
+    )
 
     scrape_opts = options.scrape_options or ScrapeOptions(url="")
-    base_opts = scrape_opts.model_dump() if hasattr(scrape_opts, "model_dump") else scrape_opts.dict()
 
-    tasks = []
-    for u in target_urls:
-        opts = base_opts.copy()
-        opts["url"] = u
-        tasks.append(scrape_engine(**opts))
+    # Concurrently crawl mapped URLs with a semaphore cap to protect resources
+    semaphore = asyncio.Semaphore(5)
+    async def process_crawl_target(target_url: str):
+        async with semaphore:
+            try:
+                base = await base_scrape_pipeline(
+                    url=target_url,
+                    use_js_fallback=scrape_opts.use_js_fallback,
+                    only_main_content=scrape_opts.only_main_content,
+                    remove_tags=scrape_opts.remove_tags
+                )
+                return {"url": target_url, "status": "success", "markdown": base["markdown"]}
+            except Exception as err:
+                return {"url": target_url, "status": "failed", "error": str(err)}
 
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    successful = [r for r in results if isinstance(r, dict) and r.get("success")]
+    crawled_results = await asyncio.gather(*[process_crawl_target(u) for u in urls_to_crawl])
 
     return {
         "success": True,
-        "crawled_count": len(successful),
-        "data": successful,
+        "pages_crawled": len(crawled_results),
+        "data": crawled_results,
         "tokens_deducted": total_cost,
-        "tokens_remaining": new_balance
+        "tokens_remaining": auth_data["tokens_remaining"]
     }
 
 
-@app.post("/search")
-async def search_web(
-    options: SearchOptions,
-    current_user: dict = Depends(get_current_user),
-    conn: sqlite3.Connection = Depends(get_db)
-):
-    if not options.query.strip():
-        raise HTTPException(status_code=400, detail="Search query required.")
-
-    new_balance = deduct_tokens(current_user["id"], 1, f"Search: {options.query[:20]}", conn)
-
-    try:
-        from duckduckgo_search import DDGS
-    except ImportError:
-        raise HTTPException(status_code=500, detail="duckduckgo-search package missing.")
-
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(options.query, max_results=options.limit))
-        return {
-            "success": True,
-            "query": options.query,
-            "results": results,
-            "tokens_remaining": new_balance
-        }
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Search failed: {exc}")
-
-
 # ============================================================
-# AGENT CLARA (CONVERSATIONAL & STRUCTURED DATA AGENT)
+# SYSTEM HEALTH ENDPOINT
 # ============================================================
-
-@app.post("/agent")
-async def clara_agent(
-    options: AgentOptions,
-    current_user: dict = Depends(get_current_user),
-    conn: sqlite3.Connection = Depends(get_db)
-):
-    """Clara: Autonomous AI Agent & Conversational Assistant for ReClaire."""
-    require_gemini()
-    new_balance = deduct_tokens(current_user["id"], 5, f"Agent Clara: {options.prompt[:20]}", conn)
-
-    target_urls = options.urls or []
-    scraped_contexts = []
-
-    # If seed URLs provided, scrape them asynchronously
-    if target_urls:
-        tasks = [scrape_engine(url=u, formats=["markdown"], only_main_content=True) for u in target_urls[:3]]
-        scraped_results = await asyncio.gather(*tasks, return_exceptions=True)
-        for res in scraped_results:
-            if isinstance(res, dict) and res.get("success"):
-                scraped_contexts.append(f"Source: {res['url']}\n\n{res.get('markdown', '')[:10000]}")
-
-    gathered_web_text = "\n\n---\n\n".join(scraped_contexts) if scraped_contexts else "No external URLs scraped."
-
-    system_instruction = """
-You are Clara, the resident AI Agent and Assistant for ReClaire.
-ReClaire is a modern micro-SaaS content engine that parses web pages into clean Markdown, JSON, Branding profiles, and AI insights.
-
-Your Capabilities:
-1. Converse naturally with users about web URLs, research topics, or technical queries.
-2. Explain ReClaire's features (FastAPI engine, Playwright JS rendering, Gemini AI transformations, Token System).
-3. Synthesize gathered web pages into answers, summaries, or structured formats.
-
-Guidelines:
-- Keep answers helpful, grounded, and engaging.
-- If given gathered web sources, use them directly to answer the user's questions.
-- If asked for structured output (JSON or CSV), respond strictly in that format.
-"""
-
-    output_fmt = options.output_format.lower().strip()
-
-    # 1. CSV Mode
-    if output_fmt == "csv":
-        prompt = f"""
-{system_instruction}
-
-Task: Fulfill user prompt and return ONLY valid raw CSV with headers. Do not use code fences.
-
-User Prompt: {options.prompt}
-Web Context:
-{gathered_web_text[:20000]}
-"""
-        response = gemini_client.models.generate_content(model="gemini-3.6-flash", contents=prompt)
-        raw_csv = re.sub(r"```(?:csv)?\s*|\s*```", "", response.text.strip(), flags=re.IGNORECASE)
-        return {"agent": "Clara", "format": "csv", "data": raw_csv, "tokens_remaining": new_balance}
-
-    # 2. JSON Mode
-    elif output_fmt == "json":
-        schema = options.json_schema or {"result": "string", "key_facts": "list"}
-        prompt = f"""
-{system_instruction}
-
-Task: Fulfill user prompt and return valid JSON matching this schema:
-{json.dumps(schema)}
-
-User Prompt: {options.prompt}
-Web Context:
-{gathered_web_text[:20000]}
-"""
-        response = gemini_client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(response_mime_type="application/json")
-        )
-        return {"agent": "Clara", "format": "json", "data": parse_json_response(response.text), "tokens_remaining": new_balance}
-
-    # 3. Conversational Chat Mode (Default)
-    else:
-        history_text = ""
-        if options.chat_history:
-            history_text = "\n".join([f"{msg.role.capitalize()}: {msg.content}" for msg in options.chat_history[-6:]])
-
-        prompt = f"""
-{system_instruction}
-
-Recent Dialogue History:
-{history_text or "No prior messages."}
-
-User Prompt: {options.prompt}
-
-Gathered Context from Web / Seed URLs:
-{gathered_web_text[:20000]}
-
-Provide a conversational, insightful response as Clara:
-"""
-        response = gemini_client.models.generate_content(model="gemini-3.6-flash", contents=prompt)
-        return {
-            "agent": "Clara",
-            "format": "chat",
-            "message": response.text.strip(),
-            "sources_used": target_urls,
-            "tokens_remaining": new_balance
-        }
-
-
-# ============================================================
-# SYSTEM HEALTH & ROOT ENDPOINTS
-# ============================================================
-
-@app.get("/")
-async def root():
-    return {
-        "name": "ReClaire API",
-        "version": "2.2.0",
-        "status": "online",
-        "docs": "/docs",
-        "endpoints": ["/auth/register", "/auth/login", "/auth/me", "/scrape", "/map", "/crawl", "/search", "/agent"]
-    }
 
 @app.get("/health")
-async def health():
+async def health_check():
     return {
-        "status": "healthy",
-        "gemini_configured": gemini_client is not None,
-        "database": "sqlite3 connected"
+        "status": "online",
+        "version": "3.0.0",
+        "supabase_connected": supabase is not None,
+        "gemini_connected": gemini_client is not None
     }
 
-
-# ============================================================
-# LOCAL SERVER LAUNCH
-# ============================================================
 
 if __name__ == "__main__":
     import uvicorn
