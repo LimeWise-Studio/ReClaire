@@ -27,7 +27,6 @@ from google import genai
 from google.genai import types
 from supabase import create_client, Client
 
-
 # ============================================================
 # CONFIGURATION & API KEYS
 # ============================================================
@@ -69,6 +68,77 @@ DEFAULT_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
+# ============================================================
+# FASTAPI APP SETUP
+# ============================================================
+
+app = FastAPI(
+    title="ReClaire Web Intelligence API",
+    description="High-performance URL Scraper, Crawler, and Site Mapper Engine",
+    version="3.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ============================================================
+# PYDANTIC SCHEMAS
+# ============================================================
+
+class ScrapeOptions(BaseModel):
+    url: str
+    formats: List[str] = Field(
+        default_factory=lambda: ["markdown"],
+        description="Supported formats: markdown, html, raw_html, summary, questions, json"
+    )
+    use_js_fallback: bool = True
+    only_main_content: bool = True
+    remove_tags: List[str] = Field(
+        default_factory=lambda: ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
+    )
+    wait_for_selector: Optional[str] = None
+    json_schema: Optional[Dict[str, Any]] = None
+    user_question: Optional[str] = None
+
+class MapOptions(BaseModel):
+    url: str
+    limit: int = Field(100, ge=1, le=1000)
+    include_subdomains: bool = False
+
+class CrawlOptions(BaseModel):
+    url: str
+    limit: int = Field(5, ge=1, le=50)
+    scrape_options: Optional[ScrapeOptions] = None
+
+
+
+class AuthCredentials(BaseModel):
+    email: str
+    password: str = Field(min_length=8, max_length=128)
+
+
+class AuthResponse(BaseModel):
+    success: bool
+    user: Dict[str, Any]
+    api_key: str
+    tokens_remaining: int
+
+
+class BatchScrapeOptions(BaseModel):
+    urls: List[str] = Field(min_length=1, max_length=10)
+    formats: List[str] = Field(default_factory=lambda: ["markdown"])
+    use_js_fallback: bool = True
+    only_main_content: bool = True
+    remove_tags: List[str] = Field(
+        default_factory=lambda: ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
+    )
+    wait_for_selector: Optional[str] = None
+    json_schema: Optional[Dict[str, Any]] = None
 
 # ============================================================
 # AUTHENTICATION, TOKEN LEDGER & ACCOUNT API
@@ -401,79 +471,6 @@ async def grant_testing_tokens(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Testing grant failed: {exc}")
 
-# ============================================================
-# FASTAPI APP SETUP
-# ============================================================
-
-app = FastAPI(
-    title="ReClaire Web Intelligence API",
-    description="High-performance URL Scraper, Crawler, and Site Mapper Engine",
-    version="3.0.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-
-# ============================================================
-# PYDANTIC SCHEMAS
-# ============================================================
-
-class ScrapeOptions(BaseModel):
-    url: str
-    formats: List[str] = Field(
-        default_factory=lambda: ["markdown"],
-        description="Supported formats: markdown, html, raw_html, summary, questions, json"
-    )
-    use_js_fallback: bool = True
-    only_main_content: bool = True
-    remove_tags: List[str] = Field(
-        default_factory=lambda: ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
-    )
-    wait_for_selector: Optional[str] = None
-    json_schema: Optional[Dict[str, Any]] = None
-    user_question: Optional[str] = None
-
-class MapOptions(BaseModel):
-    url: str
-    limit: int = Field(100, ge=1, le=1000)
-    include_subdomains: bool = False
-
-class CrawlOptions(BaseModel):
-    url: str
-    limit: int = Field(5, ge=1, le=50)
-    scrape_options: Optional[ScrapeOptions] = None
-
-
-
-class AuthCredentials(BaseModel):
-    email: str
-    password: str = Field(min_length=8, max_length=128)
-
-
-class AuthResponse(BaseModel):
-    success: bool
-    user: Dict[str, Any]
-    api_key: str
-    tokens_remaining: int
-
-
-class BatchScrapeOptions(BaseModel):
-    urls: List[str] = Field(min_length=1, max_length=10)
-    formats: List[str] = Field(default_factory=lambda: ["markdown"])
-    use_js_fallback: bool = True
-    only_main_content: bool = True
-    remove_tags: List[str] = Field(
-        default_factory=lambda: ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
-    )
-    wait_for_selector: Optional[str] = None
-    json_schema: Optional[Dict[str, Any]] = None
 
 # ============================================================
 # UTILITIES & IMPROVED PLAYWRIGHT ENGINE
