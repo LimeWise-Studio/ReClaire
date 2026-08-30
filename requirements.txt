@@ -6,5 +6,5 @@ markdownify
 pypdf
 playwright
 google-genai
-PyJWT
 supabase
+pydantic
