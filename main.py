@@ -120,7 +120,13 @@ class AuthCredentials(BaseModel):
     email: str
     password: str = Field(min_length=8, max_length=128)
     username: Optional[str] = Field(None, min_length=3, max_length=50)
+    referrer_id: Optional[str] = Field(None, description="User ID of the referrer")
 
+class SurveySubmission(BaseModel):
+    q1_answer: str
+    q2_answer: str
+    q3_answer: str
+    q4_answers: List[str]
 
 class AuthResponse(BaseModel):
     success: bool
@@ -305,7 +311,7 @@ def generate_api_key() -> Tuple[str, str]:
     return raw, hash_api_key(raw)
 
 
-def profile_for_user(user_id: str, username: Optional[str] = None) -> Dict[str, Any]:
+def profile_for_user(user_id: str, username: Optional[str] = None, referrer_id: Optional[str] = None) -> Dict[str, Any]:
     response = supabase.table("profiles").select("*").eq("id", user_id).limit(1).execute()
     if response.data:
         return response.data[0]
@@ -318,6 +324,8 @@ def profile_for_user(user_id: str, username: Optional[str] = None) -> Dict[str, 
     }
     if username:
         new_profile["username"] = username
+    if referrer_id:
+        new_profile["referrer_id"] = referrer_id
 
     created = supabase.table("profiles").insert(new_profile).execute()
     if not created.data:
@@ -355,7 +363,7 @@ async def register(credentials: AuthCredentials):
         if not user:
             raise HTTPException(status_code=500, detail="Supabase did not return a user.")
 
-        profile = profile_for_user(user.id, credentials.username)
+        profile = profile_for_user(user.id, credentials.username, credentials.referrer_id)
         api_key = await issue_api_key(user.id)
         return {
             "success": True,
@@ -489,6 +497,73 @@ async def grant_testing_tokens(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Testing grant failed: {exc}")
 
+@app.post("/v1/referrals/claim")
+async def claim_referral_tokens(
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None),
+):
+    auth = await authenticate_api_key(x_api_key, authorization)
+    user_id = auth["user_id"]
+    
+    # Check if claim marker already exists in ledger
+    marker = supabase.table("usage_logs").select("id").eq("user_id", user_id).eq("endpoint", "/v1/referrals/claim").limit(1).execute()
+    if marker.data:
+        raise HTTPException(status_code=409, detail="Referral bonus has already been claimed.")
+        
+    # Count how many profiles have this user as a referrer
+    referrals = supabase.table("profiles").select("id", count="exact").eq("referrer_id", user_id).execute()
+    ref_count = referrals.count if referrals.count else 0
+    
+    if ref_count < 5:
+        raise HTTPException(status_code=400, detail=f"5 successful referrals required. Current count: {ref_count}")
+        
+    # Grant 100 tokens
+    new_balance = auth["tokens_remaining"] + 100
+    supabase.table("profiles").update({"token_balance": new_balance}).eq("id", user_id).execute()
+    
+    # Mark as claimed via zero-cost ledger entry
+    supabase.table("usage_logs").insert({
+        "user_id": user_id,
+        "endpoint": "/v1/referrals/claim",
+        "tokens_deducted": 0,
+    }).execute()
+    
+    return {"success": True, "tokens_granted": 100, "tokens_remaining": new_balance}
+
+
+@app.post("/v1/survey")
+async def submit_survey(
+    submission: SurveySubmission,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None),
+):
+    auth = await authenticate_api_key(x_api_key, authorization)
+    
+    supabase.table("surveys").insert({
+        "user_id": auth["user_id"],
+        "q1_answer": submission.q1_answer,
+        "q2_answer": submission.q2_answer,
+        "q3_answer": submission.q3_answer,
+        "q4_answers": submission.q4_answers,
+    }).execute()
+    
+    return {"success": True, "message": "Survey recorded successfully."}
+
+
+@app.delete("/auth/me")
+async def delete_account(
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None),
+):
+    auth = await authenticate_api_key(x_api_key, authorization)
+    user_id = auth["user_id"]
+    
+    try:
+        # Requires SUPABASE_SERVICE_ROLE_KEY configured in backend to bypass RLS for deletion
+        supabase.auth.admin.delete_user(user_id)
+        return {"success": True, "message": "Account deleted successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete account: {e}")
 
 # ============================================================
 # UTILITIES & IMPROVED PLAYWRIGHT ENGINE
