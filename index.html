@@ -41,15 +41,26 @@ let supabaseClient = null;
 if (typeof supabase !== 'undefined' && SUPABASE_URL && SUPABASE_ANON_KEY) {
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
-// Add right below line 43:
 if (supabaseClient) {
   supabaseClient.auth.onAuthStateChange((event, session) => {
     if (session && session.user) {
+      // 1. Populate user info
       state.user = {
         name: session.user.user_metadata.full_name || session.user.email,
         email: session.user.email,
         avatar: session.user.user_metadata.avatar_url
       };
+      
+      // 2. Switch screen from 'landing' to the main app view
+      state.screen = 'app';
+      state.page = 'playground';
+      
+      // 3. Clean up the access_token hash from the browser address bar
+      if (window.location.hash.includes('access_token')) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+
+      // 4. Re-render UI
       render();
     }
   });
