@@ -254,20 +254,18 @@ async def authenticate_and_deduct_tokens(
         raise HTTPException(status_code=500, detail=f"Token accounting failed: {exc}")
 
 
-def token_cost_for_scrape(formats: List[str]) -> int:
-    """ReClaire pricing: base scrape 1; HTML/raw HTML +1 each; JSON 2; summary/Q&A 5 each."""
+def token_cost_for_scrape(formats: List[str], used_dynamic_fetch: bool = False) -> int:
+    """ReClaire pricing: base scrape is 1 token (standard HTTP mode) or 3 tokens
+    (Playwright JS fallback engaged). AI transformations (summary, questions, json)
+    each add +2 tokens on top of the base scraping cost."""
     normalized = {f.strip().lower() for f in formats if f and f.strip()}
-    cost = 1
-    if "html" in normalized:
-        cost += 1
-    if "raw_html" in normalized:
-        cost += 1
+    cost = 3 if used_dynamic_fetch else 1
+    if "summary" in normalized:
+        cost += 2
+    if "questions" in normalized:
+        cost += 2
     if "json" in normalized:
         cost += 2
-    if "summary" in normalized:
-        cost += 5
-    if "questions" in normalized:
-        cost += 5
     return cost
 
 
@@ -540,6 +538,7 @@ async def base_scrape_pipeline(
         raise HTTPException(status_code=400, detail="Invalid URL provided.")
 
     html_content = ""
+    used_dynamic_fetch = False
 
     # Check for PDF
     if clean_url.lower().split("?")[0].endswith(".pdf"):
@@ -549,7 +548,7 @@ async def base_scrape_pipeline(
                 res.raise_for_status()
                 reader = PdfReader(io.BytesIO(res.content))
                 extracted = [page.extract_text() or "" for page in reader.pages]
-                return {"clean_url": clean_url, "raw_html": "", "markdown": "\n\n".join(extracted)}
+                return {"clean_url": clean_url, "raw_html": "", "markdown": "\n\n".join(extracted), "used_dynamic_fetch": False}
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"Failed to extract PDF: {str(e)}")
 
@@ -561,10 +560,12 @@ async def base_scrape_pipeline(
                 html_content = res.text
             elif use_js_fallback:
                 html_content = await fetch_dynamic_content(clean_url)
+                used_dynamic_fetch = True
     except Exception:
         if use_js_fallback:
             try:
                 html_content = await fetch_dynamic_content(clean_url)
+                used_dynamic_fetch = True
             except Exception as exc:
                 raise HTTPException(status_code=502, detail=f"Failed to fetch content from URL: {str(exc)}")
         else:
@@ -586,7 +587,8 @@ async def base_scrape_pipeline(
         "clean_url": clean_url,
         "raw_html": html_content,
         "clean_html": str(target),
-        "markdown": markdown_text or "No readable text found on page."
+        "markdown": markdown_text or "No readable text found on page.",
+        "used_dynamic_fetch": used_dynamic_fetch
     }
 
 
@@ -623,11 +625,10 @@ async def scrape_endpoint(
     if "questions" in options.formats and not options.user_question:
         raise HTTPException(status_code=422, detail="user_question is required when questions format is selected.")
 
-    total_cost = token_cost_for_scrape(options.formats)
-
-    auth_data = await authenticate_and_deduct_tokens(
-        cost=total_cost, endpoint="/v1/scrape", x_api_key=x_api_key, authorization=authorization
-    )
+    # The base cost depends on whether the Playwright JS fallback ends up
+    # being engaged, so we authenticate the caller first and defer the
+    # token deduction until after the scrape tells us which mode was used.
+    await authenticate_api_key(x_api_key, authorization)
 
     # Pipeline Step 1: Always scrape to Markdown first
     scrape_base = await base_scrape_pipeline(
@@ -635,6 +636,12 @@ async def scrape_endpoint(
         use_js_fallback=options.use_js_fallback,
         only_main_content=options.only_main_content,
         remove_tags=options.remove_tags
+    )
+
+    total_cost = token_cost_for_scrape(options.formats, scrape_base["used_dynamic_fetch"])
+
+    auth_data = await authenticate_and_deduct_tokens(
+        cost=total_cost, endpoint="/v1/scrape", x_api_key=x_api_key, authorization=authorization
     )
 
     result = {
@@ -738,11 +745,9 @@ async def crawl_endpoint(
     except Exception:
         urls_to_crawl = [clean_url]
 
-    # Crawling is one billable operation.
-    total_cost = 1
-    auth_data = await authenticate_and_deduct_tokens(
-        cost=total_cost, endpoint="/v1/crawl", x_api_key=x_api_key, authorization=authorization
-    )
+    # Crawling is billed per page, so authenticate up front and defer the
+    # deduction until we know how many pages were successfully crawled.
+    await authenticate_api_key(x_api_key, authorization)
 
     scrape_opts = options.scrape_options or ScrapeOptions(url="")
 
@@ -762,6 +767,15 @@ async def crawl_endpoint(
                 return {"url": target_url, "status": "failed", "error": str(err)}
 
     crawled_results = await asyncio.gather(*[process_crawl_target(u) for u in urls_to_crawl])
+
+    # Site Crawling pricing: 1 token per discovered/crawled page.
+    # Total cost = 1 x N, where N is the number of pages successfully crawled.
+    successful_pages = sum(1 for r in crawled_results if r["status"] == "success")
+    total_cost = 1 * successful_pages
+
+    auth_data = await authenticate_and_deduct_tokens(
+        cost=total_cost, endpoint="/v1/crawl", x_api_key=x_api_key, authorization=authorization
+    )
 
     return {
         "success": True,
@@ -830,7 +844,7 @@ async def batch_scrape_endpoint(
                 only_main_content=options.only_main_content,
                 remove_tags=options.remove_tags,
             )
-            cost = token_cost_for_scrape(formats)
+            cost = token_cost_for_scrape(formats, base["used_dynamic_fetch"])
             auth_data = await authenticate_and_deduct_tokens(
                 cost=cost,
                 endpoint="/v1/batch-scrape",
