@@ -35,7 +35,7 @@ from supabase import create_client, Client
 SUPABASE_URL = os.environ.get("SUPABASE_URL")  # <--- Replace or set ENV
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")  # <--- Replace or set ENV
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
-DEFAULT_TOKEN_BALANCE = int(os.environ.get("DEFAULT_TOKEN_BALANCE", "0"))
+DEFAULT_TOKEN_BALANCE = int(os.environ.get("DEFAULT_TOKEN_BALANCE", "100"))
 TEST_GRANT_TOKENS = int(os.environ.get("TEST_GRANT_TOKENS", "50"))
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # <--- Replace or set ENV
 
