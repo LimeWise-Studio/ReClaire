@@ -116,10 +116,10 @@ class CrawlOptions(BaseModel):
     scrape_options: Optional[ScrapeOptions] = None
 
 
-
 class AuthCredentials(BaseModel):
     email: str
     password: str = Field(min_length=8, max_length=128)
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
 
 
 class AuthResponse(BaseModel):
@@ -223,7 +223,7 @@ async def authenticate_and_deduct_tokens(
             detail=f"Insufficient token balance ({current_balance} remaining, {cost} required).",
         )
 
-    try:
+    try:77777
         if cost:
             updated = (
                 supabase.table("profiles")
@@ -255,17 +255,16 @@ async def authenticate_and_deduct_tokens(
 
 
 def token_cost_for_scrape(formats: List[str], used_dynamic_fetch: bool = False) -> int:
-    """ReClaire pricing: base scrape is 1 token (standard HTTP mode) or 3 tokens
-    (Playwright JS fallback engaged). AI transformations (summary, questions, json)
-    each add +2 tokens on top of the base scraping cost."""
+    """ReClaire pricing: base scrape is 1 token, 3 tokens for Playwright JS fallback."""
     normalized = {f.strip().lower() for f in formats if f and f.strip()}
     cost = 3 if used_dynamic_fetch else 1
-    if "summary" in normalized:
-        cost += 2
-    if "questions" in normalized:
-        cost += 2
-    if "json" in normalized:
-        cost += 2
+    
+    if "html" in normalized: cost += 1
+    if "raw_html" in normalized: cost += 1
+    if "summary" in normalized: cost += 3
+    if "questions" in normalized: cost += 3
+    if "json" in normalized: cost += 2
+    
     return cost
 
 
@@ -279,27 +278,48 @@ def normalize_formats(formats: List[str]) -> List[str]:
     }
     return [aliases.get(f.strip().lower(), f.strip().lower()) for f in formats if f and f.strip()]
 
+async def commit_token_deduction(user_id: str, current_balance: int, cost: int, endpoint: str) -> int:
+    """Phase 3: Deduct tokens strictly after successful execution."""
+    if cost <= 0:
+        return current_balance
+    new_balance = current_balance - cost
+    updated = (
+        supabase.table("profiles")
+        .update({"token_balance": new_balance})
+        .eq("id", user_id)
+        .eq("token_balance", current_balance)
+        .execute()
+    )
+    if not updated.data:
+        raise HTTPException(status_code=409, detail="Token balance mismatch during deduction.")
+    
+    supabase.table("usage_logs").insert({
+        "user_id": user_id, "endpoint": endpoint, "tokens_deducted": cost
+    }).execute()
+    
+    return new_balance
+
 
 def generate_api_key() -> Tuple[str, str]:
     raw = "rc_" + secrets.token_urlsafe(32)
     return raw, hash_api_key(raw)
 
 
-def profile_for_user(user_id: str) -> Dict[str, Any]:
-    response = (
-        supabase.table("profiles")
-        .select("id, token_balance")
-        .eq("id", user_id)
-        .limit(1)
-        .execute()
-    )
+def profile_for_user(user_id: str, username: Optional[str] = None) -> Dict[str, Any]:
+    response = supabase.table("profiles").select("*").eq("id", user_id).limit(1).execute()
     if response.data:
         return response.data[0]
 
-    created = supabase.table("profiles").insert({
+    # Initialize new user with 100 tokens and 0 purchase points
+    new_profile = {
         "id": user_id,
         "token_balance": DEFAULT_TOKEN_BALANCE,
-    }).execute()
+        "purchase_points": 0
+    }
+    if username:
+        new_profile["username"] = username
+
+    created = supabase.table("profiles").insert(new_profile).execute()
     if not created.data:
         raise HTTPException(status_code=500, detail="Could not create user profile.")
     return created.data[0]
@@ -335,7 +355,7 @@ async def register(credentials: AuthCredentials):
         if not user:
             raise HTTPException(status_code=500, detail="Supabase did not return a user.")
 
-        profile = profile_for_user(user.id)
+        profile = profile_for_user(user.id, credentials.username)
         api_key = await issue_api_key(user.id)
         return {
             "success": True,
@@ -619,63 +639,51 @@ async def scrape_endpoint(
 ):
     options.formats = normalize_formats(options.formats)
     allowed_formats = {"markdown", "html", "raw_html", "summary", "questions", "json"}
-    unknown = [f for f in options.formats if f not in allowed_formats]
-    if unknown:
+    if unknown := [f for f in options.formats if f not in allowed_formats]:
         raise HTTPException(status_code=422, detail=f"Unsupported format(s): {', '.join(unknown)}")
-    if "questions" in options.formats and not options.user_question:
-        raise HTTPException(status_code=422, detail="user_question is required when questions format is selected.")
+    
+    # PHASE 1: Authenticate & Pre-check Balance
+    auth = await authenticate_api_key(x_api_key, authorization)
+    user_id = auth["user_id"]
+    current_balance = auth["tokens_remaining"]
+    
+    # Calculate the maximum possible cost (assuming JS fallback triggers) to prevent negative balances
+    max_possible_cost = token_cost_for_scrape(options.formats, used_dynamic_fetch=True)
+    if current_balance < max_possible_cost:
+        raise HTTPException(status_code=402, detail=f"Insufficient tokens. Ensure you have at least {max_possible_cost} tokens.")
 
-    # The base cost depends on whether the Playwright JS fallback ends up
-    # being engaged, so we authenticate the caller first and defer the
-    # token deduction until after the scrape tells us which mode was used.
-    await authenticate_api_key(x_api_key, authorization)
+    # (Lightweight Priority Logic) - In the future, check profile['purchase_points'] here
+    # High-point users can bypass an asyncio.sleep() delay or get assigned to a premium Playwright semaphore pool.
 
-    # Pipeline Step 1: Always scrape to Markdown first
+    # PHASE 2: Execute Scrape & LLM Transformations
     scrape_base = await base_scrape_pipeline(
-        url=options.url,
-        use_js_fallback=options.use_js_fallback,
-        only_main_content=options.only_main_content,
-        remove_tags=options.remove_tags
+        url=options.url, use_js_fallback=options.use_js_fallback,
+        only_main_content=options.only_main_content, remove_tags=options.remove_tags
     )
-
-    total_cost = token_cost_for_scrape(options.formats, scrape_base["used_dynamic_fetch"])
-
-    auth_data = await authenticate_and_deduct_tokens(
-        cost=total_cost, endpoint="/v1/scrape", x_api_key=x_api_key, authorization=authorization
-    )
-
-    result = {
-        "success": True,
-        "url": scrape_base["clean_url"],
-        "tokens_deducted": total_cost,
-        "tokens_remaining": auth_data["tokens_remaining"]
-    }
-
+    
     req_formats = [f.lower() for f in options.formats]
     markdown = scrape_base["markdown"]
+    result_data = {"success": True, "url": scrape_base["clean_url"]}
 
-    if "markdown" in req_formats or not req_formats:
-        result["markdown"] = markdown
-    if "html" in req_formats:
-        result["html"] = scrape_base["clean_html"]
-    if "raw_html" in req_formats:
-        result["raw_html"] = scrape_base["raw_html"]
-
-    # Pipeline Step 2: Formats & LLM Transformations
+    if "markdown" in req_formats or not req_formats: result_data["markdown"] = markdown
+    if "html" in req_formats: result_data["html"] = scrape_base["clean_html"]
+    if "raw_html" in req_formats: result_data["raw_html"] = scrape_base["raw_html"]
+    
     if "summary" in req_formats:
-        prompt = f"Provide a concise, comprehensive summary of this page in Markdown:\n\n{markdown[:20000]}"
-        result["summary"] = run_gemini_transform(prompt)
-
+        result_data["summary"] = run_gemini_transform(f"Provide a summary:\n\n{markdown[:20000]}")
     if "questions" in req_formats and options.user_question:
-        prompt = f"Answer this question strictly using the text provided.\nQuestion: {options.user_question}\n\nContent:\n{markdown[:20000]}"
-        result["answer"] = run_gemini_transform(prompt)
-
+        result_data["answer"] = run_gemini_transform(f"Answer: {options.user_question}\n\nContent:\n{markdown[:20000]}")
     if "json" in req_formats:
-        schema_desc = json.dumps(options.json_schema or {"summary": "string", "key_facts": "list"})
-        prompt = f"Extract data matching this JSON schema:\n{schema_desc}\n\nContent:\n{markdown[:20000]}"
-        result["json"] = run_gemini_transform(prompt, response_json=True)
+        result_data["json"] = run_gemini_transform(f"Extract JSON:\n{json.dumps(options.json_schema)}\n\nContent:\n{markdown[:20000]}", response_json=True)
 
-    return result
+    # PHASE 3: Deduct & Commit Tokens (Only happens if Phase 2 fully succeeds)
+    actual_cost = token_cost_for_scrape(options.formats, scrape_base["used_dynamic_fetch"])
+    new_balance = await commit_token_deduction(user_id, current_balance, actual_cost, "/v1/scrape")
+
+    result_data["tokens_deducted"] = actual_cost
+    result_data["tokens_remaining"] = new_balance
+    
+    return result_data
 
 
 @app.post("/v1/map")
@@ -946,6 +954,16 @@ async def download_batch_markdown(
 # SYSTEM HEALTH ENDPOINT
 # ============================================================
 
+@app.get("/v1/stats/public")
+async def public_stats():
+    """Fetches the total number of registered ReClaire users for the landing page hero."""
+    try:
+        response = supabase.table("profiles").select("id", count="exact").execute()
+        return {"success": True, "total_users": response.count if response.count else 0}
+    except Exception as e:
+        return {"success": False, "total_users": 0, "error": "Could not fetch user stats."}
+
+    
 @app.get("/health")
 async def health_check():
     return {
