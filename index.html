@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head>
+<head> <meta charset="utf-8"> <link rel="icon" type="image/png" href="favicon.png"> <link rel="apple-touch-icon" href="favicon.png">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f7f5">
@@ -41,6 +41,19 @@ let supabaseClient = null;
 if (typeof supabase !== 'undefined' && SUPABASE_URL && SUPABASE_ANON_KEY) {
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
+// Add right below line 43:
+if (supabaseClient) {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (session && session.user) {
+      state.user = {
+        name: session.user.user_metadata.full_name || session.user.email,
+        email: session.user.email,
+        avatar: session.user.user_metadata.avatar_url
+      };
+      render();
+    }
+  });
+}
 
 const state={screen:'landing',authMode:'login',page:'playground',theme:localStorage.getItem('reclaire_theme')||'light',sidebarSide:localStorage.getItem('reclaire_sidebar_side')||'left',sidebarOpen:false,notificationsOpen:false,dropdown:null,formatDrawer:false,batchOpen:false,mode:'scrape',formats:['markdown'],question:'',url:'',user:null,apiKey:localStorage.getItem('reclaire_api_key')||'',logs:[],result:null,loading:false,batchRows:[],batchRunning:false,batchId:null,animatedTimers:[]};
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -63,7 +76,7 @@ async function handleOAuth(provider) {
   if (supabaseClient) {
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: provider,
-      options: { redirectTo: window.location.origin }
+      options: { redirectTo: window.location.origin + window.location.pathname }
     });
     if (error) notify('OAuth error', error.message);
   } else if (SUPABASE_URL) {
