@@ -223,7 +223,7 @@ async def authenticate_and_deduct_tokens(
             detail=f"Insufficient token balance ({current_balance} remaining, {cost} required).",
         )
 
-    try:77777
+    try:
         if cost:
             updated = (
                 supabase.table("profiles")
