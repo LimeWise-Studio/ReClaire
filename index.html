@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f7f5">
 <title>ReClaire — Web Intelligence Engine</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -37,7 +38,11 @@ const supabaseUrl = window.SUPABASE_URL || 'YOUR_SUPABASE_URL';
 const supabaseAnonKey = window.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
 let supabaseClient = null;
 if(window.supabase) {
-    supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    try {
+        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    } catch (e) {
+        console.warn('Supabase initialization bypassed: Valid URL required.');
+    }
 }
 
 const state={screen:'landing',authMode:'login',page:'playground',theme:localStorage.getItem('reclaire_theme')||'light',sidebarSide:localStorage.getItem('reclaire_sidebar_side')||'left',sidebarOpen:false,notificationsOpen:false,dropdown:null,formatDrawer:false,batchOpen:false,mode:'scrape',formats:['markdown'],question:'',url:'',user:null,apiKey:localStorage.getItem('reclaire_api_key')||'',logs:[],result:null,loading:false,batchRows:[],batchRunning:false,batchId:null,animatedTimers:[]};
