@@ -32,12 +32,26 @@
 <body data-theme="light">
 <div id="app"></div><div id="toastStack" class="toast-stack"></div>
 <script>
-    if (window.location.hash && window.location.hash.includes("access_token=")) {
-  // Clear the token string from the browser address bar without reloading
-        history.replaceState(null, "", window.location.pathname);
+// --- OAUTH REDIRECT & LOGIN HANDLER ---
+if (window.location.hash && window.location.hash.includes("access_token=")) {
+  // 1. Extract parameters from the URL hash (#access_token=...&provider_token=...)
+  const params = new URLSearchParams(window.location.hash.substring(1));
+  const accessToken = params.get("access_token");
+
+  if (accessToken) {
+    // 2. Save the session token for ReClaire API requests
+    localStorage.setItem("rc_api_key", accessToken);
+
+    // 3. Optional: Parse user email/data if returned in the hash or default it
+    const storedUser = localStorage.getItem("rc_user");
+    if (!storedUser) {
+      localStorage.setItem("rc_user", JSON.stringify({
+        email: "authenticated_user@reclaire.com",
+        username: "Authenticated User"
+      }));
     }
+  }
 (()=>{'use strict';
-}
 let API_BASE = localStorage.getItem('reclaire_api_base') || 'https://reclaire-api.onrender.com';
 const icons={
     menu:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
