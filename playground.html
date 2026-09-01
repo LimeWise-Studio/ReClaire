@@ -32,11 +32,11 @@
 <body data-theme="light">
 <div id="app"></div><div id="toastStack" class="toast-stack"></div>
 <script>
-(()=>{'use strict';
-    // Clean up OAuth hash parameters from URL bar after arrival
-if (window.location.hash && window.location.hash.includes("access_token=")) {
+    if (window.location.hash && window.location.hash.includes("access_token=")) {
   // Clear the token string from the browser address bar without reloading
-  history.replaceState(null, "", window.location.pathname);
+        history.replaceState(null, "", window.location.pathname);
+    }
+(()=>{'use strict';
 }
 let API_BASE = localStorage.getItem('reclaire_api_base') || 'https://reclaire-api.onrender.com';
 const icons={
