@@ -177,7 +177,7 @@ if (supabaseClient) {
 }
 
 // Run OAuth callback check on load
-handleOAuthCallback();
+handleAuthCallback();
 
 const state={screen:'landing',authMode:'login',page:'playground',theme:localStorage.getItem('reclaire_theme')||'light',sidebarSide:localStorage.getItem('reclaire_sidebar_side')||'left',sidebarOpen:false,notificationsOpen:false,dropdown:null,formatDrawer:false,batchOpen:false,mode:'scrape',formats:['markdown'],question:'',url:'',user:null,apiKey:localStorage.getItem('reclaire_api_key')||'',logs:[],result:null,loading:false,batchRows:[],batchRunning:false,batchId:null,animatedTimers:[],priorityPoints:Number(localStorage.getItem('reclaire_priority_points')||0),referralId:localStorage.getItem('reclaire_referral_id')||'',notifications:JSON.parse(localStorage.getItem('reclaire_notifications')||'[]'),unreadNotifications:Number(localStorage.getItem('reclaire_unread_notifications')||0),surveyOpen:false,deleteStage:0};
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
