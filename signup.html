@@ -574,6 +574,20 @@
 
     // --- OAUTH PROVIDER HANDLERS ---
     async function handleOAuth(provider) {
+      if (window.location.hash && window.location.hash.includes("access_token=")) {
+        supabaseClient.auth.getSession().then(({ data, error }) => {
+          if (data?.session) {
+      // Save session details for playground usage
+            localStorage.setItem("rc_api_key", data.session.access_token);
+            localStorage.setItem("rc_user", JSON.stringify(data.session.user));
+      
+      // Clean redirect to playground.html without the long URL hash
+            window.location.href = "playground.html";
+          } else if (error) {
+            showStatus("OAuth sign-in failed: " + error.message, true);
+          }
+        });
+      }
       if (!supabaseClient) {
         showStatus("Supabase URL & Anon Key not configured in code yet.", true);
         return;
