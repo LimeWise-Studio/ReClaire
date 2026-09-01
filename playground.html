@@ -33,6 +33,11 @@
 <div id="app"></div><div id="toastStack" class="toast-stack"></div>
 <script>
 (()=>{'use strict';
+    // Clean up OAuth hash parameters from URL bar after arrival
+if (window.location.hash && window.location.hash.includes("access_token=")) {
+  // Clear the token string from the browser address bar without reloading
+  history.replaceState(null, "", window.location.pathname);
+}
 let API_BASE = localStorage.getItem('reclaire_api_base') || 'https://reclaire-api.onrender.com';
 const icons={
     menu:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
