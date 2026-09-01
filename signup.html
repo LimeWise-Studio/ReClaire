@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReClaire - Account Sign Up</title>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-color: #f4f4f5;
+      --card-bg: #ffffff;
+      --text-main: #09090b;
+      --text-muted: #71717a;
+      --border-color: #e4e4e7;
+      --input-bg: #ffffff;
+      --btn-main-bg: #09090b;
+      --btn-main-text: #ffffff;
+      --btn-hover: #27272a;
+      --error-color: #ef4444;
+      --radius: 16px;
+      --transition: all 0.2s ease-in-out;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #09090b;
+      --card-bg: #18181b;
+      --text-main: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --border-color: #27272a;
+      --input-bg: #09090b;
+      --btn-main-bg: #f4f4f5;
+      --btn-main-text: #09090b;
+      --btn-hover: #e4e4e7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      position: relative;
+    }
+
+    /* Theme Toggle Switcher with SVG icons */
+    .theme-toggle {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: var(--transition);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .theme-toggle:hover {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+
+    .theme-icon {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .sun-icon { display: none; }
+    [data-theme="dark"] .sun-icon { display: block; }
+    [data-theme="dark"] .moon-icon { display: none; }
+
+    /* Main Auth Container Card */
+    .auth-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 440px;
+      padding: 40px 32px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: var(--transition);
+    }
+
+    /* ReClaire Adaptive SVG Logo */
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      margin-bottom: 24px;
+      color: var(--text-main); /* Inherits theme color to render white in dark mode */
+      transition: color 0.3s ease;
+    }
+
+    .brand-logo path {
+      fill: currentColor;
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 28px;
+      width: 100%;
+    }
+
+    .auth-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .auth-subtitle {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    /* Form & Input Groups */
+    .auth-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      text-align: left;
+    }
+
+    .form-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    .form-input:focus {
+      border-color: var(--text-main);
+      box-shadow: 0 0 0 2px rgba(9, 9, 11, 0.08);
+    }
+
+    /* Submit Button */
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      margin-top: 4px;
+      background: var(--btn-main-bg);
+      color: var(--btn-main-text);
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-submit:hover {
+      opacity: 0.9;
+    }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 20px 0;
+      width: 100%;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .divider span {
+      padding: 0 12px;
+    }
+
+    /* Social Buttons */
+    .social-group {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .btn-social {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: var(--transition);
+    }
+
+    .btn-social:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    [data-theme="dark"] .btn-social:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .social-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Mode Toggle Footer Link */
+    .auth-toggle-text {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .auth-toggle-link {
+      color: var(--text-main);
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+
+    .auth-toggle-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Skip Button */
+    .btn-skip {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      margin-bottom: 24px;
+    }
+
+    .btn-skip:hover {
+      border-color: var(--text-main);
+    }
+
+    /* Legal Footer */
+    .legal-footer {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .legal-footer a {
+      color: var(--text-main);
+      font-weight: 700;
+      text-decoration: underline;
+    }
+
+    /* Status Notification Message */
+    .status-msg {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+      display: none;
+      text-align: center;
+    }
+
+    .status-msg.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error-color);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .status-msg.success {
+      display: block;
+      background: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Theme Toggle Button with SVGs -->
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle Theme">
+    <!-- Moon Icon (Dark Mode) -->
+    <svg class="theme-icon moon-icon" viewBox="0 0 24 24">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+    <!-- Sun Icon (Light Mode) -->
+    <svg class="theme-icon sun-icon" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </button>
+
+  <!-- Auth Card -->
+  <main class="auth-card">
+    
+    <!-- Adaptive ReClaire Logo -->
+    <svg class="brand-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 10 L60 10 L40 50 L80 50 L35 90 L45 50 L20 50 Z" />
+    </svg>
+
+    <div class="auth-header">
+      <h1 class="auth-title" id="formTitle">Create your account</h1>
+      <p class="auth-subtitle" id="formSubtitle">Start with your ReClaire workspace.</p>
+    </div>
+
+    <div id="statusMsg" class="status-msg"></div>
+
+    <form class="auth-form" id="authForm">
+      <div class="form-group" id="usernameGroup">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" type="text" id="username" placeholder="Choose a username" autocomplete="username" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email address</label>
+        <input class="form-input" type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" type="password" id="password" placeholder="Enter your password" required minlength="8" autocomplete="current-password" />
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">
+        <span id="btnText">Create account</span>
+      </button>
+    </form>
+
+    <div class="divider">
+      <span>or</span>
+    </div>
+
+    <!-- Social OAuth Buttons -->
+    <div class="social-group">
+      <button class="btn-social" id="googleBtn">
+        <svg class="social-icon" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        Google
+      </button>
+      <button class="btn-social" id="githubBtn">
+        <svg class="social-icon" fill="currentColor" viewBox="0 0 24 24">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+        GitHub
+      </button>
+    </div>
+
+    <p class="auth-toggle-text">
+      <span id="toggleQuestion">Already have an account?</span>
+      <a class="auth-toggle-link" id="toggleModeBtn">Sign in</a>
+    </p>
+
+    <!-- Skip sign in button leading directly to playground -->
+    <a href="playground.html" class="btn-skip">Skip sign in &rarr;</a>
+
+    <!-- Legal Terms & Privacy -->
+    <footer class="legal-footer">
+      By continuing, you agree to ReClaire's <a href="terms.html">Terms of Service</a> and <a href="privacy.html">Privacy Policy</a>.
+    </footer>
+
+  </main>
+
+  <script>
+    // CONFIGURATION & API BASE URL
+    // Update API_BASE_URL to match your running FastAPI server or Render endpoint
+    const API_BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
+      ? "http://localhost:8000" 
+      : "https://reclaire-api.onrender.com"; // Replace with your production FastAPI URL if needed
+
+    // === CONFIGURATION: PASTE YOUR SUPABASE CREDENTIALS HERE ===
+    const SUPABASE_URL = "https://lbraefssokojulyfmmjd.supabase.co"; 
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicmFlZnNzb2tvanVseWZtbWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMjQyODksImV4cCI6MjEwMzYwMDI4OX0.e_jmB4jS_-cwKAraZpspPhEW_K4l2mbhhPZAlgN_y1E";
+
+    let supabaseClient = null;
+    if (SUPABASE_URL !== "https://lbraefssokojulyfmmjd.supabase.co" && SUPABASE_ANON_KEY !== "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicmFlZnNzb2tvanVseWZtbWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMjQyODksImV4cCI6MjEwMzYwMDI4OX0.e_jmB4jS_-cwKAraZpspPhEW_K4l2mbhhPZAlgN_y1E") {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    // STATE VARIABLES
+    let isSignUpMode = true;
+
+    // DOM ELEMENTS
+    const themeToggle = document.getElementById("themeToggle");
+    const authForm = document.getElementById("authForm");
+    const formTitle = document.getElementById("formTitle");
+    const formSubtitle = document.getElementById("formSubtitle");
+    const usernameGroup = document.getElementById("usernameGroup");
+    const submitBtn = document.getElementById("submitBtn");
+    const btnText = document.getElementById("btnText");
+    const toggleQuestion = document.getElementById("toggleQuestion");
+    const toggleModeBtn = document.getElementById("toggleModeBtn");
+    const statusMsg = document.getElementById("statusMsg");
+    const googleBtn = document.getElementById("googleBtn");
+    const githubBtn = document.getElementById("githubBtn");
+
+    // --- THEME ENGINE ---
+    function initTheme() {
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme) {
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        document.documentElement.setAttribute("data-theme", dark);
+      }
+    }
+
+    themeToggle.addEventListener("click", () => {
+      const currentTheme = document.documentElement.getAttribute("data-theme");
+      const newTheme = currentTheme === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", newTheme);
+      localStorage.setItem("theme", newTheme);
+    });
+
+    initTheme();
+
+    // --- MODE SWITCHER (Sign Up vs Sign In) ---
+    toggleModeBtn.addEventListener("click", () => {
+      isSignUpMode = !isSignUpMode;
+      statusMsg.className = "status-msg";
+      statusMsg.style.display = "none";
+
+      if (isSignUpMode) {
+        formTitle.textContent = "Create your account";
+        formSubtitle.textContent = "Start with your ReClaire workspace.";
+        usernameGroup.style.display = "flex";
+        btnText.textContent = "Create account";
+        toggleQuestion.textContent = "Already have an account?";
+        toggleModeBtn.textContent = "Sign in";
+      } else {
+        formTitle.textContent = "Welcome back";
+        formSubtitle.textContent = "Sign in to access your ReClaire workspace.";
+        usernameGroup.style.display = "none";
+        btnText.textContent = "Sign in";
+        toggleQuestion.textContent = "Don't have an account?";
+        toggleModeBtn.textContent = "Sign up";
+      }
+    });
+
+    // --- SHOW STATUS MESSAGES ---
+    function showStatus(message, isError = true) {
+      statusMsg.textContent = message;
+      statusMsg.className = `status-msg ${isError ? 'error' : 'success'}`;
+    }
+
+    // --- AUTHENTICATION SUBMIT HANDLER ---
+    authForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const username = document.getElementById("username").value.trim();
+
+      submitBtn.disabled = true;
+      btnText.textContent = "Processing...";
+
+      const endpoint = isSignUpMode ? "/auth/register" : "/auth/login";
+      const payload = { email, password };
+      if (isSignUpMode && username) {
+        payload.username = username;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Authentication failed. Please check your details.");
+        }
+
+        // Store API Key and user info in localStorage for playground usage
+        if (data.api_key) {
+          localStorage.setItem("rc_api_key", data.api_key);
+          localStorage.setItem("rc_user", JSON.stringify(data.user));
+          localStorage.setItem("rc_tokens", data.tokens_remaining);
+        }
+
+        showStatus("Success! Redirecting to workspace...", false);
+
+        setTimeout(() => {
+          window.location.href = "playground.html";
+        }, 1000);
+
+      } catch (error) {
+        showStatus(error.message, true);
+        submitBtn.disabled = false;
+        btnText.textContent = isSignUpMode ? "Create account" : "Sign in";
+      }
+    });
+
+    // --- OAUTH PROVIDER HANDLERS ---
+    async function handleOAuth(provider) {
+      if (!supabaseClient) {
+        showStatus("Supabase URL & Anon Key not configured in code yet.", true);
+        return;
+      }
+
+      try {
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+          provider: provider,
+          options: {
+            redirectTo: `${window.location.origin}/playground.html`
+          }
+        });
+        if (error) throw error;
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    }
+
+    googleBtn.addEventListener("click", () => handleOAuth("google"));
+    githubBtn.addEventListener("click", () => handleOAuth("github"));
+  </script>
+</body>
+</html>
