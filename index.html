@@ -77,15 +77,14 @@ if (typeof supabase !== 'undefined' && SUPABASE_URL && SUPABASE_ANON_KEY) {
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-// Handle OAuth callback on page load
-async function handleOAuthCallback() {
+// Handle OAuth callback and session restoration
+async function handleAuthCallback() {
   if (!supabaseClient) return;
   
-  // Check if we have a hash with access_token
+  // Check if we have a hash with access_token (OAuth redirect)
   const hash = window.location.hash;
   if (hash && hash.includes('access_token')) {
     try {
-      // Parse the hash parameters
       const params = new URLSearchParams(hash.substring(1));
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
@@ -99,6 +98,7 @@ async function handleOAuthCallback() {
         
         if (error) {
           console.error('Session error:', error);
+          notify('Authentication error', error.message);
           return;
         }
         
@@ -121,11 +121,33 @@ async function handleOAuthCallback() {
           // Load account and render
           await loadAccount();
           render();
+          notify('Welcome', `Signed in as ${state.user.username || state.user.email}`);
         }
       }
     } catch (e) {
       console.error('OAuth callback error:', e);
+      notify('Authentication failed', e.message);
     }
+  }
+  
+  // Also check for existing session (in case user is already logged in)
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && session.user && !state.user) {
+      state.user = {
+        name: session.user.user_metadata.full_name || session.user.email,
+        username: localStorage.getItem('reclaire_username') || session.user.user_metadata.user_name || session.user.email?.split('@')[0] || '',
+        email: session.user.email,
+        avatar: session.user.user_metadata.avatar_url,
+        id: session.user.id
+      };
+      state.screen = 'app';
+      state.page = 'playground';
+      await loadAccount();
+      render();
+    }
+  } catch (e) {
+    console.error('Session check error:', e);
   }
 }
 
@@ -148,6 +170,8 @@ if (supabaseClient) {
       }
       
       render();
+      // Load account data after render
+      setTimeout(() => loadAccount().then(render), 100);
     }
   });
 }
@@ -234,15 +258,20 @@ async function auth(mode,f){
 
 async function handleOAuth(provider) {
   if (supabaseClient) {
+    const redirectUrl = window.location.origin + window.location.pathname;
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: provider,
       options: { 
-        redirectTo: window.location.origin + window.location.pathname
+        redirectTo: redirectUrl
       }
     });
-    if (error) notify('OAuth error', error.message);
+    if (error) {
+      notify('OAuth error', error.message);
+      console.error('OAuth error:', error);
+    }
   } else if (SUPABASE_URL) {
-    window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
+    const redirectUrl = encodeURIComponent(window.location.origin + window.location.pathname);
+    window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=${provider}&redirect_to=${redirectUrl}`;
   } else {
     notify('OAuth setup', `Configured provider: ${provider}. Set SUPABASE_URL in project environment.`);
   }
@@ -503,7 +532,23 @@ async function deleteAccount(){
 }
 
 function positionDropdown(){const t=$('.custom-select'),m=$('#modeDropdown');if(!t||!m)return;const r=t.getBoundingClientRect();m.style.left=Math.min(r.left,innerWidth-m.offsetWidth-10)+'px';m.style.top=Math.min(r.bottom+7,innerHeight-m.offsetHeight-10)+'px'}function outside(e){if(state.dropdown&&!e.target.closest('.custom-select')&&!e.target.closest('#modeDropdown')){state.dropdown=null;render()}}
-(async()=>{setTheme(state.theme);if(state.apiKey){if(await loadAccount())state.screen='app';else localStorage.removeItem('reclaire_api_key'),state.apiKey=''}render()})();
+(async() => {
+  setTheme(state.theme);
+  
+  // Check for OAuth callback first
+  await handleAuthCallback();
+  
+  // If we have an API key, try to load account
+  if (state.apiKey) {
+    if (await loadAccount()) {
+      state.screen = 'app';
+    } else {
+      localStorage.removeItem('reclaire_api_key');
+      state.apiKey = '';
+    }
+  }
+  render();
+})();
 })();
 </script>
 </body>
