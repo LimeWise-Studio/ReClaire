@@ -1,653 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head> <meta charset="utf-8"> <link rel="icon" type="image/png" href="favicon.png"> <link rel="apple-touch-icon" href="favicon.png">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f7f5">
+<title>ReClaire — Web Intelligence Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f7f7f5;--surface:#fff;--surface2:#f0f0ed;--surface3:#e6e6e1;--text:#0b0b0b;--text2:#303030;--muted:#707070;--border:#deded8;--border2:#bdbdb5;--accent:#111;--accentSoft:#ecece8;--gold:#8b6a22;--goldSoft:#f4ecd7;--success:#16703b;--danger:#b3261e;--shadow:0 18px 55px rgba(0,0,0,.08);--topbar:66px;--sidebar:270px;--radius:16px;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+[data-theme=dark]{--bg:#0b0b0b;--surface:#141414;--surface2:#1b1b1b;--surface3:#242424;--text:#fff;--text2:#dedede;--muted:#9b9b9b;--border:#303030;--border2:#494949;--accent:#EFD09E;--accentSoft:rgba(239,208,158,.12);--gold:#EFD09E;--goldSoft:rgba(239,208,158,.12);--success:#68c892;--danger:#ff8078;--shadow:0 22px 65px rgba(0,0,0,.35)}
+*{box-sizing:border-box}html{height:100%;scroll-behavior:smooth}body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:14px/1.55 'Ubuntu',ui-sans-serif,system-ui,-apple-system,sans-serif}button,input,textarea{font:inherit}button{border:0;color:inherit;cursor:pointer}a{text-decoration:none;color:inherit}svg{display:block}.hidden{display:none!important}.mono{font-family:var(--mono)}.muted{color:var(--muted)}
+.btn{min-height:42px;padding:0 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:750;transition:transform .16s ease,border-color .16s ease,background .16s ease}.btn:hover{transform:translateY(-1px);border-color:var(--border2)}.btn.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}.btn.ghost{background:transparent}.icon-btn{width:40px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface);display:grid;place-items:center}.icon-btn:hover{background:var(--surface2)}.input{width:100%;height:46px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);outline:0;padding:0 13px}.input:focus,.question-input:focus,.url-input:focus,.textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accentSoft)}.textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);outline:0;padding:12px 13px;resize:vertical;min-height:100px}
+/* Public */
+.public-shell{height:100dvh;overflow:auto;background:var(--bg);scroll-behavior:smooth}.public-nav{height:72px;max-width:1200px;margin:auto;padding:0 25px;display:flex;align-items:center;justify-content:space-between}.brand-word{display:flex;align-items:center;gap:10px;font-weight:850;letter-spacing:-.035em}.brand-logo{width:34px;height:34px;object-fit:contain;filter:brightness(0)}[data-theme=dark] .brand-logo{filter:brightness(0) invert(1)}.landing{max-width:1120px;margin:auto;padding:80px 25px 100px}.hero{text-align:center;max-width:850px;margin:auto}.hero-logo{width:84px;height:84px;object-fit:contain;margin:0 auto 28px;filter:brightness(0)}[data-theme=dark] .hero-logo{filter:brightness(0) invert(1)}.hero h1{font:600 clamp(54px,8vw,92px)/.95 Georgia,serif;letter-spacing:-.065em;margin:0 0 24px}.hero p{max-width:680px;margin:auto;color:var(--text2);font-size:18px}.hero-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:30px 0 90px}.section{margin-top:90px}.section-head{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:18px}.section-head h2{margin:0;font-size:25px;letter-spacing:-.04em}.eyebrow{font-size:10px;font-weight:850;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin-bottom:7px}.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.feature{border:1px solid var(--border);background:var(--surface);border-radius:15px;padding:22px;min-height:175px;transition:transform .2s ease,border-color .2s ease}.feature:hover{transform:translateY(-3px);border-color:var(--border2)}.feature-icon{width:38px;height:38px;border-radius:10px;background:var(--accentSoft);color:var(--accent);display:grid;place-items:center}.feature h3{font-size:15px;margin:16px 0 7px}.feature p{margin:0;color:var(--muted);font-size:13px}.examples{display:grid;grid-template-columns:1fr 1fr;gap:12px}.example{border:1px solid var(--border);background:var(--surface);border-radius:15px;overflow:hidden}.example-head{padding:14px 16px;border-bottom:1px solid var(--border);font-weight:750}.example-code{min-height:125px;padding:17px;background:var(--surface2);font:12px/1.65 var(--mono);white-space:pre-wrap;color:var(--text2)}.public-footer{max-width:1120px;margin:auto;border-top:1px solid var(--border);padding:24px 25px 45px;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:15px}
+/* Auth */.auth-screen{height:100dvh;overflow:auto;display:grid;place-items:center;padding:25px}.auth-card{width:min(450px,100%);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;box-shadow:var(--shadow)}.auth-logo{display:block;width:55px;height:55px;object-fit:contain;margin:0 auto 25px;filter:brightness(0)}[data-theme=dark] .auth-logo{filter:brightness(0) invert(1)}.auth-card h1{margin:0;font-size:29px;letter-spacing:-.05em}.auth-card .sub{margin:7px 0 26px;color:var(--muted)}.auth-field{margin:13px 0}.auth-field label{display:block;font-size:11px;font-weight:800;color:var(--text2);margin-bottom:7px}.auth-links{display:flex;justify-content:space-between;margin:10px 0 17px;font-size:11px}.auth-links a{color:var(--accent);font-weight:800}.auth-divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11px;margin:21px 0}.auth-divider:before,.auth-divider:after{content:"";height:1px;background:var(--border);flex:1}.social-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.social-btn{min-height:46px;border:1px solid var(--border);border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;gap:9px;font-weight:750}.social-btn:hover{background:var(--surface2)}.oauth-logo{width:18px;height:18px}.auth-switch{text-align:center;color:var(--muted);font-size:11px;margin-top:22px}.auth-switch button{background:transparent;color:var(--accent);font-weight:850}.legal{text-align:center;color:var(--muted);font-size:9px;margin-top:27px}
+/* App */.app-shell{height:100dvh;display:flex;flex-direction:column}.topbar{height:var(--topbar);flex:0 0 var(--topbar);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:50}.top-left,.top-right{display:flex;align-items:center;gap:9px;min-width:0}.account-chip{display:flex;align-items:center;gap:8px;padding:4px 9px 4px 4px;border:1px solid var(--border);border-radius:999px;background:var(--surface)}.avatar{width:29px;height:29px;border-radius:50%;background:var(--accentSoft);color:var(--accent);display:grid;place-items:center;font-size:10px;font-weight:850;overflow:hidden}.account-name{max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:750}.top-logo{width:31px;height:31px;object-fit:contain;filter:brightness(0)}[data-theme=dark] .top-logo{filter:brightness(0) invert(1)}.workspace{min-height:0;flex:1;display:flex;position:relative}.sidebar{width:var(--sidebar);flex:0 0 var(--sidebar);background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;padding:14px 12px 25px;overscroll-behavior:contain;z-index:40;scrollbar-gutter:stable;transition:transform .22s ease}.sidebar.right{order:3;border-right:0;border-left:1px solid var(--border)}.sidebar-overlay{display:none;position:fixed;inset:var(--topbar) 0 0;background:rgba(0,0,0,.38);z-index:30}.sidebar-top{padding:3px 4px 14px}.upgrade{width:100%;min-height:43px;border-radius:10px;background:var(--accent);color:var(--bg);font-weight:850}.support-btn{width:100%;min-height:40px;margin-top:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);font-weight:700;display: flex;align-items: center;justify-content: center;gap: 8px}.profile-box{border:1px solid var(--border);border-radius:12px;background:var(--surface2);padding:10px;margin:9px 0 17px;display:flex;align-items:center;gap:9px}.profile-meta{min-width:0}.profile-meta strong,.profile-meta span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.profile-meta span{color:var(--muted);font-size:10px}.nav-group{margin:17px 0}.nav-title{padding:0 9px 6px;color:var(--muted);font-size:9px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}.nav-item{width:100%;min-height:38px;padding:0 10px;border-radius:99px;background:transparent;display:flex;align-items:center;gap:10px;text-align:left;color:var(--text2);margin:2px 0;font-weight:650}.nav-item:hover{background:var(--surface2);color:var(--text)}.nav-item.active{background:var(--accentSoft);color:var(--accent)}.nav-icon{width:18px;height:18px;flex:0 0 auto}.logout{margin-top:20px;color:var(--danger)}.main{min-width:0;min-height:0;flex:1;overflow:hidden;background:var(--bg);position:relative}.page{height:100%;overflow-y:auto;overflow-x:hidden;padding:32px 32px 70px;overscroll-behavior:contain;scrollbar-gutter:stable}.page-inner{max-width:1080px;margin:auto}.page-header{margin-bottom:26px}.page-header h1{margin:0;font-size:28px;letter-spacing:-.05em}.page-header p{margin:7px 0 0;color:var(--muted)}
+/* Playground */.playground{height:100%;overflow-y:auto;padding:50px 24px 80px;overscroll-behavior:contain;scroll-behavior:smooth}.playground-inner{width:min(900px,100%);margin:auto}.main-brand{text-align:center}.main-brand img{width:65px;height:65px;object-fit:contain;margin:0 auto 18px;filter:brightness(0)}[data-theme=dark] .main-brand img{filter:brightness(0) invert(1)}.main-brand h1{font:600 43px/1 Georgia,serif;letter-spacing:-.05em;margin:0}.main-brand p{max-width:650px;margin:12px auto 32px;color:var(--muted)}.input-panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:12px;box-shadow:var(--shadow)}.input-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:850;color:var(--muted);margin:0 0 7px 2px}.input-row{display:grid;grid-template-columns:185px 1fr 180px;gap:8px;align-items:center}.input-row.no-format{grid-template-columns:185px 1fr}.custom-select,.format-trigger,.url-shell{min-height:50px;border:1px solid var(--border);border-radius:11px;background:var(--surface2)}.custom-select,.format-trigger{padding:0 13px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:750;text-align:left}.url-shell{display:flex;align-items:center;overflow:hidden}.url-prefix{color:var(--muted);font:11px var(--mono);padding-left:13px}.url-input{min-width:0;flex:1;height:48px;border:0;outline:0;background:transparent;color:var(--text);padding:0 11px 0 3px}.execute{min-height:50px;width:100%;border-radius:11px;background:var(--accent);color:var(--bg);font-weight:850}.question-wrap{margin-top:9px}.question-input{width:100%;height:46px;border:1px solid var(--border);border-radius:11px;background:var(--surface2);color:var(--text);padding:0 13px;outline:0}.panel-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;padding:0 3px;color:var(--muted);font-size:10px}.multi-count{color:var(--accent);font-weight:850}.batch-trigger{width:100%;min-height:42px;margin-top:9px;border:1px dashed var(--border2);border-radius:10px;background:transparent;font-weight:750}.batch-trigger:hover{background:var(--surface2)}
+/* Output */.output-area{margin-top:30px}.output-empty{min-height:190px;border:1px dashed var(--border2);border-radius:15px;display:grid;place-items:center;text-align:center;padding:28px;color:var(--muted)}.result-card{background:var(--surface);border:1px solid var(--border);border-radius:15px;overflow:hidden;margin-bottom:12px}.result-head{padding:13px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}.result-head strong{font-size:13px}.result-body{padding:20px}.code-box{margin:0;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:16px;overflow:auto;max-height:620px;white-space:pre-wrap;word-break:break-word;font:12px/1.7 var(--mono);color:var(--text2)}.curl-section{margin-bottom:20px}.curl-title{font-size:13px;font-weight:750;margin-bottom:8px;color:var(--text)}.ai-output{color:var(--text2);font-size:14px}.ai-output h1,.ai-output h2,.ai-output h3{color:var(--text);line-height:1.2;letter-spacing:-.035em}.ai-output h2{font-size:20px;margin:22px 0 8px}.ai-output h3{font-size:16px;margin:18px 0 7px}.ai-output strong{color:var(--text)}.ai-output ul{padding-left:21px}.ai-output li{margin:5px 0}.ai-output p{margin:9px 0}.result-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.result-actions .btn{min-height:39px;font-size:12px}.recent{margin-top:30px}.recent h3{font-size:12px;margin:0 0 9px}.recent-list{display:grid;gap:7px}.recent-item{border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;gap:12px}.task{min-width:0}.task strong{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.task span{display:block;color:var(--muted);font-size:9px;margin-top:2px}.cost{color:var(--gold);font-weight:850;white-space:nowrap}
+/* Batch */.batch-panel{margin-top:9px;border:1px solid var(--border);border-radius:15px;background:var(--surface);padding:13px;animation:panelIn .2s ease both}.batch-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.batch-head h3{margin:0;font-size:14px}.batch-meta{font-size:10px;color:var(--muted)}.batch-rows{display:grid;gap:7px}.batch-row{display:grid;grid-template-columns:32px 1fr 32px;gap:8px;align-items:center}.batch-num{font:11px var(--mono);color:var(--muted);text-align:center}.batch-status{width:30px;height:30px;border:1px solid var(--border);border-radius:8px;display:grid;place-items:center;color:var(--success);background:var(--surface2)}.batch-row .input{height:42px}.batch-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:11px}.batch-download:disabled{opacity:.45;cursor:not-allowed}.batch-note{font-size:10px;color:var(--muted)}
+/* Tables/settings */.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.settings-card{border:1px solid var(--border);background:var(--surface);border-radius:15px;padding:18px}.settings-card h3{margin:0 0 5px;font-size:14px}.settings-card p{margin:0 0 15px;color:var(--muted);font-size:12px}.setting-row{min-height:49px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:15px}.setting-row:first-of-type{border-top:0}.segmented{display:flex;border:1px solid var(--border);border-radius:9px;padding:3px;background:var(--surface2)}.segmented button{padding:7px 10px;border-radius:7px;background:transparent;font-size:11px;font-weight:850}.segmented button.active{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.08);color:var(--accent)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:13px}.stat{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px}.stat span{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.09em;font-weight:850}.stat strong{display:block;font-size:22px;margin-top:4px;letter-spacing:-.03em}.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:auto}table{width:100%;border-collapse:collapse;min-width:600px}th,td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;font-size:11px}th{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.08em}tr:last-child td{border-bottom:0}.usage-costs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.cost-card{padding:13px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);display:flex;justify-content:space-between;gap:10px}.cost-card strong{font-size:12px}.cost-card span{font-weight:850;color:var(--gold)}
+/* Menus */.dropdown-menu{position:fixed;min-width:215px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);z-index:70;padding:5px;animation:panelIn .15s ease both}.dropdown-option{width:100%;min-height:40px;border-radius:8px;background:transparent;padding:0 10px;display:flex;align-items:center;justify-content:space-between;text-align:left}.dropdown-option:hover{background:var(--surface2)}.dropdown-option.active{background:var(--accentSoft);color:var(--accent);font-weight:850}.format-drawer{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(760px,calc(100vw - 28px));max-height:min(70dvh,500px);overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:17px;box-shadow:var(--shadow);z-index:65;padding:15px;animation:drawerIn .2s ease both}.format-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:12px}.format-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.format-card{border:1px solid var(--border);border-radius:11px;background:var(--surface2);padding:13px;text-align:left;min-height:112px;position:relative}.format-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accentSoft) inset}.format-card strong{display:block;font-size:12px}.format-card small{display:block;color:var(--muted);margin-top:3px;font-size:10px}.wire{margin-top:10px;height:38px;border:1px solid var(--border);border-radius:7px;padding:6px;display:flex;flex-direction:column;gap:4px}.wire i{height:4px;background:var(--border2);border-radius:3px}.wire i:nth-child(2){width:72%}.wire i:nth-child(3){width:52%}.floating-panel{position:fixed;top:calc(var(--topbar) + 9px);right:14px;width:min(340px,calc(100vw - 28px));background:var(--surface);border:1px solid var(--border);border-radius:13px;box-shadow:var(--shadow);z-index:60;overflow:hidden;animation:panelIn .18s ease both}.floating-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}.notification-list{max-height:350px;overflow:auto}.notification{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;gap:10px}.notification-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:6px;flex:0 0 auto}.notification strong{display:block;font-size:11px}.notification span{display:block;color:var(--muted);font-size:10px}
+.toast-stack{position:fixed;right:15px;bottom:15px;z-index:100;display:grid;gap:8px;width:min(340px,calc(100vw - 30px))}.toast{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:11px 12px;box-shadow:var(--shadow);animation:toastIn .2s ease both}.toast strong{display:block;font-size:11px}.toast span{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+@keyframes panelIn{from{opacity:0;transform:translateY(-5px) scale(.985)}to{opacity:1;transform:none}}@keyframes drawerIn{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@keyframes typing{0%,100%{opacity:1}50%{opacity:.35}}
+@media(max-width:1050px){:root{--sidebar:245px}.feature-grid{grid-template-columns:repeat(2,1fr)}.settings-grid{grid-template-columns:1fr}.input-row{grid-template-columns:160px 1fr 160px}.input-row.no-format{grid-template-columns:160px 1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:800px){.topbar{padding:0 9px}.account-name{max-width:90px}.sidebar{position:fixed;top:var(--topbar);bottom:0;left:0;transform:translateX(-105%);width:min(300px,88vw);box-shadow:var(--shadow)}.sidebar.right{left:auto;right:0;transform:translateX(105%)}.sidebar.open{transform:translateX(0)}.sidebar-overlay.show{display:block}.input-row,.input-row.no-format{grid-template-columns:1fr}.execute{width:100%}.playground{padding:37px 15px 70px}.main-brand h1{font-size:36px}.feature-grid{grid-template-columns:1fr}.examples{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.usage-costs{grid-template-columns:1fr}.landing{padding-top:45px}.hero h1{font-size:55px}}
+@media(max-width:520px){.topbar{display:flex;justify-content:space-between}.top-right{gap:5px}.auth-card{padding:27px 20px;border-radius:17px}.social-grid{grid-template-columns:1fr}.hero h1{font-size:49px}.hero-actions .btn{width:100%}.public-nav{padding:0 16px}.landing{padding-left:16px;padding-right:16px}.format-drawer{bottom:0;border-radius:17px 17px 0 0;width:100%}.batch-row{grid-template-columns:25px 1fr 30px}.page{padding:23px 15px 55px}.batch-actions{align-items:stretch;flex-direction:column}.batch-actions .btn{width:100%}}
+</style>
+</head>
+<body data-theme="light">
+<div id="app"></div><div id="toastStack" class="toast-stack"></div>
 <script>
-  (() => {
-    'use strict';
-
-    // --- Configuration ---
-    let API_BASE = localStorage.getItem('reclaire_api_base') || 'https://reclaire-api.onrender.com';
-    const SUPABASE_URL = 'https://lbraefssokojulyfmmjd.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicmFlZnNzb2tvanVseWZtbWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMjQyODksImV4cCI6MjEwMzYwMDI4OX0.e_jmB4jS_-cwKAraZpspPhEW_K4l2mbhhPZAlgN_y1E';
-    let supabaseClient = null;
-    if (typeof supabase !== 'undefined' && SUPABASE_URL && SUPABASE_ANON_KEY) {
-      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
-
-    // --- State ---
-    const state = {
-      screen: 'landing',          // 'landing' | 'app'
-      authMode: 'login',          // 'login' | 'register'
-      page: 'playground',         // 'playground' | 'batch' | 'usage' | 'settings'
-      theme: localStorage.getItem('reclaire_theme') || 'light',
-      user: null,
-      apiKey: localStorage.getItem('reclaire_api_key') || '',
-      tokenBalance: 0,
-
-      // Playground
-      mode: 'scrape',             // 'scrape' | 'map' | 'crawl'
-      url: '',
-      formats: ['markdown'],
-      question: '',
-      loading: false,
-      result: null,
-
-      // Batch
-      batchUrls: [],
-      batchRunning: false,
-      batchId: null,
-      batchResult: null,
-
-      // Usage
-      usageLogs: [],
-    };
-
-    // --- Utilities ---
-    const $ = (s, r = document) => r.querySelector(s);
-    const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-    const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
-    const logoImg = (c = '') => `<img class="${c}" src="reclaire-logo.svg" alt="ReClaire logo" onerror="this.style.visibility='hidden'">`;
-    const initials = n => (n || 'User').split(/\s+/).map(x => x[0]).join('').slice(0, 2).toUpperCase();
-
-    function notify(title, msg) {
-      const el = document.createElement('div');
-      el.className = 'toast';
-      el.innerHTML = `<strong>${esc(title)}</strong><span>${esc(msg)}</span>`;
-      $('#toastStack').appendChild(el);
-      setTimeout(() => el.remove(), 4300);
-    }
-
-    function setTheme(t) {
-      state.theme = t;
-      document.body.dataset.theme = t;
-      localStorage.setItem('reclaire_theme', t);
-      const meta = document.querySelector('meta[name=theme-color]');
-      if (meta) meta.setAttribute('content', t === 'dark' ? '#0b0b0b' : '#f7f7f5');
-    }
-
-    function headers() {
-      return state.apiKey
-        ? { 'X-API-Key': state.apiKey, 'Content-Type': 'application/json' }
-        : { 'Content-Type': 'application/json' };
-    }
-
-    async function api(path, opt = {}) {
-      const r = await fetch(API_BASE + path, { ...opt, headers: { ...headers(), ...(opt.headers || {}) } });
-      let d = {};
-      try { d = await r.json(); } catch {}
-      if (!r.ok) throw Error(d.detail || d.message || `Request failed (${r.status})`);
-      return d;
-    }
-
-    async function loadAccount() {
-      try {
-        const data = await api('/auth/me');
-        state.tokenBalance = data.tokens_remaining || 0;
-        return true;
-      } catch {
-        return false;
+(()=>{'use strict';
+let API_BASE=localStorage.getItem('reclaire_api_base')||'https://reclaire-api.onrender.com';
+const SUPABASE_URL = 'https://lbraefssokojulyfmmjd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicmFlZnNzb2tvanVseWZtbWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMjQyODksImV4cCI6MjEwMzYwMDI4OX0.e_jmB4jS_-cwKAraZpspPhEW_K4l2mbhhPZAlgN_y1E';
+let supabaseClient = null;
+if (typeof supabase !== 'undefined' && SUPABASE_URL && SUPABASE_ANON_KEY) {
+  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+if (supabaseClient) {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (session && session.user) {
+      // 1. Populate user info
+      state.user = {
+        name: session.user.user_metadata.full_name || session.user.email,
+        email: session.user.email,
+        avatar: session.user.user_metadata.avatar_url
+      };
+      
+      // 2. Switch screen from 'landing' to the main app view
+      state.screen = 'app';
+      state.page = 'playground';
+      
+      // 3. Clean up the access_token hash from the browser address bar
+      if (window.location.hash.includes('access_token')) {
+        window.history.replaceState(null, '', window.location.pathname);
       }
-    }
 
-    // --- Auth ---
-    async function handleAuth() {
-      const email = $('#authEmail')?.value?.trim();
-      const password = $('#authPassword')?.value;
-      const username = $('#authUsername')?.value?.trim();
-      if (!email || !password) { notify('Missing fields', 'Email and password required.'); return; }
-      try {
-        let data;
-        if (state.authMode === 'register') {
-          data = await api('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify({ email, password, username })
-          });
-        } else {
-          data = await api('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password })
-          });
-        }
-        state.apiKey = data.api_key;
-        localStorage.setItem('reclaire_api_key', data.api_key);
-        state.user = data.user;
-        state.tokenBalance = data.tokens_remaining || 0;
-        state.screen = 'app';
-        state.authMode = null; // close modal
-        notify('Success', state.authMode === 'register' ? 'Account created!' : 'Welcome back!');
-        render();
-      } catch (e) {
-        notify('Auth failed', e.message);
-      }
-    }
-
-    async function logout() {
-      try {
-        await api('/auth/logout', { method: 'POST' });
-      } catch {}
-      state.apiKey = '';
-      localStorage.removeItem('reclaire_api_key');
-      state.user = null;
-      state.screen = 'landing';
+      // 4. Re-render UI
       render();
     }
+  });
+}
 
-    // --- Execute ---
-    async function execute() {
-      if (state.loading) return;
-      const url = state.url.trim();
-      if (!url) { notify('URL required', 'Enter a valid URL.'); return; }
-      if (state.mode === 'scrape' && state.formats.includes('questions') && !state.question.trim()) {
-        notify('Question required', 'Enter a question for Q&A.');
-        return;
-      }
+const state={screen:'landing',authMode:'login',page:'playground',theme:localStorage.getItem('reclaire_theme')||'light',sidebarSide:localStorage.getItem('reclaire_sidebar_side')||'left',sidebarOpen:false,notificationsOpen:false,dropdown:null,formatDrawer:false,batchOpen:false,mode:'scrape',formats:['markdown'],question:'',url:'',user:null,apiKey:localStorage.getItem('reclaire_api_key')||'',logs:[],result:null,loading:false,batchRows:[],batchRunning:false,batchId:null,animatedTimers:[]};
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const icons={menu:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',bell:'<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-9-3-9M10 21h4"/></svg>',scrape:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 9h10M4 13h16M4 17h8"/><path d="m17 15 4 4m0-4-4 4"/></svg>',map:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5 9 3l6 2 5-2v16l-5 2-6-2-5 2Z"/><path d="M9 3v16M15 5v16"/></svg>',crawl:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.3 2.3 3.4 5 3.4 8s-1.1 5.7-3.4 8c-2.3-2.3-3.4-5-3.4-8S9.7 6.3 12 4Z"/></svg>',activity:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5M4 19h16"/><path d="m7 15 3-4 3 2 5-7"/></svg>',usage:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5M4 19h16"/><path d="M7 16v-3M12 16V8M17 16v-6"/></svg>',key:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2 2 2-3 3-2-2-2 2"/></svg>',settings:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M19.4 15l.1.1-1.7 2.9-.2-.1a3 3 0 0 0-4.2 1.1V19h-3.4v-.2a3 3 0 0 0-4.2-1.1l-.2.1-1.7-2.9.1-.1a3 3 0 0 0 0-5l-.1-.1 1.7-2.9.2.1a3 3 0 0 0 4.2-1.1V5h3.4v.2a3 3 0 0 0 4.2 1.1l.2-.1 1.7 2.9-.1.1a3 3 0 0 0 0 5Z"/></svg>',logout:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5"/><path d="m14 8 4 4-4 4M8 12h10"/></svg>',file:'<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/></svg>',check:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 4 4L19 6"/></svg>',chevron:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 9 5 5 5-5"/></svg>',copy:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',download:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',sun:'<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41-1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',moon:'<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4a8.5 8.5 0 1 0 11.2 11.2Z"/></svg>',support:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'};
+const modes=[{id:'scrape',label:'Scrape',icon:icons.scrape},{id:'crawl',label:'Crawl',icon:icons.crawl},{id:'map',label:'Map',icon:icons.map}];
+const formats=[{id:'markdown',label:'Markdown',desc:'Clean readable page content'},{id:'html',label:'HTML',desc:'Clean extracted HTML'},{id:'raw_html',label:'Raw HTML',desc:'Original fetched document'},{id:'summary',label:'Summary',desc:'Concise AI overview'},{id:'questions',label:'Q&A',desc:'Answer a question from the page'},{id:'json',label:'Structured JSON',desc:'Schema-driven AI extraction'}];
+const urlHints=['developer.mozilla.org/en-US/docs/Web/JavaScript','fastapi.tiangolo.com','supabase.com/docs','www.python.org/about/gettingstarted/'],questionHints=['What is this page about?','What are the key points on this page?','Who is this page intended for?','What are the main facts I should know?'];
+const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const logoImg=c=>`<img class="${c||''}" src="reclaire-logo.svg" alt="ReClaire logo" onerror="this.style.visibility='hidden'">`;
+const initials=n=>(n||'User').split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
+function renderMd(src=''){let s=esc(src);s=s.replace(/^###\s+(.+)$/gm,'<h3>$1</h3>').replace(/^##\s+(.+)$/gm,'<h2>$1</h2>').replace(/^#\s+(.+)$/gm,'<h2>$1</h2>').replace(/^\s*[-*]\s+(.+)$/gm,'<li>$1</li>').replace(/(<li>[\s\S]*?<\/li>)(?!<li>)/g,'$1').replace(/(<li>.*?<\/li>)/gs,'<ul>$1</ul>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>');return s.split(/\n{2,}/).map(x=>x.match(/^<h[23]>/)?x:`<p>${x.replace(/\n/g,'<br>')}</p>`).join('')}
+function notify(t,x){const e=document.createElement('div');e.className='toast';e.innerHTML=`<strong>${esc(t)}</strong><span>${esc(x)}</span>`;$('#toastStack').appendChild(e);setTimeout(()=>e.remove(),4300)}
+function setTheme(t){state.theme=t;document.body.dataset.theme=t;localStorage.setItem('reclaire_theme',t);$('meta[name=theme-color]').setAttribute('content',t==='dark'?'#0b0b0b':'#f7f7f5')}
+function headers(){return state.apiKey?{'X-API-Key':state.apiKey,'Content-Type':'application/json'}:{'Content-Type':'application/json'}}
+async function api(path,opt={}){const r=await fetch(API_BASE+path,{...opt,headers:{...headers(),...(opt.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.detail||d.message||`Request failed (${r.status})`);return d}
+async function loadAccount(){try{const d=await api('/auth/me');state.user={...(state.user||{}),id:d.user_id,tokens:d.tokens_remaining,created_at:d.created_at||state.user?.created_at||new Date().toISOString()};const u=await api('/v1/usage');state.user.tokens=u.tokens_remaining;state.logs=u.logs||[];return true}catch{state.user=null;return false}}
+async function auth(mode,f){const body=JSON.stringify({email:f.get('email'),password:f.get('password')});const d=await api(`/auth/${mode}`,{method:'POST',body});state.apiKey=d.api_key;localStorage.setItem('reclaire_api_key',d.api_key);state.user={...d.user,tokens:d.tokens_remaining,created_at:new Date().toISOString()};state.screen='app';state.page='playground';render();await loadAccount();notify(mode==='login'?'Welcome back':'Account created',mode==='login'?'You are signed in.':'Your ReClaire workspace is ready.')}
 
-      state.loading = true;
-      state.result = null;
-      render();
+async function handleOAuth(provider) {
+  if (supabaseClient) {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: provider,
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+    if (error) notify('OAuth error', error.message);
+  } else if (SUPABASE_URL) {
+    window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(window.location.origin)}`;
+  } else {
+    notify('OAuth setup', `Configured provider: ${provider}. Set SUPABASE_URL in project environment.`);
+  }
+}
 
-      try {
-        let data;
-        if (state.mode === 'scrape') {
-          data = await api('/v1/scrape', {
-            method: 'POST',
-            body: JSON.stringify({
-              url,
-              formats: state.formats,
-              user_question: state.question || null,
-              use_js_fallback: true,
-              only_main_content: true,
-              remove_tags: ['script', 'style', 'nav', 'footer', 'header', 'aside', 'form', 'iframe', 'noscript']
-            })
-          });
-        } else if (state.mode === 'map') {
-          data = await api('/v1/map', {
-            method: 'POST',
-            body: JSON.stringify({ url, limit: 100, include_subdomains: false })
-          });
-        } else { // crawl
-          data = await api('/v1/crawl', {
-            method: 'POST',
-            body: JSON.stringify({
-              url,
-              limit: 5,
-              scrape_options: {
-                url,
-                formats: state.formats,
-                user_question: state.question || null,
-                use_js_fallback: true,
-                only_main_content: true
-              }
-            })
-          });
-        }
-        state.result = data;
-        if (data.tokens_remaining !== undefined) state.tokenBalance = data.tokens_remaining;
-        await loadAccount(); // refresh balance
-        notify('Complete', `${data.tokens_deducted || 1} token(s) used.`);
-      } catch (e) {
-        state.result = { error: e.message };
-        notify('Request failed', e.message);
-      } finally {
-        state.loading = false;
-        render();
-      }
-    }
-
-    // --- Render functions ---
-    function render() {
-      const app = $('#app');
-      if (!app) return;
-
-      if (state.screen === 'landing') {
-        app.innerHTML = renderLanding();
-        attachLandingEvents();
-        return;
-      }
-
-      // App view
-      app.innerHTML = `
-        <div class="app">
-          ${renderTopbar()}
-          <div class="body-wrap">
-            ${renderSidebar()}
-            <div class="main">
-              ${renderPage()}
-            </div>
-          </div>
-        </div>
-      `;
-      attachAppEvents();
-    }
-
-    function renderTopbar() {
-      const name = state.user?.name || state.user?.email || 'User';
-      return `
-        <div class="topbar">
-          <div class="brand">
-            ${logoImg('')}
-            <span>ReClaire</span>
-          </div>
-          <div class="spacer"></div>
-          <div class="top-right">
-            <span class="muted" style="font-size:12px;">${state.tokenBalance} tokens</span>
-            <div class="account-badge">
-              <div class="account-avatar">${initials(name)}</div>
-              <span class="account-name">${esc(name)}</span>
-              <button class="icon-btn" style="width:28px;height:28px;border-radius:50%;background:transparent;border:0;" onclick="window.__logout()">✕</button>
-            </div>
-            <button class="icon-btn" onclick="window.__toggleTheme()">${state.theme === 'dark' ? '☀️' : '🌙'}</button>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderSidebar() {
-      const items = [
-        { id: 'playground', label: 'Scrape', icon: '🔍' },
-        { id: 'batch', label: 'Batch', icon: '📦' },
-        { id: 'usage', label: 'Usage', icon: '📊' },
-        { id: 'settings', label: 'Settings', icon: '⚙️' },
-      ];
-      return `
-        <div class="sidebar">
-          ${items.map(it => `
-            <div class="nav-item ${state.page === it.id ? 'active' : ''}" data-page="${it.id}">
-              <span class="icon">${it.icon}</span> ${it.label}
-            </div>
-          `).join('')}
-          <div class="bottom">
-            <div class="nav-item" onclick="window.__logout()">
-              <span class="icon">🚪</span> Logout
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderPage() {
-      switch (state.page) {
-        case 'playground': return renderPlayground();
-        case 'batch': return renderBatch();
-        case 'usage': return renderUsage();
-        case 'settings': return renderSettings();
-        default: return '<p>Page not found.</p>';
-      }
-    }
-
-    function renderPlayground() {
-      const modes = ['scrape', 'map', 'crawl'];
-      const formatOptions = ['markdown', 'html', 'raw_html', 'summary', 'questions', 'json'];
-      const isQuestions = state.formats.includes('questions');
-
-      return `
-        <div class="page">
-          <div class="page-header">
-            <h2>Web Intelligence</h2>
-          </div>
-          <div class="mode-tabs">
-            ${modes.map(m => `<button class="mode-tab ${state.mode === m ? 'active' : ''}" data-mode="${m}">${m.charAt(0).toUpperCase()+m.slice(1)}</button>`).join('')}
-          </div>
-          <div class="url-row">
-            <input class="input url-input" id="urlInput" placeholder="Enter URL (e.g. https://example.com)" value="${esc(state.url)}">
-          </div>
-          <div class="format-row">
-            ${formatOptions.map(f => `
-              <span class="format-tag ${state.formats.includes(f) ? 'selected' : ''}" data-format="${f}">${f.replace('_',' ').toUpperCase()}</span>
-            `).join('')}
-          </div>
-          ${isQuestions ? `
-            <div class="question-row">
-              <input class="input question-input" id="questionInput" placeholder="Your question about the page" value="${esc(state.question)}">
-            </div>
-          ` : ''}
-          <div class="execute-row">
-            <div class="execute">
-              <button class="btn primary" id="executeBtn" ${state.loading ? 'disabled' : ''}>
-                ${state.loading ? '<span class="spinner"></span>' : 'Execute'}
-              </button>
-            </div>
-            <span class="muted" style="font-size:12px;">Cost: ~${state.mode === 'scrape' ? (state.formats.includes('summary')?4:1) : state.mode === 'map' ? 1 : 5} tokens</span>
-          </div>
-
-          ${state.result ? `
-            <div class="result-area">
-              <div class="result-header">
-                <span>Result</span>
-                <span class="muted">${state.result.tokens_deducted ? state.result.tokens_deducted + ' tokens' : ''}</span>
-              </div>
-              <div class="result-body">
-                ${state.result.error ? `<div class="error">❌ ${esc(state.result.error)}</div>` :
-                  state.mode === 'map' ? 
-                    `<div>Found ${state.result.links_count || 0} links:</div><ul>${(state.result.links || []).map(l => `<li>${esc(l)}</li>`).join('')}</ul>` :
-                    state.result.markdown ? 
-                      `<div style="white-space:pre-wrap;">${esc(state.result.markdown)}</div>` :
-                      state.result.data ? 
-                        `<div>${state.result.data.map(d => `<div><strong>${esc(d.url)}</strong> ${d.status}</div>`).join('')}</div>` :
-                        `<pre>${esc(JSON.stringify(state.result, null, 2))}</pre>`
-                }
-              </div>
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }
-
-    function renderBatch() {
-      return `
-        <div class="page">
-          <h2>Batch Scrape</h2>
-          <div class="batch-input">
-            <textarea class="textarea" id="batchUrls" placeholder="Enter URLs, one per line" rows="5">${state.batchUrls.join('\n')}</textarea>
-            <div class="flex mt-8">
-              <button class="btn primary" id="batchStartBtn" ${state.batchRunning ? 'disabled' : ''}>
-                ${state.batchRunning ? 'Running...' : 'Start Batch'}
-              </button>
-              ${state.batchId ? `<a class="btn" href="${API_BASE}/v1/batch-scrape/${state.batchId}/download" target="_blank">Download ZIP</a>` : ''}
-            </div>
-          </div>
-          ${state.batchResult ? `
-            <div class="result-area mt-8">
-              <div class="result-header">Batch Results</div>
-              <div class="result-body">
-                ${state.batchResult.rows.map(r => `<div>${r.index+1}. ${esc(r.url)} — ${r.status} ${r.error ? '❌ '+esc(r.error) : '✅'}</div>`).join('')}
-              </div>
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }
-
-    function renderUsage() {
-      return `
-        <div class="page">
-          <h2>Usage Logs</h2>
-          <p class="muted">Last 100 entries</p>
-          <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:400px;">
-            <table style="width:100%;border-collapse:collapse;font-size:13px;">
-              <thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:8px 12px;text-align:left;">Endpoint</th><th style="padding:8px 12px;text-align:right;">Tokens</th><th style="padding:8px 12px;text-align:right;">Time</th></tr></thead>
-              <tbody>
-                ${(state.usageLogs || []).map(log => `
-                  <tr style="border-bottom:1px solid var(--border2);">
-                    <td style="padding:8px 12px;">${esc(log.endpoint)}</td>
-                    <td style="padding:8px 12px;text-align:right;">${log.tokens_deducted}</td>
-                    <td style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted);">${new Date(log.created_at).toLocaleString()}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderSettings() {
-      return `
-        <div class="page">
-          <h2>Settings</h2>
-          <div class="flex gap-sm">
-            <label>API Base URL:</label>
-            <input class="input" id="apiBaseInput" value="${esc(API_BASE)}" style="max-width:300px;">
-            <button class="btn" onclick="window.__saveApiBase()">Save</button>
-          </div>
-          <div class="mt-8">
-            <button class="btn ghost" onclick="window.__logout()">Logout</button>
-            <button class="btn ghost" style="color:var(--danger);" onclick="window.__deleteAccount()">Delete Account</button>
-          </div>
-        </div>
-      `;
-    }
-
-    // --- Landing & Auth Modal ---
-    function renderLanding() {
-      return `
-        <div class="public-shell">
-          <nav class="public-nav">
-            <div class="brand-word">${logoImg('brand-logo')} ReClaire</div>
-            <div>
-              <button class="btn ghost" onclick="window.__showAuth('login')">Sign in</button>
-              <button class="btn primary" onclick="window.__showAuth('register')">Get started</button>
-            </div>
-          </nav>
-          <div class="landing">
-            <div class="hero">
-              ${logoImg('hero-logo')}
-              <h1>Web Intelligence</h1>
-              <p>Scrape, map, and crawl websites with LLM-powered extraction. Clean Markdown, Q&A, structured JSON — all via one API.</p>
-              <div class="hero-actions">
-                <button class="btn primary" onclick="window.__showAuth('register')">Start free →</button>
-                <button class="btn ghost" onclick="window.__showAuth('login')">Sign in</button>
-              </div>
-            </div>
-            <div class="section">
-              <div class="section-head"><h2>Features</h2></div>
-              <div class="feature-grid">
-                <div class="feature"><div class="feature-icon">📄</div><h3>Markdown & HTML</h3><p>Clean, readable content with optional raw HTML.</p></div>
-                <div class="feature"><div class="feature-icon">🧠</div><h3>LLM Summaries</h3><p>Auto-generated summaries and Q&A with your context.</p></div>
-                <div class="feature"><div class="feature-icon">🗺️</div><h3>Site Mapping</h3><p>Discover all pages on a domain with one request.</p></div>
-                <div class="feature"><div class="feature-icon">📦</div><h3>Batch Scraping</h3><p>Scrape up to 10 URLs in a single job, download ZIP.</p></div>
-                <div class="feature"><div class="feature-icon">🔐</div><h3>Token Economy</h3><p>Pay only for what you use. Grant tokens for testing.</p></div>
-                <div class="feature"><div class="feature-icon">⚡</div><h3>JS Rendering</h3><p>Playwright fallback for dynamic content.</p></div>
-              </div>
-            </div>
-          </div>
-          <div class="public-footer">
-            <span>© 2026 ReClaire</span>
-            <span>Built with ❤️</span>
-          </div>
-        </div>
-        ${state.authMode ? renderAuthModal() : ''}
-      `;
-    }
-
-    function renderAuthModal() {
-      const isLogin = state.authMode === 'login';
-      return `
-        <div class="auth-overlay" id="authOverlay">
-          <div class="auth-card">
-            <h2>${isLogin ? 'Sign in' : 'Create account'}</h2>
-            <input class="input" id="authEmail" type="email" placeholder="Email">
-            <input class="input" id="authPassword" type="password" placeholder="Password" minlength="8">
-            ${!isLogin ? `<input class="input" id="authUsername" placeholder="Username (optional)">` : ''}
-            <button class="btn primary" id="authSubmit">${isLogin ? 'Sign in' : 'Register'}</button>
-            <div class="toggle-link">
-              ${isLogin ? "Don't have an account? " : "Already have an account? "}
-              <a onclick="window.__toggleAuthMode()">${isLogin ? 'Register' : 'Sign in'}</a>
-            </div>
-            <button class="btn ghost" style="margin-top:8px;" onclick="window.__closeAuth()">Close</button>
-          </div>
-        </div>
-      `;
-    }
-
-    // --- Event attachment ---
-    function attachLandingEvents() {
-      // Auth modal events are inline, but we need to handle overlay click
-      const overlay = $('#authOverlay');
-      if (overlay) {
-        overlay.addEventListener('click', (e) => {
-          if (e.target === overlay) {
-            state.authMode = null;
-            render();
-          }
-        });
-      }
-      // Auth submit
-      const submitBtn = $('#authSubmit');
-      if (submitBtn) submitBtn.addEventListener('click', handleAuth);
-      // Enter key on password field
-      const pwd = $('#authPassword');
-      if (pwd) pwd.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuth(); });
-    }
-
-    function attachAppEvents() {
-      // Sidebar navigation
-      $$('.sidebar .nav-item[data-page]').forEach(el => {
-        el.addEventListener('click', () => {
-          const page = el.dataset.page;
-          state.page = page;
-          if (page === 'usage') fetchUsage();
-          render();
-        });
-      });
-
-      // Mode tabs
-      $$('.mode-tab').forEach(el => {
-        el.addEventListener('click', () => {
-          state.mode = el.dataset.mode;
-          render();
-        });
-      });
-
-      // Format tags
-      $$('.format-tag').forEach(el => {
-        el.addEventListener('click', () => {
-          const fmt = el.dataset.format;
-          if (state.formats.includes(fmt)) {
-            state.formats = state.formats.filter(f => f !== fmt);
-          } else {
-            state.formats.push(fmt);
-          }
-          render();
-        });
-      });
-
-      // URL input
-      const urlInput = $('#urlInput');
-      if (urlInput) {
-        urlInput.addEventListener('input', (e) => { state.url = e.target.value; });
-        urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') execute(); });
-      }
-
-      // Question input
-      const qInput = $('#questionInput');
-      if (qInput) {
-        qInput.addEventListener('input', (e) => { state.question = e.target.value; });
-        qInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') execute(); });
-      }
-
-      // Execute button
-      const execBtn = $('#executeBtn');
-      if (execBtn) execBtn.addEventListener('click', execute);
-
-      // Batch start
-      const batchStart = $('#batchStartBtn');
-      if (batchStart) {
-        batchStart.addEventListener('click', async () => {
-          const ta = $('#batchUrls');
-          if (!ta) return;
-          const urls = ta.value.split('\n').map(s => s.trim()).filter(Boolean);
-          if (urls.length === 0) { notify('No URLs', 'Enter at least one URL.'); return; }
-          state.batchRunning = true;
-          render();
-          try {
-            const data = await api('/v1/batch-scrape', {
-              method: 'POST',
-              body: JSON.stringify({
-                urls,
-                formats: state.formats,
-                use_js_fallback: true,
-                only_main_content: true
-              })
-            });
-            state.batchId = data.batch_id;
-            state.batchResult = data;
-            notify('Batch started', `${data.total} URLs submitted.`);
-          } catch (e) {
-            notify('Batch failed', e.message);
-          } finally {
-            state.batchRunning = false;
-            render();
-          }
-        });
-      }
-    }
-
-    // --- Expose global functions for inline onclick ---
-    window.__toggleTheme = () => {
-      setTheme(state.theme === 'dark' ? 'light' : 'dark');
-      render();
-    };
-
-    window.__logout = logout;
-
-    window.__showAuth = (mode) => {
-      state.authMode = mode;
-      render();
-    };
-
-    window.__closeAuth = () => {
-      state.authMode = null;
-      render();
-    };
-
-    window.__toggleAuthMode = () => {
-      state.authMode = state.authMode === 'login' ? 'register' : 'login';
-      render();
-    };
-
-    window.__saveApiBase = () => {
-      const input = $('#apiBaseInput');
-      if (input) {
-        localStorage.setItem('reclaire_api_base', input.value);
-        API_BASE = input.value;
-        notify('Saved', 'API base updated.');
-      }
-    };
-
-    window.__deleteAccount = async () => {
-      if (!confirm('Are you sure you want to delete your account? This is irreversible.')) return;
-      try {
-        await api('/auth/me', { method: 'DELETE' });
-        notify('Account deleted', 'Your account has been removed.');
-        logout();
-      } catch (e) {
-        notify('Deletion failed', e.message);
-      }
-    };
-
-    // --- Fetch usage ---
-    async function fetchUsage() {
-      try {
-        const data = await api('/v1/usage');
-        state.usageLogs = data.logs || [];
-        render();
-      } catch {}
-    }
-
-    // --- Supabase auth listener (keeps your existing one) ---
-    if (supabaseClient) {
-      supabaseClient.auth.onAuthStateChange((event, session) => {
-        if (session && session.user) {
-          state.user = {
-            name: session.user.user_metadata.full_name || session.user.email,
-            email: session.user.email,
-            avatar: session.user.user_metadata.avatar_url
-          };
-          state.screen = 'app';
-          state.page = 'playground';
-          if (window.location.hash.includes('access_token')) {
-            window.history.replaceState(null, '', window.location.pathname);
-          }
-          // also load account for token balance
-          loadAccount().then(() => render());
-        }
-      });
-    }
-
-    // --- Bootstrap ---
-    (async () => {
-      setTheme(state.theme);
-      if (state.apiKey) {
-        const ok = await loadAccount();
-        if (ok) {
-          state.screen = 'app';
-          // if we have a valid key, attempt to get user info from /auth/me (already done)
-          // also fetch usage if page is usage (but we'll do that on navigation)
-        } else {
-          localStorage.removeItem('reclaire_api_key');
-          state.apiKey = '';
-        }
-      }
-      render();
-    })();
-
-  })();
+async function logout(){try{if(state.apiKey)await api('/auth/logout',{method:'POST'})}catch{}localStorage.removeItem('reclaire_api_key');state.apiKey='';state.user=null;state.logs=[];state.screen='landing';render()}
+function openPage(p){
+  state.sidebarOpen=false;
+  state.notificationsOpen=false;
+  state.dropdown=null;
+  state.formatDrawer=false;
+  if(['playground','map','crawl'].includes(p)){
+    state.mode = p === 'playground' ? 'scrape' : p;
+    state.page = 'playground';
+  } else {
+    state.page = p;
+  }
+  if(p!=='playground')state.result=null;
+  render();
+  if(['usage','activity'].includes(state.page))loadAccount().then(render)
+}
+function toggleSidebar(){state.sidebarOpen=!state.sidebarOpen;state.notificationsOpen=false;render()}
+function selectedLabel(){return state.formats.length===1?(formats.find(x=>x.id===state.formats[0])?.label||state.formats[0]):`${state.formats.length} formats selected`}
+function actionLabel(){return state.mode==='map'?'Map site':state.mode==='crawl'?'Start crawl':state.formats.includes('questions')?'Answer question':state.formats.includes('summary')?'Generate summary':'Scrape page'}
+function renderTopbar(){const u=state.user||{username:'Guest',email:'Guest',tokens:0},right=state.sidebarSide==='right';return `<header class="topbar"><div class="top-left">${!right?`<button class="icon-btn" id="sidebarBtn" title="Open navigation">${icons.menu}</button>`:''}${logoImg('top-logo')}<div class="account-chip"><div class="avatar">${esc(initials(u.username||u.email))}</div><span class="account-name">${esc(u.username||u.email||'Guest')}</span></div></div><div class="top-right"><button class="icon-btn" id="notificationBtn" title="Notifications">${icons.bell}</button>${right?`<button class="icon-btn" id="sidebarBtn" title="Open navigation">${icons.menu}</button>`:''}</div></header>`}
+function navItem(p,l,i,a){return `<button class="nav-item ${a?'active':''}" data-page="${p}">${i}<span>${l}</span></button>`}
+function renderSidebar(){
+  const activeMode = state.page === 'playground' ? state.mode : state.page;
+  return `<aside class="sidebar ${state.sidebarSide==='right'?'right':''} ${state.sidebarOpen?'open':''}" id="sidebar"><div class="sidebar-top"><button class="upgrade" data-action="upgrade">Upgrade plan</button><button class="support-btn" data-action="support">${icons.support} Support</button></div><div class="profile-box"><div class="avatar">${esc(initials(state.user?.username||state.user?.email))}</div><div class="profile-meta"><strong>${esc(state.user?.username||state.user?.email||'User')}</strong><span>${esc(state.user?.email||'Account')}</span></div></div><nav><div class="nav-group"><div class="nav-title">Workspace</div>${navItem('scrape','Scrape',icons.scrape,activeMode==='scrape')}${navItem('map','Map',icons.map,activeMode==='map')}${navItem('crawl','Crawl',icons.crawl,activeMode==='crawl')}</div><div class="nav-group"><div class="nav-title">Account</div>${navItem('activity','Activity logs',icons.activity,state.page==='activity')}${navItem('usage','Usage',icons.usage,state.page==='usage')}${navItem('api','API keys',icons.key,state.page==='api')}${navItem('settings','Settings',icons.settings,state.page==='settings')}</div><button class="nav-item logout" data-action="logout">${icons.logout}<span>Log out</span></button></nav></aside><div class="sidebar-overlay ${state.sidebarOpen?'show':''}" id="sidebarOverlay"></div>`
+}
+function renderLanding(){return `<div class="public-shell"><nav class="public-nav"><div class="brand-word">${logoImg('brand-logo')}<span>ReClaire</span></div><div style="display:flex;gap:8px"><button class="btn ghost" data-screen="auth" data-auth-mode="login">Sign in</button><button class="btn primary" data-screen="auth" data-auth-mode="register">Get started</button></div></nav><main class="landing"><section class="hero">${logoImg('hero-logo')}<div class="eyebrow">Web intelligence engine</div><h1>Understand the web, faster.</h1><p>ReClaire turns public web pages into clean Markdown, extracted HTML, site maps, crawled content and AI-powered answers through one focused workflow.</p><div class="hero-actions"><button class="btn primary" data-screen="auth" data-auth-mode="register">Start building</button><button class="btn" data-screen="auth" data-auth-mode="login">Sign in</button></div></section><section class="section"><div class="section-head"><h2>One engine. Three core operations.</h2><span class="muted">URL → process → useful output.</span></div><div class="feature-grid">${feature('Scrape','Fetch a page and convert its main content into clean Markdown or other supported formats.',icons.scrape)}${feature('Crawl','Discover same-domain links and process multiple pages with controlled concurrency.',icons.crawl)}${feature('Map','Discover reachable links on a target domain without manually navigating the site.',icons.map)}${feature('Dynamic pages','Use Playwright when standard HTTP fetching is not enough.',icons.scrape)}${feature('AI transformations','Generate summaries, answer page questions, or extract schema-driven JSON.',icons.file)}${feature('Token ledger','Protected operations are authenticated and metered against your token balance.',icons.usage)}</div></section><section class="section"><div class="section-head"><h2>Designed for useful output.</h2><span class="muted">Clean results instead of noisy browser chrome.</span></div><div class="examples">${example('Markdown','# Page title\n\n## Main content\nClean, readable page content.')}${example('Structured JSON','{\n  "summary": "…",\n  "key_facts": ["…"]\n}')}${example('Site map','https://example.com/\nhttps://example.com/docs\nhttps://example.com/about')}${example('AI answer','Question\nWhat is this page about?\n\nAnswer\nA focused answer grounded in page content.')}</div></section></main><footer class="public-footer"><span>ReClaire · Web intelligence engine</span><span>FastAPI · Playwright · Gemini · Supabase</span></footer></div>`}
+const feature=(t,d,i)=>`<article class="feature"><div class="feature-icon">${i}</div><h3>${t}</h3><p>${d}</p></article>`;const example=(t,c)=>`<article class="example"><div class="example-head">${esc(t)}</div><div class="example-code">${esc(c)}</div></article>`;
+function renderAuth(mode='login'){const reg=mode==='register';return `<div class="auth-screen"><section class="auth-card">${logoImg('auth-logo')}<h1>${reg?'Create your account':'Sign in'}</h1><p class="sub">${reg?'Start with your ReClaire workspace.':'Welcome back to ReClaire.'}</p><form id="authForm"><div class="auth-field"><label>Email address</label><input class="input" name="email" type="email" autocomplete="email" required placeholder="you@example.com"></div><div class="auth-field"><label>Password</label><input class="input" name="password" type="password" autocomplete="${reg?'new-password':'current-password'}" required placeholder="Enter your password"></div>${!reg?`<div class="auth-links"><span></span><a href="#" data-action="forgot">Forgot password?</a></div>`:''}<button class="btn primary" type="submit" style="width:100%">${reg?'Create account':'Login'}</button></form><div class="auth-divider">or</div><div class="social-grid"><button class="social-btn" data-action="oauth" data-provider="google"><svg class="oauth-logo" viewBox="0 0 24 24" aria-label="Google"><path fill="#4285F4" d="M21.35 12.27c0-.72-.06-1.42-.18-2.09H12v3.96h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.26Z"/><path fill="#34A853" d="M12 21.5c2.64 0 4.86-.87 6.48-2.36l-3.14-2.45c-.87.58-1.98.92-3.34.92-2.56 0-4.73-1.73-5.51-4.06H3.25V16.1A9.78 9.78 0 0 0 12 21.5Z"/><path fill="#FBBC05" d="M6.49 13.55A5.87 5.87 0 0 1 6.18 12c0-.54.11-1.06.31-1.55V8H3.25A9.76 9.76 0 0 0 2.2 12c0 1.57.38 3.06 1.05 4.37l3.24-2.82Z"/><path fill="#EA4335" d="M12 6.39c1.44 0 2.73.5 3.75 1.48l2.81-2.81C16.85 3.42 14.64 2.5 12 2.5a9.78 9.78 0 0 0-8.75 5.5l3.24 2.95C7.27 8.12 9.44 6.39 12 6.39Z"/></svg>Google</button><button class="social-btn" data-action="oauth" data-provider="github"><svg class="oauth-logo" viewBox="0 0 24 24" aria-label="GitHub"><path fill="currentColor" d="M12 .5A11.5 11.5 0 0 0 8.36 22.4c.58.1.79-.25.79-.56v-2.18c-3.23.7-3.91-1.56-3.91-1.56-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.58-.29-5.29-1.29-5.29-5.74 0-1.27.45-2.31 1.19-3.12-.12-.29-.52-1.48.11-3.08 0 0 .97-.31 3.18 1.19a11.06 11.06 0 0 1 5.79 0c2.21-1.5 3.18-1.19 3.18-1.19.63 1.6.23 2.79.11 3.08.74.81.11 2.79.11 3.08.74.81 1.19 1.85 1.19 3.12 0 4.46-2.71 5.45-5.3 5.74.42.36.78 1.07.78 2.16v3.2c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>GitHub</button></div><div class="auth-switch">${reg?`Already have an account? <button data-auth-mode="login">Sign in</button>`:`New user? <button data-auth-mode="register">Create an account</button>`}</div><div style="margin-top:18px;text-align:center"><button class="btn ghost" data-action="skip-auth" style="width:100%;color:var(--muted);font-size:12px">Skip sign in →</button></div><div class="legal">By continuing, you agree to ReClaire's Terms of Service and Privacy Policy.</div></section></div>`}
+function renderPlayground(){const q=state.formats.includes('questions')&&state.mode==='scrape';const showFormat = state.mode!=='map';return `<div class="playground"><div class="playground-inner"><section class="main-brand">${logoImg('')}<h1>Turn URLs into useful data.</h1><p>Choose an operation, enter a URL, select the output you need, then execute.</p></section><section class="input-panel"><div class="input-label">Input</div><div class="input-row ${!showFormat?'no-format':''}"><button class="custom-select" data-dropdown="mode"><span style="display:flex;align-items:center;gap:8px">${modes.find(m=>m.id===state.mode).icon}${modes.find(m=>m.id===state.mode).label}</span>${icons.chevron}</button><div class="url-shell"><span class="url-prefix">https://</span><input id="urlInput" class="url-input" value="${esc(state.url.replace(/^https?:\/\//i,''))}" placeholder="Enter a website URL"></div>${showFormat?`<button class="format-trigger" data-action="open-format">${icons.file}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(selectedLabel())}</span>${icons.chevron}</button>`:''}</div>${q?`<div class="question-wrap"><input id="questionInput" class="question-input" value="${esc(state.question)}" placeholder="Ask a question about this page"></div>`:''}${state.mode==='scrape'?`<button class="batch-trigger" data-action="toggle-batch">${state.batchOpen?'Close batch scrape':'Batch scrape'}</button>${state.batchOpen?renderBatch():''}`:''}<div class="panel-foot"><span>${state.mode==='map'?'Discover links on the target domain.':state.mode==='crawl'?'Crawl same-domain pages.':'Select one or more supported output formats.'}</span><span class="multi-count">${state.mode!=='map'&&state.formats.length>1?`${state.formats.length} selected`:''}</span></div><button class="execute" style="margin-top:8px" data-action="execute">${actionLabel()}</button></section><div class="output-area">${renderResult()}</div>${renderRecent()}</div></div>${state.formatDrawer?renderFormatDrawer():''}${state.dropdown==='mode'?renderModeDropdown():''}`}
+function renderModeDropdown(){return `<div class="dropdown-menu" id="modeDropdown">${modes.map(m=>`<button class="dropdown-option ${state.mode===m.id?'active':''}" data-mode="${m.id}"><span style="display:flex;align-items:center;gap:8px">${m.icon}${m.label}</span>${state.mode===m.id?icons.check:''}</button>`).join('')}</div>`}
+function renderFormatDrawer(){return `<div class="format-drawer"><div class="format-head"><div><strong>Choose output format</strong><div class="muted" style="font-size:10px">Supported by the current backend.</div></div><button class="icon-btn" style="width:34px;height:34px" data-action="close-format">×</button></div><div class="format-grid">${formats.map(f=>`<button class="format-card ${state.formats.includes(f.id)?'selected':''}" data-format="${f.id}"><strong>${esc(f.label)}</strong><small>${esc(f.desc)}</small><div class="wire"><i></i><i></i><i></i></div>${state.formats.includes(f.id)?`<span style="position:absolute;right:9px;top:9px;color:var(--accent)">${icons.check}</span>`:''}</button>`).join('')}</div></div>`}
+function renderResult(){if(state.loading)return`<div class="output-empty"><div><div style="font-weight:750;color:var(--text)">Processing request</div><div style="margin-top:5px">ReClaire is fetching and transforming the page.</div></div></div>`;if(!state.result)return`<div class="output-empty"><div><strong style="display:block;color:var(--text);margin-bottom:5px">Your output will appear here.</strong><span>Run a scrape, crawl or map operation to see the result.</span></div></div>`;if(state.result.error)return`<div class="result-card"><div class="result-head"><strong>Request error</strong></div><div class="result-body">${esc(state.result.error)}</div></div>`;return state.mode==='map'?renderMapResult(state.result):state.mode==='crawl'?renderCrawlResult(state.result):renderScrapeResult(state.result)}
+function outputActions(text){if(!text)return'';return `<div class="result-actions"><button class="btn" data-action="download-md">${icons.download} Download .md file</button><button class="btn" data-action="copy-md">${icons.copy} Copy Markdown</button><button class="btn" data-action="copy-output">${icons.copy} Copy output</button></div>`}
+function renderScrapeResult(r){const b=[];if(r.summary)b.push(`<div class="result-card"><div class="result-head"><strong>AI summary</strong><span class="muted">${esc(r.url||'')}</span></div><div class="result-body ai-output">${renderMd(r.summary)}${outputActions(r.summary)}</div></div>`);if(r.answer)b.push(`<div class="result-card"><div class="result-head"><strong>AI answer</strong><span class="muted">Q&A</span></div><div class="result-body ai-output">${renderMd(r.answer)}${outputActions(r.answer)}</div></div>`);if(r.markdown)b.push(`<div class="result-card"><div class="result-head"><strong>Markdown</strong><span class="muted">${esc(r.url||'')}</span></div><div class="result-body"><pre class="code-box">${esc(r.markdown)}</pre>${outputActions(r.markdown)}</div></div>`);if(r.html)b.push(`<div class="result-card"><div class="result-head"><strong>HTML</strong></div><div class="result-body"><pre class="code-box">${esc(r.html)}</pre>${outputActions(r.html)}</div></div>`);if(r.raw_html)b.push(`<div class="result-card"><div class="result-head"><strong>Raw HTML</strong></div><div class="result-body"><pre class="code-box">${esc(r.raw_html)}</pre>${outputActions(r.raw_html)}</div></div>`);if(r.json)b.push(`<div class="result-card"><div class="result-head"><strong>Structured JSON</strong></div><div class="result-body"><pre class="code-box">${esc(JSON.stringify(r.json,null,2))}</pre>${outputActions(JSON.stringify(r.json,null,2))}</div></div>`);return `<div style="display:grid;gap:12px">${b.join('')}</div>`}
+function renderMapResult(r){const text=(r.links||[]).join('\n');return `<div class="result-card"><div class="result-head"><strong>Site map</strong><span class="muted">${(r.links||[]).length} links</span></div><div class="result-body"><pre class="code-box">${esc(text||'No links found.')}</pre>${outputActions(text)}</div></div>`}
+function renderCrawlResult(r){const rows=(r.data||[]).map(x=>`<div class="recent-item"><div class="task"><strong>${esc(x.url||'Page')}</strong><span>${esc(x.status||'')}</span></div><span class="cost">${esc(x.status||'')}</span></div>`).join('');const md=(r.data||[]).filter(x=>x.status==='success').map(x=>`# ${x.url}\n\n${x.markdown||''}`).join('\n\n---\n\n');return `<div class="result-card"><div class="result-head"><strong>Crawl complete</strong><span class="muted">${(r.data||[]).length} pages</span></div><div class="result-body"><div style="display:grid;gap:7px">${rows||'No pages returned.'}</div>${outputActions(md)}</div></div>`}
+function renderRecent(){const tx=state.logs||[];if(!tx.length)return'';return `<section class="recent"><h3>Recent activity</h3><div class="recent-list">${tx.slice(0,5).map(x=>`<div class="recent-item"><div class="task"><strong>${esc(x.endpoint||'Activity')}</strong><span>${esc(new Date(x.created_at).toLocaleString())}</span></div><span class="cost">-${Number(x.tokens_deducted||0)} tokens</span></div>`).join('')}</div></section>`}
+function renderBatch(){if(!state.batchRows.length)state.batchRows=Array.from({length:10},()=>({url:'',status:'idle'}));return `<div class="batch-panel"><div class="batch-head"><div><h3>Batch scrape</h3><div class="batch-meta">Up to 10 URLs · Markdown only · results stay hidden</div></div><button class="btn primary" data-action="start-batch" ${state.batchRunning?'disabled':''}>${state.batchRunning?'Scraping…':'Start scrape'}</button></div><div class="batch-rows">${state.batchRows.map((r,i)=>`<div class="batch-row"><span class="batch-num">${String(i+1).padStart(2,'0')}</span><input class="input batch-url" data-batch-index="${i}" value="${esc(r.url)}" placeholder="https://example.com/page"><span class="batch-status" title="${r.status==='complete'?'Complete':r.status==='failed'?'Failed':'Waiting'}">${r.status==='complete'?icons.check:r.status==='failed'?'×':''}</span></div>`).join('')}</div><div class="batch-actions"><span class="batch-note">${state.batchRunning?'Submitting batch…':state.batchId?'Completed rows can be downloaded as a ZIP.':'Enter only the rows you need.'}</span><button class="btn batch-download" data-action="download-batch" ${state.batchId&&state.batchRows.some(x=>x.status==='complete')?'':'disabled'}>${icons.download} Download batch Markdown</button></div></div>`}
+async function execute(){if(state.loading)return;const u=state.url.trim();if(!u){notify('URL required','Enter a valid website URL.');return}if(state.formats.includes('questions')&&state.mode==='scrape'&&!state.question.trim()){notify('Question required','Enter a question for the Q&A format.');return}state.loading=true;state.result=null;render();try{let d;if(state.mode==='scrape')d=await api('/v1/scrape',{method:'POST',body:JSON.stringify({url:u,formats:state.formats,user_question:state.question||null,use_js_fallback:true,only_main_content:true})});else if(state.mode==='map')d=await api('/v1/map',{method:'POST',body:JSON.stringify({url:u,limit:100,include_subdomains:false})});else d=await api('/v1/crawl',{method:'POST',body:JSON.stringify({url:u,limit:5,scrape_options:{url:u,formats:state.formats,user_question:state.question||null,use_js_fallback:true,only_main_content:true}})});state.result=d;await loadAccount();notify('Complete',`${d.tokens_deducted||1} token(s) used.`)}catch(e){state.result={error:e.message};notify('Request failed',e.message)}finally{state.loading=false;render()}}
+async function batchScrape(){if(state.batchRunning)return;const active=state.batchRows.map((x,i)=>({x,i})).filter(o=>o.x.url.trim());const urls=active.map(o=>o.x.url.trim());if(!urls.length){notify('URLs required','Add at least one URL to the batch.');return}state.batchRunning=true;state.batchId=null;state.batchRows.forEach(x=>x.status=x.url.trim()?'idle':'idle');render();try{const d=await api('/v1/batch-scrape',{method:'POST',body:JSON.stringify({urls,formats:['markdown'],use_js_fallback:true,only_main_content:true})});state.batchId=d.batch_id;(d.rows||[]).forEach((r,i)=>{const pos=active[r.index??i]?.i;const row=state.batchRows[pos];if(row)row.status=r.status});await loadAccount();notify('Batch complete',`${d.completed} of ${d.total} page(s) scraped successfully.`)}catch(e){notify('Batch failed',e.message)}finally{state.batchRunning=false;render()}}
+async function downloadBatch(){if(!state.batchId)return;try{const r=await fetch(API_BASE+`/v1/batch-scrape/${state.batchId}/download`,{headers:{'X-API-Key':state.apiKey}});if(!r.ok)throw Error((await r.json().catch(()=>({}))).detail||'Batch download failed.');const blob=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`reclaire-batch-${state.batchId.slice(0,8)}.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}catch(e){notify('Download failed',e.message)}}
+function downloadText(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/markdown'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function currentOutput(){const r=state.result;if(!r)return'';if(r.markdown)return r.markdown;if(r.summary)return r.summary;if(r.answer)return r.answer;if(r.json)return JSON.stringify(r.json,null,2);if(r.html)return r.html;if(r.raw_html)return r.raw_html;if(r.links)return r.links.join('\n');return JSON.stringify(r,null,2)}
+function renderActivity(){return `<div class="page"><div class="page-inner"><header class="page-header"><div class="eyebrow">Account</div><h1>Activity logs</h1><p>Recent authenticated operations and token deductions.</p></header><div class="table-wrap"><table><thead><tr><th>Endpoint</th><th>Tokens</th><th>Timestamp</th></tr></thead><tbody>${state.logs.length?state.logs.map(x=>`<tr><td>${esc(x.endpoint)}</td><td style="font-weight:850;color:var(--gold)">${Number(x.tokens_deducted||0)}</td><td>${esc(new Date(x.created_at).toLocaleString())}</td></tr>`).join(''):`<tr><td colspan="3" class="muted">No activity yet.</td></tr>`}</tbody></table></div></div></div>`}
+function renderUsage(){
+  const t=Number(state.user?.tokens||0);
+  const createdDate = state.user?.created_at ? new Date(state.user.created_at) : new Date();
+  const nextRefillDate = new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return `<div class="page"><div class="page-inner"><header class="page-header"><div class="eyebrow">Account</div><h1>Usage</h1><p>Your token account and active backend token pricing.</p></header><div class="stats"><div class="stat"><span>Available tokens</span><strong>${t}</strong></div><div class="stat"><span>Next Refill</span><strong>${nextRefillDate}</strong></div><div class="stat"><span>Operations logged</span><strong>${state.logs.length}</strong></div><div class="stat"><span>Testing grant</span><strong>50</strong></div></div><section class="settings-card"><h3>Token costs</h3><p>Current active token deduction schedule.</p><div class="usage-costs"><div class="cost-card"><strong>Standard Static Scrape</strong><span>1 token</span></div><div class="cost-card"><strong>Dynamic Scrape (Playwright)</strong><span>3 tokens</span></div><div class="cost-card"><strong>Scrape with AI Summary</strong><span>+2 extra tokens</span></div><div class="cost-card"><strong>Map Site Links (/v1/map)</strong><span>1 token</span></div><div class="cost-card"><strong>Crawl Entire Site (/v1/crawl)</strong><span>1 token / page</span></div></div><button class="btn" style="margin-top:12px" data-action="grant-demo">Grant 50 test tokens</button><div class="muted" style="font-size:10px;margin-top:8px">Available once per account through the backend testing endpoint.</div></section></div></div>`
+}
+function renderApi(){
+  const maskedKey = state.apiKey ? state.apiKey.slice(0, 3) + '••••••••••••••••' : 'No active key';
+  return `<div class="page"><div class="page-inner"><header class="page-header"><div class="eyebrow">Account</div><h1>API keys</h1><p>Your active ReClaire API credential and backend cURL guides.</p></header><section class="settings-card"><h3>Active API key</h3><p>The backend issues one active key per account. Signing in again rotates it.</p><div style="display:flex;gap:8px"><input class="input mono" readonly value="${esc(maskedKey)}" id="apiKeyValue"><button class="btn" data-action="copy-key">${icons.copy} Copy Key</button></div></section><section class="settings-card" style="margin-top:12px"><h3>Backend connection</h3><p>Used by this frontend for API requests.</p><div style="display:flex;gap:8px"><input id="apiBaseInput" class="input" value="${esc(API_BASE)}"><button class="btn primary" data-action="save-api-base">Save</button></div></section><section class="settings-card" style="margin-top:12px"><h3>API Usage & Examples</h3><p>cURL snippets for sending backend API requests directly.</p><div class="curl-section"><div class="curl-title">1. Standard Static Scrape (1 token):</div><pre class="code-box">curl -X POST "${API_BASE}/v1/scrape" \\
+  -H "Authorization: Bearer YOUR_RECLAIRE_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "url": "https://example.com"
+  }'</pre></div><div class="curl-section"><div class="curl-title">2. Dynamic Scrape with Playwright Fallback (3 tokens):</div><pre class="code-box">curl -X POST "${API_BASE}/v1/scrape" \\
+  -H "Authorization: Bearer YOUR_RECLAIRE_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "url": "https://example.com",
+    "use_js_fallback": true
+  }'</pre></div><div class="curl-section"><div class="curl-title">3. Scrape with AI Summary (+2 extra tokens):</div><pre class="code-box">curl -X POST "${API_BASE}/v1/scrape" \\
+  -H "Authorization: Bearer YOUR_RECLAIRE_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "url": "https://example.com",
+    "formats": ["markdown", "summary"]
+  }'</pre></div><div class="curl-section"><div class="curl-title">4. Map Site Links ( /v1/map ) — (1 token)</div><pre class="code-box">curl -X POST "${API_BASE}/v1/map" \\
+  -H "Authorization: Bearer YOUR_RECLAIRE_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "url": "https://example.com"
+  }'</pre></div><div class="curl-section"><div class="curl-title">5. Crawl Entire Site ( /v1/crawl ) — (1 token per discovered page)</div><pre class="code-box">curl -X POST "${API_BASE}/v1/crawl" \\
+  -H "Authorization: Bearer YOUR_RECLAIRE_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "url": "https://example.com",
+    "max_depth": 2
+  }'</pre></div></section></div></div>`
+}
+function renderSupport(){
+  return `<div class="page"><div class="page-inner"><header class="page-header"><div class="eyebrow">Support</div><h1>Feedback & Help</h1><p>Send feedback or reach out directly to the ReClaire team.</p></header><section class="settings-card"><h3>Send Feedback</h3><p>Have questions, feature requests, or bugs? Let us know.</p><form id="supportForm"><div class="auth-field"><label>Your Email</label><input class="input" name="supportEmail" type="email" value="${esc(state.user?.email||'')}" required placeholder="you@example.com"></div><div class="auth-field"><label>Subject</label><input class="input" name="supportSubject" type="text" required placeholder="Feedback regarding..."></div><div class="auth-field"><label>Message</label><textarea class="textarea" name="supportMessage" required placeholder="Describe your experience or feedback..."></textarea></div><button class="btn primary" type="submit" style="margin-top:10px">Send via Email</button></form><div style="margin-top:20px;font-size:12px;" class="muted">Or contact us directly at <a href="mailto:reclaire.support@gmail.com" style="color:var(--accent);font-weight:700">reclaire.support@gmail.com</a></div></section></div></div>`;
+}
+function renderSettings(){const dark=state.theme==='dark';return `<div class="page"><div class="page-inner"><header class="page-header"><div class="eyebrow">Account</div><h1>Settings</h1><p>Appearance and navigation preferences are stored locally.</p></header><div class="settings-grid"><section class="settings-card"><h3>Appearance</h3><p>Theme changes snap instantly.</p><div class="setting-row"><span>Theme</span><div class="segmented"><button class="${!dark?'active':''}" data-theme-set="light">${icons.sun} Light</button><button class="${dark?'active':''}" data-theme-set="dark">${icons.moon} Dark</button></div></div></section><section class="settings-card"><h3>Navigation</h3><p>Choose the side containing persistent navigation.</p><div class="setting-row"><span>Sidebar side</span><div class="segmented"><button class="${state.sidebarSide==='left'?'active':''}" data-side-set="left">Left</button><button class="${state.sidebarSide==='right'?'active':''}" data-side-set="right">Right</button></div></div></section><section class="settings-card"><h3>Workspace behavior</h3><p>Independent scroll containers keep navigation stable.</p><div class="setting-row"><span>Independent scrolling</span><strong>Enabled</strong></div><div class="setting-row"><span>Typing hints</span><strong>Enabled</strong></div></section><section class="settings-card"><h3>Account</h3><p>${esc(state.user?.email||'No email')}</p><div class="setting-row"><span>User ID</span><strong class="mono" style="font-size:9px">${esc(state.user?.id||'—')}</strong></div><div class="setting-row"><span>Token balance</span><strong>${Number(state.user?.tokens||0)}</strong></div></section></div></div></div>`}
+function renderPage(){if(['playground','map','crawl'].includes(state.page)){if(state.page!=='playground')state.mode=state.page;return renderPlayground()}if(state.page==='support')return renderSupport();return state.page==='activity'?renderActivity():state.page==='usage'?renderUsage():state.page==='api'?renderApi():renderSettings()}
+function renderNotifications(){if(!state.notificationsOpen)return'';return `<div class="floating-panel"><div class="floating-head"><strong>Recent activity</strong><button class="icon-btn" style="width:30px;height:30px" data-action="close-overlays">×</button></div><div class="notification-list">${state.logs.slice(0,5).map(x=>`<div class="notification"><i class="notification-dot"></i><div><strong>${esc(x.endpoint)}</strong><span>${Number(x.tokens_deducted||0)} token(s) used</span></div></div>`).join('')||`<div class="notification"><i class="notification-dot" style="opacity:.25"></i><div><strong>No recent activity</strong><span>Your notifications will appear here.</span></div></div>`}</div></div>`}
+function renderApp(){return `<div class="app-shell">${renderTopbar()}<div class="workspace">${renderSidebar()}<main class="main">${renderPage()}${renderNotifications()}</main></div></div>`}
+function render(){document.body.dataset.theme=state.theme;$('#app').innerHTML=state.screen==='landing'?renderLanding():state.screen==='auth'?renderAuth(state.authMode):renderApp();bind();if(state.screen==='app')startTypingHints()}
+function startTypingHints(){state.animatedTimers.forEach(clearTimeout);state.animatedTimers=[];for(const {el,list} of [{el:$('#urlInput'),list:urlHints},{el:$('#questionInput'),list:questionHints}]){if(!el||el.value)continue;let n=0,i=0,del=false;const tick=()=>{if(!document.body.contains(el)||el.value)return;const target=list[n%list.length];if(!del){el.placeholder=target.slice(0,++i);if(i>=target.length){del=true;state.animatedTimers.push(setTimeout(tick,2000));return}}else{el.placeholder=target.slice(0,--i);if(i<=0){del=false;n++;state.animatedTimers.push(setTimeout(tick,500));return}}state.animatedTimers.push(setTimeout(tick,del?35:45))};state.animatedTimers.push(setTimeout(tick,600))}}
+function bind(){$$('[data-screen]').forEach(b=>b.onclick=()=>{state.screen=b.dataset.screen;state.authMode=b.dataset.authMode||'login';render()});$$('[data-auth-mode]').forEach(b=>b.onclick=()=>{state.screen='auth';state.authMode=b.dataset.authMode;render()});const af=$('#authForm');if(af)af.onsubmit=async e=>{e.preventDefault();try{await auth(state.authMode,new FormData(af))}catch(x){notify('Authentication failed',x.message)}};
+const sf=$('#supportForm');if(sf)sf.onsubmit=e=>{e.preventDefault();const fd=new FormData(sf);const subj=encodeURIComponent(fd.get('supportSubject'));const msg=encodeURIComponent(fd.get('supportMessage'));window.location.href=`mailto:reclaire.support@gmail.com?subject=${subj}&body=${msg}`;notify('Feedback ready','Opening email client to send your message.')};
+$$('[data-action=oauth]').forEach(b=>b.onclick=()=>handleOAuth(b.dataset.provider));$$('[data-action=forgot]').forEach(b=>b.onclick=e=>{e.preventDefault();notify('Password reset unavailable','The current backend does not expose password reset yet.')});$$('[data-page]').forEach(b=>b.onclick=()=>openPage(b.dataset.page));$('#sidebarBtn')?.addEventListener('click',toggleSidebar);$('#sidebarOverlay')?.addEventListener('click',()=>{state.sidebarOpen=false;render()});$('#notificationBtn')?.addEventListener('click',()=>{state.notificationsOpen=!state.notificationsOpen;render()});$$('[data-action=close-overlays]').forEach(b=>b.onclick=()=>{state.notificationsOpen=false;render()});$$('[data-action=logout]').forEach(b=>b.onclick=logout);$$('[data-action=skip-auth]').forEach(b=>b.onclick=()=>{state.screen='app';state.page='playground';state.user={username:'Guest',email:'guest@demo.local',tokens:9999,created_at:new Date().toISOString()};render();notify('Guest mode','You are browsing in preview mode. API calls require sign-in.')});$$('[data-action=support]').forEach(b=>b.onclick=()=>openPage('support'));$$('[data-action=upgrade]').forEach(b=>b.onclick=()=>notify('Plans','Billing is not implemented by the current backend.'));$('#urlInput')?.addEventListener('input',e=>state.url=e.target.value);$('#questionInput')?.addEventListener('input',e=>state.question=e.target.value);$('[data-dropdown=mode]')?.addEventListener('click',()=>{state.dropdown=state.dropdown==='mode'?null:'mode';render();if(state.dropdown)setTimeout(positionDropdown,0)});$$('[data-mode]').forEach(b=>b.onclick=()=>{state.mode=b.dataset.mode;state.dropdown=null;if(state.mode==='map')state.formats=['markdown'];render()});$('[data-action=open-format]')?.addEventListener('click',()=>{state.formatDrawer=true;state.dropdown=null;render()});$('[data-action=close-format]')?.addEventListener('click',()=>{state.formatDrawer=false;render()});$$('[data-format]').forEach(b=>b.onclick=()=>{const id=b.dataset.format;if(state.formats.includes(id)){if(state.formats.length>1)state.formats=state.formats.filter(x=>x!==id)}else state.formats.push(id);render()});$('[data-action=execute]')?.addEventListener('click',execute);$('[data-action=toggle-batch]')?.addEventListener('click',()=>{state.batchOpen=!state.batchOpen;render()});$$('.batch-url').forEach(b=>b.oninput=()=>state.batchRows[Number(b.dataset.batchIndex)].url=b.value);$('[data-action=start-batch]')?.addEventListener('click',batchScrape);$('[data-action=download-batch]')?.addEventListener('click',downloadBatch);$$('[data-action=download-md]').forEach(b=>b.onclick=()=>downloadText('reclaire-output.md',currentOutput()));$$('[data-action=copy-md], [data-action=copy-output]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(currentOutput());notify('Copied','Output copied to clipboard.')}catch{notify('Copy failed','Clipboard access was unavailable.')}});$$('[data-theme-set]').forEach(b=>b.onclick=()=>{setTheme(b.dataset.themeSet);render()});$$('[data-side-set]').forEach(b=>b.onclick=()=>{state.sidebarSide=b.dataset.sideSet;localStorage.setItem('reclaire_sidebar_side',state.sidebarSide);state.sidebarOpen=false;render()});$('[data-action=grant-demo]')?.addEventListener('click',async()=>{try{const d=await api('/v1/testing/grant',{method:'POST'});state.user.tokens=d.tokens_remaining;await loadAccount();notify('Tokens granted',`${d.tokens_granted} test tokens added.`);render()}catch(e){notify('Grant unavailable',e.message)}});$('[data-action=copy-key]')?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(state.apiKey);notify('Copied','API key copied.')}catch{notify('Copy failed','Clipboard access was unavailable.')}});$('[data-action=save-api-base]')?.addEventListener('click',async()=>{API_BASE=($('#apiBaseInput')?.value||'').trim().replace(/\/+$/,'');localStorage.setItem('reclaire_api_base',API_BASE);notify('Saved','API base updated.');if(state.apiKey)await loadAccount();render()});document.addEventListener('click',outside,{once:true})}
+function positionDropdown(){const t=$('.custom-select'),m=$('#modeDropdown');if(!t||!m)return;const r=t.getBoundingClientRect();m.style.left=Math.min(r.left,innerWidth-m.offsetWidth-10)+'px';m.style.top=Math.min(r.bottom+7,innerHeight-m.offsetHeight-10)+'px'}function outside(e){if(state.dropdown&&!e.target.closest('.custom-select')&&!e.target.closest('#modeDropdown')){state.dropdown=null;render()}}
+(async()=>{setTheme(state.theme);if(state.apiKey){if(await loadAccount())state.screen='app';else localStorage.removeItem('reclaire_api_key'),state.apiKey=''}render()})();
+})();
 </script>
+</body>
+</html>
