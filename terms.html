@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReClaire - Terms of Service</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Ubuntu', sans-serif;
+            line-height: 1.6;
+            color: #222222;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            background-color: #ffffff;
+        }
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #111111;
+            margin-bottom: 6px;
+        }
+        .meta-date {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #333333;
+            margin-bottom: 24px;
+        }
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111111;
+            margin-top: 32px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #eaeaea;
+            padding-bottom: 4px;
+        }
+        p {
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        ul {
+            margin-top: 6px;
+            margin-bottom: 18px;
+            padding-left: 24px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        strong {
+            font-weight: 700;
+        }
+        .contact-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #333;
+            padding: 16px;
+            margin-top: 12px;
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ReClaire — Terms of Service</h1>
+    <div class="meta-date">Effective Date: August 28, 2026 Last Updated: August 28, 2026</div>
+
+    <p>Welcome to ReClaire! These Terms of Service ("Terms") govern your access to and use of the ReClaire website, APIs, browser tools, and web-scraping services (collectively, the "Service").</p>
+    <p>By creating an account, accessing our API, or using the Service, you agree to be bound by these Terms. If you do not agree, do not use ReClaire.</p>
+
+    <h2>1. Description of Service</h2>
+    <p>ReClaire provides automated web-scraping, dynamic browser rendering, and AI-assisted content transformation services. The Service processes user-submitted target URLs and converts web content into structured Markdown format.</p>
+
+    <h2>2. Accounts & Registration</h2>
+    <ul>
+        <li><strong>Account Creation:</strong> You must provide a valid email address and secure credentials to register. You are responsible for all activity under your account.</li>
+        <li><strong>Account Security:</strong> You must safeguard your password and API authentication tokens. ReClaire is not liable for unauthorized access resulting from compromised credentials.</li>
+        <li><strong>Age Limit:</strong> You must be at least 13 years old (or the legal age of digital consent in your jurisdiction) to use the Service.</li>
+    </ul>
+
+    <h2>3. Tokens, Payments & Subscriptions</h2>
+    <ul>
+        <li><strong>Token Metering:</strong> Access to ReClaire features consumes usage credits ("Tokens") managed through our internal transaction ledger.</li>
+        <li><strong>Token Balance Checks:</strong> The system calculates and deducts token balances per API request. If your token balance drops below the required request cost, access to endpoints will be blocked (HTTP 402 Payment Required) until topped up.</li>
+        <li><strong>Purchases & Subscriptions:</strong> Paid top-ups and subscriptions are processed through PCI-DSS compliant third-party payment gateways. All token purchases are non-refundable once used or assigned to an active account balance.</li>
+        <li><strong>Expirations & Modifying Costs:</strong> We reserve the right to adjust token pricing, deduction rates per feature, or promotional token allocations at any time with prior notice on our platform.</li>
+    </ul>
+
+    <h2>4. Acceptable Use & Scraping Restrictions</h2>
+    <p>You retain full legal responsibility for all target URLs submitted to ReClaire. You agree not to use the Service to:</p>
+    <ul>
+        <li><strong>Bypass Access Controls:</strong> Target private web infrastructure, paywalls, or accounts requiring unauthorized authorization without explicit permission.</li>
+        <li><strong>Harvest Sensitive Data:</strong> Scrape credentials, banking/financial data, private medical records, or personally identifiable information (PII) without a lawful basis.</li>
+        <li><strong>Overload Systems:</strong> Launch denial-of-service (DoS) attacks or bombard target websites at rates that violate reasonable rate-limiting practices.</li>
+        <li><strong>Scrape Prohibited Content:</strong> Extract illegal, abusive, infringing, or malicious content.</li>
+        <li><strong>Reverse Engineer ReClaire:</strong> Attempt to compromise, decompile, or overload ReClaire's API infrastructure, authentication secrets, or underlying code.</li>
+    </ul>
+    <p>ReClaire reserves the right to terminate accounts immediately and without refund if illegal or abusive scraping behavior is detected.</p>
+
+    <h2>5. Intellectual Property & Scraping Rights</h2>
+    <ul>
+        <li><strong>ReClaire IP:</strong> All software, API designs, trademarks, logo marks, and branding related to ReClaire belong exclusively to ReClaire.</li>
+        <li><strong>Scraped Content Rights:</strong> ReClaire acts as an automated technical utility for extracting Markdown. ReClaire claims no ownership over the content you scrape. You are solely responsible for ensuring that your storage and use of scraped content complies with applicable copyright laws and third-party terms of service.</li>
+    </ul>
+
+    <h2>6. AI Features & Third-Party Services</h2>
+    <ul>
+        <li><strong>Third-Party Processing:</strong> ReClaire integrates third-party services, including Google Gemini AI APIs and headless browser automation drivers.</li>
+        <li><strong>AI Output Accuracy:</strong> Content generated or summarized by integrated AI tools is provided "as is." ReClaire does not guarantee 100% accuracy, completeness, or factual correctness of AI-transformed text.</li>
+    </ul>
+
+    <h2>7. Disclaimer of Warranties</h2>
+    <p>THE SERVICE IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS. RECLAIRE EXPRESSLY DISCLAIMS ALL WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO:</p>
+    <ul>
+        <li>Uninterrupted or error-free web-scraping execution.</li>
+        <li>Protection against target website structure changes or IP blocking.</li>
+        <li>Accuracy or completeness of rendered Markdown outputs.</li>
+    </ul>
+
+    <h2>8. Limitation of Liability</h2>
+    <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, RECLAIRE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, DATA LOSS, OR SYSTEM DOWNTIME RISING OUT OF YOUR USE OF THE SERVICE.</p>
+    <p>RECLAIRE'S TOTAL AGGREGATE LIABILITY FOR ANY CLAIM SHALL NOT EXCEED THE AMOUNT PAID BY YOU TO RECLAIRE IN THE THREE (3) MONTHS PRECEDING THE CLAIM.</p>
+
+    <h2>9. Account Termination</h2>
+    <p>We reserve the right to suspend or terminate your access to ReClaire at our sole discretion, without notice, if we believe you have violated these Terms, engaged in fraudulent activity, or abused system resources.</p>
+
+    <h2>10. Contact Information</h2>
+    <p>For legal inquiries or questions regarding these Terms, please contact us at:</p>
+    <div class="contact-card">
+        <strong>ReClaire Legal Team Email:</strong> reclaire.support@gmail.com
+    </div>
+
+</body>
+</html>
