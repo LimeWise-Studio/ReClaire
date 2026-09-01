@@ -444,6 +444,76 @@ function renderNotifications(){
 
 function renderApp(){return `<div class="app-shell">${renderTopbar()}<div class="workspace">${renderSidebar()}<main class="main">${renderPage()}${renderNotifications()}</main></div>${renderSurveyModal()}${renderDeleteModal()}</div>`}
 function render(){document.body.dataset.theme=state.theme;$('#app').innerHTML=state.screen==='landing'?renderLanding():state.screen==='auth'?renderAuth(state.authMode):renderApp();bind();if(state.screen==='app')startTypingHints()}
+function renderSurveyModal() {
+  if (!state.surveyOpen) return '';
+  return `<div class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Help us improve ReClaire</h2>
+        <button class="icon-btn" style="width:34px;height:34px" data-action="close-survey">×</button>
+      </div>
+      <p>Your feedback helps us build a better product.</p>
+      <form id="surveyForm">
+        <div class="survey-question">
+          <label>1. How did you find ReClaire?</label>
+          <input class="input" name="q1_answer" placeholder="e.g., Google, GitHub, Twitter, friend..." required>
+        </div>
+        <div class="survey-question">
+          <label>2. What is your primary use case?</label>
+          <input class="input" name="q2_answer" placeholder="e.g., Data extraction, AI training, research..." required>
+        </div>
+        <div class="survey-question">
+          <label>3. What's your role or profession?</label>
+          <input class="input" name="q3_answer" placeholder="e.g., Developer, Researcher, Student..." required>
+        </div>
+        <div class="survey-question">
+          <label>4. What features would you like to see? (comma separated)</label>
+          <input class="input" name="q4_answers" placeholder="e.g., PDF support, API docs, webhooks...">
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" data-action="close-survey">Skip</button>
+          <button class="btn primary" type="submit">Submit feedback</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+
+function renderDeleteModal() {
+  if (state.deleteStage === 0) return '';
+  if (state.deleteStage === 1) {
+    return `<div class="modal-backdrop">
+      <div class="modal-card danger-zone">
+        <div class="modal-head">
+          <h2>Delete account</h2>
+          <button class="icon-btn" style="width:34px;height:34px" data-action="cancel-delete">×</button>
+        </div>
+        <p>This will permanently delete your account and all associated data. This action cannot be undone.</p>
+        <div class="modal-actions">
+          <button class="btn ghost" data-action="cancel-delete">Cancel</button>
+          <button class="btn danger" data-action="confirm-delete">Delete account</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  if (state.deleteStage === 2) {
+    return `<div class="modal-backdrop">
+      <div class="modal-card danger-zone">
+        <div class="modal-head">
+          <h2>Confirm deletion</h2>
+          <button class="icon-btn" style="width:34px;height:34px" data-action="cancel-delete">×</button>
+        </div>
+        <p>Type <strong>DELETEfromAPP</strong> below to confirm permanent deletion.</p>
+        <input class="input" id="deletePhraseInput" placeholder="Type DELETEfromAPP">
+        <div class="modal-actions">
+          <button class="btn ghost" data-action="cancel-delete">Cancel</button>
+          <button class="btn danger" id="finalDeleteBtn" data-action="final-delete" disabled>Confirm delete</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  return '';
+}
 function startTypingHints(){state.animatedTimers.forEach(clearTimeout);state.animatedTimers=[];for(const {el,list} of [{el:$('#urlInput'),list:urlHints},{el:$('#questionInput'),list:questionHints}]){if(!el||el.value)continue;let n=0,i=0,del=false;const tick=()=>{if(!document.body.contains(el)||el.value)return;const target=list[n%list.length];if(!del){el.placeholder=target.slice(0,++i);if(i>=target.length){del=true;state.animatedTimers.push(setTimeout(tick,2000));return}}else{el.placeholder=target.slice(0,--i);if(i<=0){del=false;n++;state.animatedTimers.push(setTimeout(tick,500));return}}state.animatedTimers.push(setTimeout(tick,del?35:45))};state.animatedTimers.push(setTimeout(tick,600))}}
 function bind(){
   $$('[data-screen]').forEach(b=>b.onclick=()=>{state.screen=b.dataset.screen;state.authMode=b.dataset.authMode||'login';render()});
