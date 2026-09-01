@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head> 
+<meta charset="utf-8"> 
+<link rel="icon" type="image/png" href="favicon.png"> 
+<link rel="apple-touch-icon" href="favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f7f5">
+<title>ReClaire — Web Intelligence Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7f7f5;--surface:#fff;--surface2:#f0f0ed;--surface3:#e6e6e1;--text:#0b0b0b;--text2:#303030;--muted:#707070;--border:#deded8;--border2:#bdbdb5;--accent:#111;--accentSoft:#ecece8;--gold:#8b6a22;--goldSoft:#f4ecd7;--success:#16703b;--danger:#b3261e;--shadow:0 18px 55px rgba(0,0,0,.08);--topbar:66px;--sidebar:270px;--radius:16px;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+[data-theme=dark]{--bg:#0b0b0b;--surface:#141414;--surface2:#1b1b1b;--surface3:#242424;--text:#fff;--text2:#dedede;--muted:#9b9b9b;--border:#303030;--border2:#494949;--accent:#EFD09E;--accentSoft:rgba(239,208,158,.12);--gold:#EFD09E;--goldSoft:rgba(239,208,158,.12);--success:#68c892;--danger:#ff8078;--shadow:0 22px 65px rgba(0,0,0,.35)}
+*{box-sizing:border-box}html{height:100%;scroll-behavior:smooth}body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:14px/1.55 'Ubuntu',ui-sans-serif,system-ui,-apple-system,sans-serif}button,input,textarea{font:inherit}button{border:0;color:inherit;cursor:pointer}a{text-decoration:none;color:inherit}svg{display:block}.hidden{display:none!important}.mono{font-family:var(--mono)}.muted{color:var(--muted)}
+.btn{min-height:42px;padding:0 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:750;transition:transform .16s ease,border-color .16s ease,background .16s ease}.btn:hover{transform:translateY(-1px);border-color:var(--border2)}.btn.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}.btn.ghost{background:transparent}.icon-btn{width:40px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface);display:grid;place-items:center;position:relative;text-decoration:none}.icon-btn:hover{background:var(--surface2)}.icon-btn .badge{position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:var(--danger);border-radius:50%;border:2px solid var(--surface)}.input{width:100%;height:46px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);outline:0;padding:0 13px}.input:focus,.question-input:focus,.url-input:focus,.textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accentSoft)}
+/* App */.app-shell{height:100dvh;display:flex;flex-direction:column}.topbar{height:var(--topbar);flex:0 0 var(--topbar);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:50}.top-left,.top-right{display:flex;align-items:center;gap:9px;min-width:0}.account-chip{display:flex;align-items:center;gap:8px;padding:4px 9px 4px 4px;border:1px solid var(--border);border-radius:999px;background:var(--surface)}.avatar{width:29px;height:29px;border-radius:50%;background:var(--accentSoft);color:var(--accent);display:grid;place-items:center;font-size:10px;font-weight:850;overflow:hidden}.account-name{max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:750}.top-logo{width:31px;height:31px;object-fit:contain;filter:brightness(0)}[data-theme=dark] .top-logo{filter:brightness(0) invert(1)}.workspace{min-height:0;flex:1;display:flex;position:relative;flex-direction:row}.workspace.right-side{flex-direction:row-reverse}.sidebar{width:var(--sidebar);flex:0 0 var(--sidebar);background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;padding:14px 12px 25px;overscroll-behavior:contain;z-index:40}.workspace.right-side .sidebar{border-right:none;border-left:1px solid var(--border)}.sidebar-overlay{display:none;position:fixed;inset:var(--topbar) 0 0;background:rgba(0,0,0,.38);z-index:30}.profile-box{border:1px solid var(--border);border-radius:12px;background:var(--surface2);padding:10px;margin:9px 0 17px;display:flex;align-items:center;gap:9px}.profile-meta{min-width:0}.profile-meta strong,.profile-meta span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.profile-meta span{color:var(--muted);font-size:10px}.nav-group{margin:17px 0}.nav-item{width:100%;min-height:38px;padding:0 10px;border-radius:99px;background:transparent;display:flex;align-items:center;gap:10px;text-align:left;color:var(--text2);margin:2px 0;font-weight:650}.nav-item:hover{background:var(--surface2);color:var(--text)}.nav-item.active{background:var(--accentSoft);color:var(--accent)}.logout{margin-top:20px;color:var(--danger)}.main{min-width:0;min-height:0;flex:1;overflow:hidden;background:var(--bg);position:relative}.page{height:100%;overflow-y:auto;overflow-x:hidden;padding:32px 32px 70px;overscroll-behavior:contain}.page-inner{max-width:1080px;margin:auto}.page-header{margin-bottom:26px}.page-header h1{margin:0;font-size:28px;letter-spacing:-.05em}.page-header p{margin:7px 0 0;color:var(--muted)}
+/* Playground */.playground{height:100%;overflow-y:auto;padding:50px 24px 80px}.playground-inner{width:min(900px,100%);margin:auto}.main-brand{text-align:center}.main-brand img{width:65px;height:65px;object-fit:contain;margin:0 auto 18px;filter:brightness(0)}[data-theme=dark] .main-brand img{filter:brightness(0) invert(1)}.main-brand h1{font:600 43px/1 Georgia,serif;letter-spacing:-.05em;margin:0}.main-brand p{max-width:650px;margin:12px auto 32px;color:var(--muted)}.input-panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:12px;box-shadow:var(--shadow)}.input-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:850;color:var(--muted);margin:0 0 7px 2px}.input-row{display:grid;grid-template-columns:185px 1fr 180px;gap:8px;align-items:center}.input-row.no-format{grid-template-columns:185px 1fr}.custom-select,.format-trigger,.url-shell{min-height:50px;border:1px solid var(--border);border-radius:11px;background:var(--surface2)}.custom-select,.format-trigger{padding:0 13px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:750;text-align:left}.url-shell{display:flex;align-items:center;overflow:hidden}.url-prefix{color:var(--muted);font:11px var(--mono);padding-left:13px}.url-input{min-width:0;flex:1;height:48px;border:0;outline:0;background:transparent;color:var(--text);padding:0 11px 0 3px}.execute{min-height:50px;width:100%;border-radius:11px;background:var(--accent);color:var(--bg);font-weight:850}.adv-flags{display:flex;gap:15px;padding:8px 5px;font-size:12px;color:var(--muted)}.adv-flags label{display:flex;align-items:center;gap:6px;cursor:pointer}.adv-flags input{accent-color:var(--accent);width:14px;height:14px}.question-wrap{margin-top:9px}.question-input{width:100%;height:46px;border:1px solid var(--border);border-radius:11px;background:var(--surface2);color:var(--text);padding:0 13px;outline:0}.panel-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;padding:0 3px;color:var(--muted);font-size:10px}
+/* Batch Dropdown */.batch-container{position:relative;margin-top:9px}.batch-trigger{width:100%;min-height:42px;border:1px dashed var(--border2);border-radius:10px;background:transparent;font-weight:750;display:flex;align-items:center;justify-content:center;gap:8px}.batch-trigger:hover{background:var(--surface2)}.batch-menu{position:absolute;top:100%;left:0;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);z-index:65;margin-top:5px;padding:5px}.batch-menu button{width:100%;text-align:left;padding:10px 15px;border-radius:6px;font-weight:600;background:transparent}.batch-menu button:hover{background:var(--surface2)}
+/* Results */.output-area{margin-top:30px}.output-empty{min-height:190px;border:1px dashed var(--border2);border-radius:15px;display:grid;place-items:center;text-align:center;padding:28px;color:var(--muted)}.result-card{background:var(--surface);border:1px solid var(--border);border-radius:15px;overflow:hidden;margin-bottom:12px}.result-head{padding:13px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}.result-body{padding:20px}.code-box{margin:0;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:16px;overflow:auto;max-height:620px;white-space:pre-wrap;font:12px/1.7 var(--mono);color:var(--text2)}
+/* Recent Logs */.recent{margin-top:30px}.recent h3{font-size:12px;margin:0 0 9px}.recent-list{display:grid;gap:7px}.recent-item{border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;gap:12px}.task{min-width:0}.task strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.task span{display:block;color:var(--muted);font-size:10px;margin-top:2px}.cost{color:var(--gold);font-weight:850;white-space:nowrap}
+/* Usage & Settings */.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.settings-card{border:1px solid var(--border);background:var(--surface);border-radius:15px;padding:18px}.settings-card h3{margin:0 0 5px;font-size:14px}.settings-card p{margin:0 0 15px;color:var(--muted);font-size:12px}.setting-row{min-height:49px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:15px;text-decoration:none;color:inherit}.setting-row:first-of-type{border-top:0}.setting-row.link{cursor:pointer}.setting-row.link:hover{color:var(--accent)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:13px}.stat{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px}.stat span{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.09em;font-weight:850}.stat strong{display:block;font-size:22px;margin-top:4px;letter-spacing:-.03em}.referral-panel{margin:15px 0;padding:15px;border:1px dashed var(--border2);border-radius:12px;background:var(--surface)}.referral-row{display:flex;gap:10px;margin-top:10px}.referral-row input{flex:1;background:var(--surface2)}
+/* Notifications */.floating-panel{position:fixed;top:calc(var(--topbar) + 9px);right:14px;width:min(340px,calc(100vw - 28px));background:var(--surface);border:1px solid var(--border);border-radius:13px;box-shadow:var(--shadow);z-index:60;overflow:hidden;animation:panelIn .18s ease both}.floating-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}.notification-list{max-height:350px;overflow:auto}.notification{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;gap:10px}.notification-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:6px;flex:0 0 auto}.notification strong{display:block;font-size:12px}.notification span{display:block;color:var(--muted);font-size:11px}
+.toast-stack{position:fixed;right:15px;bottom:15px;z-index:100;display:grid;gap:8px;width:min(340px,calc(100vw - 30px))}.toast{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:11px 12px;box-shadow:var(--shadow);animation:toastIn .2s ease both}
+/* Format Drawer */.format-drawer{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(760px,calc(100vw - 28px));max-height:min(70dvh,500px);overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:17px;box-shadow:var(--shadow);z-index:65;padding:15px;animation:drawerIn .2s ease both}.format-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:12px}.format-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.format-card{border:1px solid var(--border);border-radius:11px;background:var(--surface2);padding:13px;text-align:left;min-height:90px;position:relative}.format-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accentSoft) inset}
+@keyframes panelIn{from{opacity:0;transform:translateY(-5px) scale(.985)}to{opacity:1;transform:none}}@keyframes drawerIn{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:1050px){:root{--sidebar:245px}.settings-grid{grid-template-columns:1fr}.input-row{grid-template-columns:160px 1fr 160px}.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:800px){.topbar{padding:0 9px}.sidebar{position:fixed;top:var(--topbar);bottom:0;left:0;transform:translateX(-105%);width:min(300px,88vw)}.workspace.right-side .sidebar{left:auto;right:0;transform:translateX(105%)}.sidebar.open{transform:translateX(0)}.sidebar-overlay.show{display:block}.input-row,.input-row.no-format{grid-template-columns:1fr}.execute{width:100%}}
+</style>
+</head>
+<body data-theme="light">
+<div id="app"></div><div id="toastStack" class="toast-stack"></div>
+<script>
+(()=>{'use strict';
+let API_BASE = localStorage.getItem('reclaire_api_base') || 'https://reclaire-api.onrender.com';
+const icons={
+    menu:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
+    bell:'<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-9-3-9M10 21h4"/></svg>',
+    survey:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
+    scrape:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 9h10M4 13h16M4 17h8"/><path d="m17 15 4 4m0-4-4 4"/></svg>',
+    map:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5 9 3l6 2 5-2v16l-5 2-6-2-5 2Z"/><path d="M9 3v16M15 5v16"/></svg>',
+    crawl:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.3 2.3 3.4 5 3.4 8s-1.1 5.7-3.4 8c-2.3-2.3-3.4-5-3.4-8S9.7 6.3 12 4Z"/></svg>',
+    usage:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5M4 19h16"/><path d="M7 16v-3M12 16V8M17 16v-6"/></svg>',
+    settings:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M19.4 15l.1.1-1.7 2.9-.2-.1a3 3 0 0 0-4.2 1.1V19h-3.4v-.2a3 3 0 0 0-4.2-1.1l-.2.1-1.7-2.9.1-.1a3 3 0 0 0 0-5l-.1-.1 1.7-2.9.2.1a3 3 0 0 0 4.2-1.1V5h3.4v.2a3 3 0 0 0 4.2 1.1l.2-.1 1.7 2.9-.1.1a3 3 0 0 0 0 5Z"/></svg>',
+    logout:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5"/><path d="m14 8 4 4-4 4M8 12h10"/></svg>',
+    copy:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
+    external:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>'
+};
+
+const modes = [
+    {id:'scrape',label:'Scrape',icon:icons.scrape},
+    {id:'crawl',label:'Crawl',icon:icons.crawl},
+    {id:'map',label:'Map',icon:icons.map}
+];
+const formats = [
+    {id:'markdown',label:'Markdown',desc:'Clean readable page content'},
+    {id:'html',label:'HTML',desc:'Clean extracted HTML'},
+    {id:'raw_html',label:'Raw HTML',desc:'Original fetched document'},
+    {id:'summary',label:'Summary',desc:'Concise AI overview'},
+    {id:'questions',label:'Q&A',desc:'Answer a question from the page'},
+    {id:'json',label:'Structured JSON',desc:'Schema-driven AI extraction'},
+    {id:'extract',label:'Extraction',desc:'Natural language prompt extraction'}
+];
+
+// Fallback dummy user for playground testing
+const dummyUser = { 
+    id: 'user_12345', 
+    username: 'JaneDoe', 
+    email: 'jane.doe@example.com', 
+    tokens: 100,
+    survey_completed: false
+};
+
+const state = {
+    page: 'playground',
+    theme: localStorage.getItem('reclaire_theme') || 'light',
+    sidebarSide: localStorage.getItem('reclaire_sidebar_side') || 'left',
+    sidebarOpen: false,
+    notificationsOpen: false,
+    formatDrawer: false,
+    batchMenuOpen: false,
+    mode: 'scrape',
+    formats: ['markdown'],
+    flags: { js: true, main: true },
+    question: '',
+    url: '',
+    user: dummyUser,
+    logs: [
+        { endpoint: '/v1/scrape', tokens_deducted: 4, created_at: new Date().toISOString() },
+        { endpoint: '/v1/crawl', tokens_deducted: 10, created_at: new Date(Date.now() - 3600000).toISOString() }
+    ],
+    result: null,
+    loading: false,
+    notifications: [
+        { id: 1, title: 'Welcome to ReClaire!', msg: 'You received 100 tokens to get started.', read: false },
+        { id: 2, title: 'Earn More Tokens', msg: 'Share your referral link 5 times to receive 100 bonus tokens.', read: false },
+        { id: 3, title: 'Got a Minute?', msg: 'Done testing ReClaire out? Why not take a quick survey.', read: false }
+    ]
+};
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const logoImg = c => `<img class="${c||''}" src="reclaire-logo.svg" alt="ReClaire logo" onerror="this.style.visibility='hidden'">`;
+const initials = n => (n||'User').split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
+
+function notify(t, x) {
+    const e = document.createElement('div');
+    e.className = 'toast';
+    e.innerHTML = `<strong>${esc(t)}</strong><span>${esc(x)}</span>`;
+    $('#toastStack').appendChild(e);
+    setTimeout(() => e.remove(), 4300);
+}
+
+function setTheme(t) {
+    state.theme = t;
+    document.body.dataset.theme = t;
+    localStorage.setItem('reclaire_theme', t);
+}
+
+function setSidebarSide(side) {
+    state.sidebarSide = side;
+    localStorage.setItem('reclaire_sidebar_side', side);
+    render();
+}
+
+function getLogDesc(endpoint) {
+    if (endpoint.includes('scrape')) return 'Single URL Scrape';
+    if (endpoint.includes('crawl')) return 'Site Crawl Execution';
+    if (endpoint.includes('map')) return 'Site Mapping';
+    if (endpoint.includes('batch')) return 'Batch Processing';
+    if (endpoint.includes('survey')) return 'Survey Completion';
+    return 'API Execution';
+}
+
+function renderSidebar() {
+    const p = state.page;
+    return `
+    <div class="sidebar-overlay ${state.sidebarOpen ? 'show' : ''}" onclick="state.sidebarOpen=false;render()"></div>
+    <div class="sidebar ${state.sidebarSide === 'right' ? 'right' : ''} ${state.sidebarOpen ? 'open' : ''}">
+        <div class="profile-box">
+            <div class="avatar">${initials(state.user.username || state.user.email)}</div>
+            <div class="profile-meta">
+                <strong>${esc(state.user.username || state.user.email.split('@')[0])}</strong>
+                <span>${esc(state.user.email)}</span>
+            </div>
+        </div>
+        <div class="nav-group">
+            <div class="nav-title">Engine</div>
+            <button class="nav-item ${['playground','map','crawl'].includes(p) ? 'active' : ''}" onclick="state.page='playground';state.mode='scrape';render()">
+                <div class="nav-icon">${icons.scrape}</div> Playground
+            </button>
+            <button class="nav-item ${p==='usage' ? 'active' : ''}" onclick="state.page='usage';render()">
+                <div class="nav-icon">${icons.usage}</div> Usage & API
+            </button>
+            <button class="nav-item ${p==='settings' ? 'active' : ''}" onclick="state.page='settings';render()">
+                <div class="nav-icon">${icons.settings}</div> Settings
+            </button>
+        </div>
+        <button class="nav-item logout" onclick="notify('Logged out', 'Returning to landing page')">
+            <div class="nav-icon">${icons.logout}</div> Logout
+        </button>
+    </div>`;
+}
+
+function renderTopbar() {
+    const unread = state.notifications.filter(n => !n.read).length;
+    const surveyIcon = !state.user.survey_completed ? `<a href="survey.html" class="icon-btn" title="Take Survey">${icons.survey}</a>` : '';
+    
+    return `
+    <header class="topbar">
+        <div class="top-left">
+            <button class="icon-btn" onclick="state.sidebarOpen=true;render()">${icons.menu}</button>
+            ${logoImg('top-logo')}
+        </div>
+        <div class="top-right">
+            ${surveyIcon}
+            <button class="icon-btn" onclick="state.notificationsOpen=!state.notificationsOpen;render()">
+                ${unread ? '<span class="badge"></span>' : ''}
+                ${icons.bell}
+            </button>
+            <div class="account-chip">
+                <div class="avatar">${initials(state.user.username || state.user.email)}</div>
+                <div class="account-name">${esc(state.user.username || state.user.email.split('@')[0])}</div>
+            </div>
+        </div>
+    </header>
+    ${state.notificationsOpen ? `
+        <div class="floating-panel">
+            <div class="floating-head"><strong>Notifications</strong></div>
+            <div class="notification-list">
+                ${state.notifications.length ? state.notifications.map(n => `
+                    <div class="notification" onclick="this.style.opacity=0.5; ${n.read=true}">
+                        ${!n.read ? `<div class="notification-dot"></div>` : '<div style="width:7px"></div>'}
+                        <div><strong>${esc(n.title)}</strong><span>${esc(n.msg)}</span></div>
+                    </div>
+                `).join('') : '<div style="padding:15px;text-align:center;color:var(--muted)">All caught up!</div>'}
+            </div>
+        </div>
+    ` : ''}`;
+}
+
+function renderPlayground() {
+    const curMode = modes.find(m => m.id === state.mode);
+    const m = state.mode;
+    
+    return `
+    <div class="page playground">
+        <div class="playground-inner">
+            <div class="main-brand">
+                ${logoImg()}
+                <h1>ReClaire Engine</h1>
+                <p>High-performance URL Scraper, Crawler, and Site Mapper Engine. Generate ready-to-use LLM context instantly.</p>
+            </div>
+            
+            <div class="input-panel">
+                <div class="input-label">Target URL</div>
+                <div class="input-row ${m !== 'scrape' ? 'no-format' : ''}">
+                    <button class="custom-select" onclick="state.mode=state.mode==='scrape'?'crawl':state.mode==='crawl'?'map':'scrape';render()">
+                        <div style="display:flex;align-items:center;gap:8px">${curMode.icon} ${curMode.label}</div>
+                    </button>
+                    <div class="url-shell">
+                        <span class="url-prefix">https://</span>
+                        <input type="text" class="url-input" id="urlInput" value="${esc(state.url)}" placeholder="developer.mozilla.org/..." oninput="state.url=this.value" onfocus="stopTyping()" onblur="startTyping()">
+                    </div>
+                    ${m === 'scrape' ? `
+                    <button class="format-trigger" onclick="state.formatDrawer=true;render()">
+                        <span>${state.formats.length} Format${state.formats.length!==1?'s':''}</span>
+                    </button>` : ''}
+                </div>
+                
+                ${m === 'scrape' ? `
+                <div class="adv-flags">
+                    <label><input type="checkbox" ${state.flags.js ? 'checked' : ''} onchange="state.flags.js=this.checked"> JS Fallback</label>
+                    <label><input type="checkbox" ${state.flags.main ? 'checked' : ''} onchange="state.flags.main=this.checked"> Main Content Only</label>
+                </div>
+                ` : ''}
+
+                ${m === 'scrape' && state.formats.includes('questions') ? `
+                <div class="question-wrap">
+                    <div class="input-label">Question</div>
+                    <input type="text" class="question-input" placeholder="What are the key points on this page?" value="${esc(state.question)}" oninput="state.question=this.value">
+                </div>` : ''}
+
+                <div style="margin-top:12px">
+                    <button class="btn execute" onclick="executeTask()">
+                        ${state.loading ? 'Processing...' : `Execute ${curMode.label}`}
+                    </button>
+                </div>
+
+                <div class="batch-container">
+                    <button class="batch-trigger" onclick="state.batchMenuOpen=!state.batchMenuOpen;render()">Batch Mode ▾</button>
+                    ${state.batchMenuOpen ? `
+                    <div class="batch-menu">
+                        <button onclick="state.batchMenuOpen=false; notify('Batch Scrape', 'Opening batch interface...')">Batch Scrape</button>
+                        <button onclick="state.batchMenuOpen=false; notify('Batch Summary', 'Opening batch intelligence...')">Batch Summary</button>
+                        <button onclick="state.batchMenuOpen=false; notify('Batch Q&A', 'Opening batch intelligence...')">Batch Q&A</button>
+                    </div>` : ''}
+                </div>
+            </div>
+
+            <div class="output-area">
+                ${state.result ? `
+                <div class="result-card">
+                    <div class="result-head">
+                        <strong>Execution Result</strong>
+                        <button class="btn" style="min-height:30px;font-size:11px" onclick="navigator.clipboard.writeText(JSON.stringify(state.result, null, 2));notify('Copied', 'Result copied to clipboard.')">${icons.copy} Copy JSON</button>
+                    </div>
+                    <div class="result-body">
+                        <pre class="code-box">${esc(JSON.stringify(state.result, null, 2))}</pre>
+                    </div>
+                </div>` : `
+                <div class="output-empty">
+                    Waiting for execution...<br>Enter a URL and click Execute to view the intelligence results.
+                </div>`}
+            </div>
+
+            <div class="recent">
+                <h3>Recent Executions</h3>
+                <div class="recent-list">
+                    ${state.logs.length ? state.logs.map(l => `
+                        <div class="recent-item">
+                            <div class="task">
+                                <strong>${getLogDesc(l.endpoint)}</strong>
+                                <span>${new Date(l.created_at).toLocaleString()}</span>
+                            </div>
+                            <div class="cost">-${l.tokens_deducted} Tokens</div>
+                        </div>
+                    `).join('') : '<div style="color:var(--muted);font-size:11px">No recent executions.</div>'}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    ${state.formatDrawer ? `
+    <div class="sidebar-overlay show" onclick="state.formatDrawer=false;render()"></div>
+    <div class="format-drawer">
+        <div class="format-head">
+            <strong>Select Output Formats</strong>
+            <button class="btn" style="min-height:30px" onclick="state.formatDrawer=false;render()">Done</button>
+        </div>
+        <div class="format-grid">
+            ${formats.map(f => `
+                <button class="format-card ${state.formats.includes(f.id)?'selected':''}" onclick="toggleFormat('${f.id}')">
+                    <strong>${f.label}</strong>
+                    <small>${f.desc}</small>
+                </button>
+            `).join('')}
+        </div>
+    </div>` : ''}`;
+}
+
+function renderUsage() {
+    const refLink = `https://reclaire.com/signup?ref=${state.user.id}`;
+    return `
+    <div class="page">
+        <div class="page-inner">
+            <div class="page-header">
+                <h1>Usage & API</h1>
+                <p>Manage your token balances, API integrations, and referral rewards.</p>
+            </div>
+            
+            <div class="stats">
+                <div class="stat"><span>Tokens Left</span><strong>${state.user.tokens}</strong></div>
+                <div class="stat"><span>Total Runs</span><strong>${state.logs.length}</strong></div>
+            </div>
+
+            <div class="referral-panel">
+                <strong>Invite & Earn</strong>
+                <p style="margin:5px 0 0; color:var(--muted); font-size:12px;">Share your link. When 5 users sign up, claim 100 free tokens.</p>
+                <div class="referral-row">
+                    <input type="text" class="input" value="${refLink}" readonly>
+                    <button class="btn" onclick="navigator.clipboard.writeText('${refLink}'); notify('Copied', 'Referral link copied!')">${icons.copy}</button>
+                </div>
+            </div>
+
+            <div class="settings-card" style="margin-top:20px">
+                <h3>Token Costs</h3>
+                <p>Costs are calculated per successful operation. Failed operations are not billed.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div style="padding:10px;background:var(--surface2);border-radius:8px"><strong>Base Scrape</strong> <span style="float:right;color:var(--gold)">1 Token</span></div>
+                    <div style="padding:10px;background:var(--surface2);border-radius:8px"><strong>JS Fallback</strong> <span style="float:right;color:var(--gold)">+2 Tokens</span></div>
+                    <div style="padding:10px;background:var(--surface2);border-radius:8px"><strong>HTML / Raw</strong> <span style="float:right;color:var(--gold)">+1 Token</span></div>
+                    <div style="padding:10px;background:var(--surface2);border-radius:8px"><strong>Structured JSON</strong> <span style="float:right;color:var(--gold)">+2 Tokens</span></div>
+                    <div style="padding:10px;background:var(--surface2);border-radius:8px"><strong>Summary / Q&A</strong> <span style="float:right;color:var(--gold)">+3 Tokens</span></div>
+                    <div style="padding:10px;background:var(--surface2);border-radius:8px"><strong>Map (up to 100)</strong> <span style="float:right;color:var(--gold)">1 Token</span></div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderSettings() {
+    return `
+    <div class="page">
+        <div class="page-inner">
+            <div class="page-header">
+                <h1>Settings</h1>
+                <p>Customize your workspace preferences.</p>
+            </div>
+            
+            <div class="settings-grid">
+                <div class="settings-card">
+                    <h3>Appearance</h3>
+                    <p>Toggle light and dark mode</p>
+                    <div class="setting-row">
+                        <strong>Theme</strong>
+                        <button class="btn" onclick="setTheme(state.theme==='dark'?'light':'dark');render()">
+                            ${state.theme==='dark' ? 'Light Mode' : 'Dark Mode'}
+                        </button>
+                    </div>
+                </div>
+                <div class="settings-card">
+                    <h3>Layout</h3>
+                    <p>Adjust your workspace structure</p>
+                    <div class="setting-row">
+                        <strong>Sidebar Position</strong>
+                        <button class="btn" onclick="setSidebarSide(state.sidebarSide==='left'?'right':'left')">
+                            Move to ${state.sidebarSide==='left'?'Right':'Left'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card" style="margin-top:20px">
+                <h3>Legal & Resources</h3>
+                <a href="privacy.html" class="setting-row link">
+                    <strong>Privacy Policy</strong>
+                    <div style="color:var(--muted)">${icons.external}</div>
+                </a>
+                <a href="terms.html" class="setting-row link">
+                    <strong>Terms of Service</strong>
+                    <div style="color:var(--muted)">${icons.external}</div>
+                </a>
+                <a href="docs.html" class="setting-row link">
+                    <strong>API Documentation</strong>
+                    <div style="color:var(--muted)">${icons.external}</div>
+                </a>
+            </div>
+        </div>
+    </div>`;
+}
+
+function render() {
+    const content = state.page === 'playground' ? renderPlayground() : state.page === 'usage' ? renderUsage() : renderSettings();
+    $('#app').innerHTML = `
+        <div class="app-shell" data-theme="${state.theme}">
+            ${renderTopbar()}
+            <div class="workspace ${state.sidebarSide === 'right' ? 'right-side' : ''}">
+                ${renderSidebar()}
+                <main class="main">${content}</main>
+            </div>
+        </div>
+    `;
+    setTheme(state.theme);
+    if (state.page === 'playground') startTyping();
+}
+
+function toggleFormat(id) {
+    if (state.formats.includes(id)) {
+        if (state.formats.length > 1) state.formats = state.formats.filter(f => f !== id);
+    } else {
+        state.formats.push(id);
+    }
+    render();
+}
+
+async function executeTask() {
+    if (!state.url) return notify('Error', 'Please enter a URL first.');
+    state.loading = true;
+    render();
+    
+    // Mock simulation for playground since backend isn't guaranteed live here
+    setTimeout(() => {
+        state.loading = false;
+        let cost = 1;
+        if (state.mode === 'scrape') {
+            if (state.flags.js) cost += 2;
+            if (state.formats.includes('html') || state.formats.includes('raw_html')) cost += 1;
+            if (state.formats.includes('json')) cost += 2;
+            if (state.formats.includes('summary') || state.formats.includes('questions')) cost += 3;
+        }
+
+        if (state.user.tokens < cost) {
+            notify('Error', 'Insufficient tokens for this request.');
+            render();
+            return;
+        }
+        
+        state.user.tokens -= cost;
+        state.result = {
+            success: true,
+            url: state.url,
+            tokens_deducted: cost,
+            tokens_remaining: state.user.tokens,
+            data: { message: "Mock execution successful." }
+        };
+        
+        state.logs.unshift({
+            endpoint: `/v1/${state.mode}`,
+            tokens_deducted: cost,
+            created_at: new Date().toISOString()
+        });
+        
+        notify('Success', `Task executed. Deducted ${cost} tokens.`);
+        render();
+    }, 1500);
+}
+
+// URL Typing Animation Logic
+const urlHints = ['developer.mozilla.org/en-US/docs/Web/JavaScript', 'fastapi.tiangolo.com', 'supabase.com/docs', 'www.python.org/about/gettingstarted/'];
+let typeIdx = 0, charIdx = 0, isTyping = true, isDeleting = false, typeTimer = null;
+
+function typeEffect() {
+    const input = $('#urlInput');
+    if (!input || document.activeElement === input || input.value || !isTyping) return;
+    
+    const currentWord = urlHints[typeIdx];
+    if (isDeleting) {
+        input.placeholder = currentWord.substring(0, charIdx - 1);
+        charIdx--;
+        if (charIdx === 0) {
+            isDeleting = false;
+            typeIdx = (typeIdx + 1) % urlHints.length;
+            typeTimer = setTimeout(typeEffect, 500);
+            return;
+        }
+    } else {
+        input.placeholder = currentWord.substring(0, charIdx + 1);
+        charIdx++;
+        if (charIdx === currentWord.length) {
+            isDeleting = true;
+            typeTimer = setTimeout(typeEffect, 2000);
+            return;
+        }
+    }
+    typeTimer = setTimeout(typeEffect, isDeleting ? 50 : 100);
+}
+
+function stopTyping() {
+    isTyping = false;
+    clearTimeout(typeTimer);
+    const input = $('#urlInput');
+    if (input) input.placeholder = '';
+}
+
+function startTyping() {
+    const input = $('#urlInput');
+    if (input && !input.value) {
+        isTyping = true;
+        charIdx = 0;
+        isDeleting = false;
+        clearTimeout(typeTimer);
+        typeEffect();
+    }
+}
+
+// Initialize
+render();
+
+})();
+</script>
+</body>
+</html>
