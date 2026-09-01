@@ -71,14 +71,68 @@
 let API_BASE=localStorage.getItem('reclaire_api_base')||'https://reclaire-api.onrender.com';
 const SUPABASE_URL = 'https://lbraefssokojulyfmmjd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicmFlZnNzb2tvanVseWZtbWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMjQyODksImV4cCI6MjEwMzYwMDI4OX0.e_jmB4jS_-cwKAraZpspPhEW_K4l2mbhhPZAlgN_y1E';
+// Initialize Supabase client
 let supabaseClient = null;
 if (typeof supabase !== 'undefined' && SUPABASE_URL && SUPABASE_ANON_KEY) {
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
+
+// Handle OAuth callback on page load
+async function handleOAuthCallback() {
+  if (!supabaseClient) return;
+  
+  // Check if we have a hash with access_token
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    try {
+      // Parse the hash parameters
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      
+      if (accessToken) {
+        // Set the session manually
+        const { data, error } = await supabaseClient.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        
+        if (error) {
+          console.error('Session error:', error);
+          return;
+        }
+        
+        if (data && data.session) {
+          const user = data.session.user;
+          // Update state
+          state.user = {
+            name: user.user_metadata.full_name || user.email,
+            username: localStorage.getItem('reclaire_username') || user.user_metadata.user_name || user.email?.split('@')[0] || '',
+            email: user.email,
+            avatar: user.user_metadata.avatar_url,
+            id: user.id
+          };
+          state.screen = 'app';
+          state.page = 'playground';
+          
+          // Clean up the URL
+          window.history.replaceState(null, '', window.location.pathname);
+          
+          // Load account and render
+          await loadAccount();
+          render();
+        }
+      }
+    } catch (e) {
+      console.error('OAuth callback error:', e);
+    }
+  }
+}
+
+// Set up auth state change listener
 if (supabaseClient) {
   supabaseClient.auth.onAuthStateChange((event, session) => {
     if (session && session.user) {
-      // 1. Populate user info
       state.user = {
         name: session.user.user_metadata.full_name || session.user.email,
         username: localStorage.getItem('reclaire_username') || session.user.user_metadata.user_name || session.user.email?.split('@')[0] || '',
@@ -86,21 +140,20 @@ if (supabaseClient) {
         avatar: session.user.user_metadata.avatar_url,
         id: session.user.id
       };
-      
-      // 2. Switch screen from 'landing' to the main app view
       state.screen = 'app';
       state.page = 'playground';
       
-      // 3. Clean up the access_token hash from the browser address bar
       if (window.location.hash.includes('access_token')) {
         window.history.replaceState(null, '', window.location.pathname);
       }
-
-      // 4. Re-render UI
+      
       render();
     }
   });
 }
+
+// Run OAuth callback check on load
+handleOAuthCallback();
 
 const state={screen:'landing',authMode:'login',page:'playground',theme:localStorage.getItem('reclaire_theme')||'light',sidebarSide:localStorage.getItem('reclaire_sidebar_side')||'left',sidebarOpen:false,notificationsOpen:false,dropdown:null,formatDrawer:false,batchOpen:false,mode:'scrape',formats:['markdown'],question:'',url:'',user:null,apiKey:localStorage.getItem('reclaire_api_key')||'',logs:[],result:null,loading:false,batchRows:[],batchRunning:false,batchId:null,animatedTimers:[],priorityPoints:Number(localStorage.getItem('reclaire_priority_points')||0),referralId:localStorage.getItem('reclaire_referral_id')||'',notifications:JSON.parse(localStorage.getItem('reclaire_notifications')||'[]'),unreadNotifications:Number(localStorage.getItem('reclaire_unread_notifications')||0),surveyOpen:false,deleteStage:0};
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -183,11 +236,13 @@ async function handleOAuth(provider) {
   if (supabaseClient) {
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: provider,
-      options: { redirectTo: window.location.origin + window.location.pathname }
+      options: { 
+        redirectTo: window.location.origin + window.location.pathname
+      }
     });
     if (error) notify('OAuth error', error.message);
   } else if (SUPABASE_URL) {
-    window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(window.location.origin)}`;
+    window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
   } else {
     notify('OAuth setup', `Configured provider: ${provider}. Set SUPABASE_URL in project environment.`);
   }
