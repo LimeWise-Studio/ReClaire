@@ -94,16 +94,37 @@ class ScrapeOptions(BaseModel):
     url: str
     formats: List[str] = Field(
         default_factory=lambda: ["markdown"],
-        description="Supported formats: markdown, html, raw_html, summary, questions, json"
+        description="Supported formats: markdown, html, raw_html, summary, questions, json, extract"
     )
+    use_js_fallback: bool = True
+    only_main_content: bool = True
+    remove_tags: List[str] = Field(
+        default_factory=lambda: [
+            "script", "style", "nav", "footer", "header", "aside", 
+            "form", "iframe", "noscript", "svg", "button"
+        ]
+    )
+    wait_for_selector: Optional[str] = None
+    prompt: Optional[str] = Field(None, description="Natural Language Extraction prompt")
+    json_schema: Optional[Dict[str, Any]] = Field(None, description="Schema-Aware Extraction output model")
+    user_question: Optional[str] = None
+
+# Replace BatchScrapeOptions & Add BatchIntelligenceOptions (Lines 118-126)
+class BatchScrapeOptions(BaseModel):
+    urls: List[str] = Field(min_length=1, max_length=5, description="Maximum 5 URLs allowed per batch")
+    formats: List[str] = Field(default_factory=lambda: ["markdown"])
     use_js_fallback: bool = True
     only_main_content: bool = True
     remove_tags: List[str] = Field(
         default_factory=lambda: ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript"]
     )
     wait_for_selector: Optional[str] = None
-    json_schema: Optional[Dict[str, Any]] = None
-    user_question: Optional[str] = None
+
+class BatchIntelligenceOptions(BaseModel):
+    urls: List[str] = Field(min_length=1, max_length=5, description="Strictly capped at 5 URLs")
+    mode: str = Field(..., description="Target mode: 'summary' OR 'questions'")
+    user_question: Optional[str] = Field(None, description="Required if mode is 'questions'")
+    use_js_fallback: bool = True
 
 class MapOptions(BaseModel):
     url: str
@@ -627,13 +648,21 @@ async def base_scrape_pipeline(
     only_main_content: bool = True,
     remove_tags: List[str] = None
 ) -> Dict[str, Any]:
-    """Pipeline Step 1: Always scrape and convert URL to Markdown before formatting."""
-    clean_url = clean_input_url(url)
-    if not clean_url:
-        raise HTTPException(status_code=400, detail="Invalid URL provided.")
+    # Replace tag removal logic in base_scrape_pipeline (Lines 433-439)
+    # Step 1 Content Prioritization: Strip noise tags and structural elements
+    soup = BeautifulSoup(html_content, "html.parser")
+    default_noise_tags = remove_tags or ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript", "svg"]
+    
+    for tag in default_noise_tags:
+        for el in soup.find_all(tag):
+            el.decompose()
 
-    html_content = ""
-    used_dynamic_fetch = False
+    # Heuristic removal of common ad/cookie element containers
+    for el in soup.find_all(class_=re.compile(r'(banner|cookie|ad-container|advertisement|social-share|sidebar)', re.I)):
+        el.decompose()
+
+    target = (soup.find("main") or soup.find("article") or soup.body or soup) if only_main_content else (soup.body or soup)
+    markdown_text = md(str(target), heading_style="ATX").strip()
 
     # Check for PDF
     if clean_url.lower().split("?")[0].endswith(".pdf"):
@@ -686,19 +715,24 @@ async def base_scrape_pipeline(
         "used_dynamic_fetch": used_dynamic_fetch
     }
 
-
-def run_gemini_transform(prompt: str, response_json: bool = False) -> Any:
-    """Executes Gemini LLM transformations using the 2026 google-genai SDK."""
+def run_gemini_transform(prompt: str, response_json: bool = False, schema: Optional[Dict[str, Any]] = None) -> Any:
+    """Executes Gemini LLM transformations using structured schemas or plain text prompts."""
     if not gemini_client:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured on the server.")
 
-    config = types.GenerateContentConfig(response_mime_type="application/json") if response_json else None
+    config = None
+    if response_json or schema:
+        config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=schema if schema else None
+        )
+        
     res = gemini_client.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt,
         config=config
     )
-    return parse_json_response(res.text) if response_json else res.text.strip()
+    return parse_json_response(res.text) if (response_json or schema) else res.text.strip()
 
 
 
@@ -713,9 +747,8 @@ async def scrape_endpoint(
     authorization: Optional[str] = Header(None)
 ):
     options.formats = normalize_formats(options.formats)
-    allowed_formats = {"markdown", "html", "raw_html", "summary", "questions", "json"}
-    if unknown := [f for f in options.formats if f not in allowed_formats]:
-        raise HTTPException(status_code=422, detail=f"Unsupported format(s): {', '.join(unknown)}")
+    # Replace format checking and LLM section inside scrape_endpoint (Lines 471 & Lines 498-506)
+    allowed_formats = {"markdown", "html", "raw_html", "summary", "questions", "json", "extract"}
     
     # PHASE 1: Authenticate & Pre-check Balance
     auth = await authenticate_api_key(x_api_key, authorization)
@@ -740,16 +773,19 @@ async def scrape_endpoint(
     markdown = scrape_base["markdown"]
     result_data = {"success": True, "url": scrape_base["clean_url"]}
 
-    if "markdown" in req_formats or not req_formats: result_data["markdown"] = markdown
-    if "html" in req_formats: result_data["html"] = scrape_base["clean_html"]
-    if "raw_html" in req_formats: result_data["raw_html"] = scrape_base["raw_html"]
-    
+    if "extract" in req_formats and options.prompt:
+        extract_prompt = f"Extract the following information from the text:\nInstruction: {options.prompt}\n\nContent:\n{markdown[:25000]}"
+        result_data["extraction"] = run_gemini_transform(extract_prompt)
+
     if "summary" in req_formats:
-        result_data["summary"] = run_gemini_transform(f"Provide a summary:\n\n{markdown[:20000]}")
+        result_data["summary"] = run_gemini_transform(f"Provide a concise signal-focused summary:\n\n{markdown[:25000]}")
+
     if "questions" in req_formats and options.user_question:
-        result_data["answer"] = run_gemini_transform(f"Answer: {options.user_question}\n\nContent:\n{markdown[:20000]}")
+        result_data["answer"] = run_gemini_transform(f"Answer the question strictly using the provided context.\nQuestion: {options.user_question}\n\nContent:\n{markdown[:25000]}")
+
     if "json" in req_formats:
-        result_data["json"] = run_gemini_transform(f"Extract JSON:\n{json.dumps(options.json_schema)}\n\nContent:\n{markdown[:20000]}", response_json=True)
+        json_prompt = f"Extract structured data matching the requested schema.\nSchema: {json.dumps(options.json_schema)}\n\nContent:\n{markdown[:25000]}"
+        result_data["json"] = run_gemini_transform(json_prompt, response_json=True, schema=options.json_schema)
 
     # PHASE 3: Deduct & Commit Tokens (Only happens if Phase 2 fully succeeds)
     actual_cost = token_cost_for_scrape(options.formats, scrape_base["used_dynamic_fetch"])
@@ -1023,7 +1059,71 @@ async def download_batch_markdown(
         },
     )
 
+@app.post("/v1/batch-query")
+async def batch_query_endpoint(
+    options: BatchIntelligenceOptions,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None)
+):
+    """Executes single-pass Batch Summarization OR Batch Q&A across up to 5 URLs."""
+    if options.mode not in {"summary", "questions"}:
+        raise HTTPException(status_code=422, detail="Invalid mode. Must be 'summary' or 'questions'.")
+    
+    if options.mode == "questions" and not options.user_question:
+        raise HTTPException(status_code=422, detail="user_question is required when mode is 'questions'.")
 
+    # 1. Base Cost: 3 tokens per batch request (covers 5 URLs + 1 Gemini Context Call)
+    auth = await authenticate_api_key(x_api_key, authorization)
+    user_id = auth["user_id"]
+    current_balance = auth["tokens_remaining"]
+    
+    cost = 3
+    if current_balance < cost:
+        raise HTTPException(status_code=402, detail=f"Insufficient tokens. Required: {cost}")
+
+    # 2. Concurrently scrape up to 5 target URLs
+    semaphore = asyncio.Semaphore(5)
+    async def fetch_target(target_url: str):
+        async with semaphore:
+            try:
+                base = await base_scrape_pipeline(url=target_url, use_js_fallback=options.use_js_fallback)
+                return {"url": target_url, "status": "success", "markdown": base["markdown"]}
+            except Exception as err:
+                return {"url": target_url, "status": "failed", "error": str(err)}
+
+    scraped_pages = await asyncio.gather(*[fetch_target(u) for u in options.urls])
+
+    # 3. Aggregate content into single context block
+    aggregated_context = ""
+    successful_sources = []
+    for idx, page in enumerate(scraped_pages):
+        if page["status"] == "success":
+            successful_sources.append(page["url"])
+            aggregated_context += f"\n--- SOURCE {idx+1}: {page['url']} ---\n{page['markdown'][:10000]}\n"
+
+    if not aggregated_context:
+        raise HTTPException(status_code=502, detail="Failed to scrape content from provided URLs.")
+
+    # 4. Execute single Gemini call based on selected mode
+    if options.mode == "summary":
+        prompt = f"Provide a comprehensive batch summary comparing and synthesizing key insights across these sources:\n{aggregated_context}"
+        intelligence_result = run_gemini_transform(prompt)
+    else:
+        prompt = f"Answer the question using ONLY the provided multi-source context. Cite sources where applicable.\nQuestion: {options.user_question}\n\nContext:\n{aggregated_context}"
+        intelligence_result = run_gemini_transform(prompt)
+
+    # 5. Commit token deduction
+    new_balance = await commit_token_deduction(user_id, current_balance, cost, "/v1/batch-query")
+
+    return {
+        "success": True,
+        "mode": options.mode,
+        "urls_processed": len(successful_sources),
+        "sources": successful_sources,
+        "result": intelligence_result,
+        "tokens_deducted": cost,
+        "tokens_remaining": new_balance
+    }
 
 # ============================================================
 # SYSTEM HEALTH ENDPOINT
