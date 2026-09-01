@@ -82,14 +82,29 @@ const formats = [
     {id:'extract',label:'Extraction',desc:'Natural language prompt extraction'}
 ];
 
-// Fallback dummy user for playground testing
-const dummyUser = { 
-    id: 'user_12345', 
-    username: 'JaneDoe', 
-    email: 'jane.doe@example.com', 
-    tokens: 100,
-    survey_completed: false
-};
+// Initialize Supabase client in playground
+const SUPABASE_URL = "https://lbraefssokojulyfmmjd.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicmFlZnNzb2tvanVseWZtbWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMjQyODksImV4cCI6MjEwMzYwMDI4OX0.e_jmB4jS_-cwKAraZpspPhEW_K4l2mbhhPZAlgN_y1E"; // your key
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Fetch active session and user info dynamically
+async function loadUserProfile() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  
+  if (session?.user) {
+    state.user = {
+      id: session.user.id,
+      username: session.user.user_metadata?.username || session.user.email.split('@')[0],
+      email: session.user.email,
+      tokens: session.user.user_metadata?.tokens || 100,
+      survey_completed: false
+    };
+    render(); // Re-render UI with actual user data
+  }
+}
+
+// Run on page load
+loadUserProfile();
 
 const state = {
     page: 'playground',
