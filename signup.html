@@ -106,12 +106,17 @@
       transition: var(--transition);
     }
 
-    /* ReClaire Adaptive Logo */
+/* ReClaire Adaptive Logo */
     .brand-logo {
       width: 36px;
       height: 36px;
       margin-bottom: 24px;
       object-fit: contain; /* Keeps SVG aspect ratio intact */
+    }
+
+    /* Invert colors for dark mode */
+    [data-theme="dark"] .brand-logo {
+      filter: invert(1);
     }
 
     .brand-logo path {
@@ -571,10 +576,8 @@
         btnText.textContent = isSignUpMode ? "Create account" : "Sign in";
       }
     });
-
-    // --- OAUTH PROVIDER HANDLERS ---
-    async function handleOAuth(provider) {
-      if (window.location.hash && window.location.hash.includes("access_token=")) {
+    
+    if (window.location.hash && window.location.hash.includes("access_token=")) {
         supabaseClient.auth.getSession().then(({ data, error }) => {
           if (data?.session) {
       // Save session details for playground usage
@@ -588,6 +591,9 @@
           }
         });
       }
+
+    // --- OAUTH PROVIDER HANDLERS ---
+    async function handleOAuth(provider) {
       if (!supabaseClient) {
         showStatus("Supabase URL & Anon Key not configured in code yet.", true);
         return;
