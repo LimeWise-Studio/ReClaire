@@ -129,9 +129,12 @@ async function loadUserProfile(){
             throw new Error("Backend sync failed");
         }
     } catch (err) {
-        notify('Authentication Error', 'Failed to load user workspace.');
-        setTimeout(() => window.location.href = 'signup.html', 2000);
-    }
+    console.error('Auth sync error:', err);
+    // Show a more descriptive toast
+    notify('Authentication Error', 'Could not sync with backend. Please try again.');
+    // Instead of redirecting immediately, allow user to retry (maybe add a retry button)
+    // For now, we'll still redirect but only after a longer delay and with a clear message.
+    setTimeout(() => window.location.href = 'signup.html', 5000);
 }
 
 // Run on page load
