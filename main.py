@@ -677,7 +677,10 @@ async def base_scrape_pipeline(
     only_main_content: bool = True,
     remove_tags: List[str] = None
 ) -> Dict[str, Any]:
-    # Replace tag removal logic in base_scrape_pipeline (Lines 433-439)
+    
+    # Execute network request to define html_content prior to parsing
+    html_content = await fetch_dynamic_content(url) 
+
     # Step 1 Content Prioritization: Strip noise tags and structural elements
     soup = BeautifulSoup(html_content, "html.parser")
     default_noise_tags = remove_tags or ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript", "svg"]
