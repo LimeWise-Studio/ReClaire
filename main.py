@@ -136,6 +136,8 @@ class CrawlOptions(BaseModel):
     limit: int = Field(5, ge=1, le=50)
     scrape_options: Optional[ScrapeOptions] = None
 
+class OAuthSyncRequest(BaseModel):
+    access_token: str
 
 class AuthCredentials(BaseModel):
     email: str
@@ -427,6 +429,33 @@ async def login(credentials: AuthCredentials):
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
+@app.post("/auth/sync", response_model=AuthResponse)
+async def sync_oauth_user(request: OAuthSyncRequest):
+    _require_supabase()
+    if not supabase_auth:
+        raise HTTPException(status_code=500, detail="SUPABASE_ANON_KEY is required for authentication.")
+
+    try:
+        # Verify the Supabase JWT
+        user_response = supabase_auth.auth.get_user(request.access_token)
+        user = user_response.user
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid or expired OAuth token.")
+
+        # Ensure their ReClaire profile exists and generate their rc_ key
+        profile = profile_for_user(user.id)
+        api_key = await issue_api_key(user.id)
+        
+        return {
+            "success": True,
+            "user": {"id": user.id, "email": user.email},
+            "api_key": api_key,
+            "tokens_remaining": int(profile.get("token_balance") or 0),
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=f"OAuth sync failed: {exc}")
 
 @app.post("/auth/logout")
 async def logout(
