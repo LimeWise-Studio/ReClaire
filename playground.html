@@ -71,9 +71,30 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function loadUserProfile(){
-    // 1. Let Supabase process the URL hash and get the active session
-    const { data: { session }, error } = await supabaseClient.auth.getSession();
-    
+     // 1. Manually extract tokens from the OAuth redirect hash
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const access_token = hashParams.get('access_token');
+    const refresh_token = hashParams.get('refresh_token');
+
+    let session = null, error = null;
+
+    if (access_token && refresh_token) {
+        // Force Supabase to establish the session directly — don't rely on auto-detect
+        const result = await supabaseClient.auth.setSession({ access_token, refresh_token });
+        session = result.data.session;
+        error = result.error;
+
+        // Clean tokens out of the URL immediately
+        window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+    } else {
+        // No tokens in URL — check for an existing persisted session
+        const result = await supabaseClient.auth.getSession();
+        session = result.data.session;
+        error = result.error;
+    }
+
+    if (error) console.error('Supabase session error:', error);
+
     // 2. Redirect to signup if no valid session exists
     if (error || !session) {
         window.location.href = 'signup.html';
@@ -102,11 +123,6 @@ async function loadUserProfile(){
                 tokens: result.tokens_remaining,
                 survey_completed: false
             };
-            
-            // Clean the access_token out of the browser URL bar
-            if (window.location.hash) {
-                window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
-            }
             
             render(); 
         } else {
