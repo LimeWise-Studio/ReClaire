@@ -101,20 +101,21 @@ async function loadUserProfile(){
         return;
     }
 
-    // 3. Sync with ReClaire backend to secure the API key & token balance
-    try {
-        const response = await fetch(API_BASE + '/auth/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ access_token: session.access_token })
+    if (window.location.hash && window.location.hash.includes("access_token=")) {
+    supabaseClient.auth.getSession().then(async ({ data, error }) => {
+      if (data?.session) {
+        // Pass session token to backend to retrieve the system API key
+        const response = await fetch("http://localhost:8000/auth/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ access_token: data.session.access_token })
         });
+        const syncData = await response.json();
         
-        const result = await response.json();
-        
-        if (result.success) {
-            // Save the backend API key for engine executions
-            localStorage.setItem('rc_api_key', result.api_key);
-            
+        // Save the correct ReClaire API key for playground usage
+        if (syncData.api_key) {
+            localStorage.setItem("rc_api_key", syncData.api_key);
+        }
             // Populate the UI with verified backend data
             state.user = {
                 id: result.user.id,
