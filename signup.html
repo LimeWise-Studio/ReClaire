@@ -545,16 +545,15 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        const response = await fetch("http://localhost:8000/auth/sync", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ access_token: data.session.access_token })
         });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Authentication failed. Please check your details.");
+        const result = await response.json();
+        if (result.success) {
+          localStorage.setItem("rc_api_key", result.api_key);
+          window.location.href = "playground.html";
         }
 
         // Store API Key and user info in localStorage for playground usage
