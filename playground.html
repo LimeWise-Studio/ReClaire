@@ -10,6 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+<!-- Supabase JS Client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#f7f7f5;--surface:#fff;--surface2:#f0f0ed;--surface3:#e6e6e1;--text:#0b0b0b;--text2:#303030;--muted:#707070;--border:#deded8;--border2:#bdbdb5;--accent:#111;--accentSoft:#ecece8;--gold:#8b6a22;--goldSoft:#f4ecd7;--success:#16703b;--danger:#b3261e;--shadow:0 18px 55px rgba(0,0,0,.08);--topbar:66px;--sidebar:270px;--radius:16px;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
 [data-theme=dark]{--bg:#0b0b0b;--surface:#141414;--surface2:#1b1b1b;--surface3:#242424;--text:#fff;--text2:#dedede;--muted:#9b9b9b;--border:#303030;--border2:#494949;--accent:#EFD09E;--accentSoft:rgba(239,208,158,.12);--gold:#EFD09E;--goldSoft:rgba(239,208,158,.12);--success:#68c892;--danger:#ff8078;--shadow:0 22px 65px rgba(0,0,0,.35)}
@@ -32,25 +34,6 @@
 <body data-theme="light">
 <div id="app"></div><div id="toastStack" class="toast-stack"></div>
 <script>
-// --- OAUTH REDIRECT & LOGIN HANDLER ---
-if (window.location.hash && window.location.hash.includes("access_token=")) {
-  // 1. Extract parameters from the URL hash (#access_token=...&provider_token=...)
-  const params = new URLSearchParams(window.location.hash.substring(1));
-  const accessToken = params.get("access_token");
-
-  if (accessToken) {
-    // 2. Save the session token for ReClaire API requests
-    localStorage.setItem("rc_api_key", accessToken);
-
-    // 3. Optional: Parse user email/data if returned in the hash or default it
-    const storedUser = localStorage.getItem("rc_user");
-    if (!storedUser) {
-      localStorage.setItem("rc_user", JSON.stringify({
-        email: "authenticated_user@reclaire.com",
-        username: "Authenticated User"
-      }));
-    }
-  }
 (()=>{'use strict';
 let API_BASE = localStorage.getItem('reclaire_api_base') || 'https://reclaire-api.onrender.com';
 const icons={
@@ -87,25 +70,63 @@ const SUPABASE_URL = "https://lbraefssokojulyfmmjd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicmFlZnNzb2tvanVseWZtbWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMjQyODksImV4cCI6MjEwMzYwMDI4OX0.e_jmB4jS_-cwKAraZpspPhEW_K4l2mbhhPZAlgN_y1E"; // your key
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Fetch active session and user info dynamically
-async function loadUserProfile() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  
-  if (session?.user) {
-    state.user = {
-      id: session.user.id,
-      username: session.user.user_metadata?.username || session.user.email.split('@')[0],
-      email: session.user.email,
-      tokens: session.user.user_metadata?.tokens || 100,
-      survey_completed: false
-    };
-    render(); // Re-render UI with actual user data
-  }
+async function loadUserProfile(){
+    // 1. Let Supabase process the URL hash and get the active session
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    
+    // 2. Redirect to signup if no valid session exists
+    if (error || !session) {
+        window.location.href = 'signup.html';
+        return;
+    }
+
+    // 3. Sync with ReClaire backend to secure the API key & token balance
+    try {
+        const response = await fetch(API_BASE + '/auth/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ access_token: session.access_token })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Save the backend API key for engine executions
+            localStorage.setItem('rc_api_key', result.api_key);
+            
+            // Populate the UI with verified backend data
+            state.user = {
+                id: result.user.id,
+                username: result.user.email.split('@')[0],
+                email: result.user.email,
+                tokens: result.tokens_remaining,
+                survey_completed: false
+            };
+            
+            // Clean the access_token out of the browser URL bar
+            if (window.location.hash) {
+                window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+            }
+            
+            render(); 
+        } else {
+            throw new Error("Backend sync failed");
+        }
+    } catch (err) {
+        notify('Authentication Error', 'Failed to load user workspace.');
+        setTimeout(() => window.location.href = 'signup.html', 2000);
+    }
 }
 
 // Run on page load
 loadUserProfile();
 
+async function handleLogout() {
+    await supabaseClient.auth.signOut();
+    localStorage.removeItem('rc_api_key');
+    window.location.href = 'signup.html';
+}    
+    
 const state = {
     page: 'playground',
     theme: localStorage.getItem('reclaire_theme') || 'light',
@@ -119,7 +140,7 @@ const state = {
     flags: { js: true, main: true },
     question: '',
     url: '',
-    user: dummyUser,
+    user: { id: '', username: 'Loading...', email: '', tokens: 0, survey_completed: false },
     logs: [
         { endpoint: '/v1/scrape', tokens_deducted: 4, created_at: new Date().toISOString() },
         { endpoint: '/v1/crawl', tokens_deducted: 10, created_at: new Date(Date.now() - 3600000).toISOString() }
@@ -191,7 +212,7 @@ function renderSidebar() {
                 <div class="nav-icon">${icons.settings}</div> Settings
             </button>
         </div>
-        <button class="nav-item logout" onclick="notify('Logged out', 'Returning to landing page')">
+        <button class="nav-item logout" onclick="handleLogout()">
             <div class="nav-icon">${icons.logout}</div> Logout
         </button>
     </div>`;
