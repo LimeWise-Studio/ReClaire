@@ -36,7 +36,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL")  # <--- Replace or set ENV
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")  # <--- Replace or set ENV
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 DEFAULT_TOKEN_BALANCE = int(os.environ.get("DEFAULT_TOKEN_BALANCE", "100"))
-TEST_GRANT_TOKENS = int(os.environ.get("TEST_GRANT_TOKENS", "50"))
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://yourapp.com")  # used to build referral links
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # <--- Replace or set ENV
 
 # Initialize Supabase Client
@@ -143,20 +143,25 @@ class AuthCredentials(BaseModel):
     email: str
     password: str = Field(min_length=8, max_length=128)
     username: Optional[str] = Field(None, min_length=3, max_length=50)
-    referrer_id: Optional[str] = Field(None, description="User ID of the referrer")
+    referral_code: Optional[str] = Field(None, description="Referral code of the user who invited them")
 
-class SurveySubmission(BaseModel):
-    q1_answer: str
-    q2_answer: str
-    q3_answer: str
-    q4_answers: List[str]
+#class SurveySubmission(BaseModel):
+    #q1_answer: str
+    #q2_answer: str
+    #q3_answer: str
+    #q4_answers: List[str]
 
 class AuthResponse(BaseModel):
     success: bool
     user: Dict[str, Any]
-    api_key: str
+    api_key: Optional[str] = None  # only set at registration or explicit regeneration
     tokens_remaining: int
+    referral_code: Optional[str] = None
+    referral_link: Optional[str] = None
 
+class RegisterResponse(BaseModel):
+    success: bool
+    message: str
 
 class BatchScrapeOptions(BaseModel):
     urls: List[str] = Field(min_length=1, max_length=10)
@@ -333,17 +338,40 @@ def generate_api_key() -> Tuple[str, str]:
     raw = "rc_" + secrets.token_urlsafe(32)
     return raw, hash_api_key(raw)
 
+def generate_referral_code(length: int = 8) -> str:
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no ambiguous chars
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
-def profile_for_user(user_id: str, username: Optional[str] = None, referrer_id: Optional[str] = None) -> Dict[str, Any]:
-    response = supabase.table("profiles").select("*").eq("id", user_id).limit(1).execute()
-    if response.data:
-        return response.data[0]
+def create_profile(user_id: str, username: Optional[str] = None, referral_code: Optional[str] = None) -> Dict[str, Any]:
+    existing = supabase.table("profiles").select("*").eq("id", user_id).limit(1).execute()
+    if existing.data:
+        return existing.data[0]
 
-    # Initialize new user with 100 tokens and 0 purchase points
+    referrer_id = None
+    if referral_code:
+        referrer = (
+            supabase.table("profiles")
+            .select("id")
+            .eq("referral_code", referral_code.strip().upper())
+            .limit(1)
+            .execute()
+        )
+        if not referrer.data:
+            raise HTTPException(status_code=400, detail="Invalid referral code.")
+        referrer_id = referrer.data[0]["id"]
+
+    own_code = generate_referral_code()
+    for _ in range(5):
+        clash = supabase.table("profiles").select("id").eq("referral_code", own_code).limit(1).execute()
+        if not clash.data:
+            break
+        own_code = generate_referral_code()
+
     new_profile = {
         "id": user_id,
         "token_balance": DEFAULT_TOKEN_BALANCE,
-        "purchase_points": 0
+        "purchase_points": 0,
+        "referral_code": own_code,
     }
     if username:
         new_profile["username"] = username
@@ -369,30 +397,26 @@ async def issue_api_key(user_id: str) -> str:
     return raw_key
 
 
-@app.post("/auth/register", response_model=AuthResponse)
+@app.post("/auth/register", response_model=RegisterResponse)
 async def register(credentials: AuthCredentials):
     _require_supabase()
-    if not supabase_auth:
-        raise HTTPException(status_code=500, detail="SUPABASE_ANON_KEY is required for authentication.")
 
     email = credentials.email.strip().lower()
     try:
         created = supabase.auth.admin.create_user({
             "email": email,
             "password": credentials.password,
-            "email_confirm": True,
+            "email_confirm": False,  # forces the confirmation email — nothing is granted until it's clicked
         })
         user = created.user
         if not user:
             raise HTTPException(status_code=500, detail="Supabase did not return a user.")
 
-        profile = profile_for_user(user.id, credentials.username, credentials.referrer_id)
-        api_key = await issue_api_key(user.id)
+        # No profile, no tokens, no API key here. Those only get created on
+        # first login, which Supabase will refuse until the email is confirmed.
         return {
             "success": True,
-            "user": {"id": user.id, "email": user.email},
-            "api_key": api_key,
-            "tokens_remaining": int(profile.get("token_balance") or 0),
+            "message": "Account created. Check your email to confirm before logging in.",
         }
     except HTTPException:
         raise
@@ -416,36 +440,34 @@ async def login(credentials: AuthCredentials):
         if not user:
             raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-        profile = profile_for_user(user.id)
-        api_key = await issue_api_key(user.id)
+        # First successful login = confirmed email = real signup moment.
+        profile = create_profile(user.id, credentials.username, credentials.referral_code)
+
+        has_active_key = (
+            supabase.table("api_keys")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("is_active", True)
+            .limit(1)
+            .execute()
+        )
+        api_key = None
+        if not has_active_key.data:
+            api_key = await issue_api_key(user.id)
+
+        code = profile.get("referral_code")
         return {
             "success": True,
-            "user": {"id": user.id, "email": user.email},
+            "user": {"id": user.id, "email": user.email, "username": profile.get("username")},
             "api_key": api_key,
             "tokens_remaining": int(profile.get("token_balance") or 0),
+            "referral_code": code,
+            "referral_link": f"{FRONTEND_URL}/playground.html?ref={code}" if code else None,
         }
     except HTTPException:
         raise
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
-
-@app.post("/auth/sync", response_model=AuthResponse)
-async def sync_oauth_user(request: OAuthSyncRequest):
-    _require_supabase()
-    # Use the existing supabase client (service role) to validate the token
-    # instead of requiring a separate anon key client.
-    try:
-        # The service-role client can also call get_user()
-        user_response = supabase.auth.get_user(request.access_token)
-        user = user_response.user
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid or expired OAuth token.")
-        
-        # ... rest of the function (profile creation, key issuance) stays the same
-    except Exception as exc:
-        # Log the actual error for debugging
-        print(f"OAuth sync error: {exc}")
-        raise HTTPException(status_code=401, detail=f"OAuth sync failed: {str(exc)}")
 
 @app.post("/auth/logout")
 async def logout(
@@ -469,6 +491,23 @@ async def me(
         "tokens_remaining": auth["tokens_remaining"],
     }
 
+@app.post("/auth/api-key/regenerate", response_model=AuthResponse)
+async def regenerate_api_key(
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None),
+):
+    auth = await authenticate_api_key(x_api_key, authorization)
+    profile = create_profile(auth["user_id"])
+    new_key = await issue_api_key(auth["user_id"])
+    code = profile.get("referral_code")
+    return {
+        "success": True,
+        "user": {"id": auth["user_id"], "email": None, "username": profile.get("username")},
+        "api_key": new_key,
+        "tokens_remaining": auth["tokens_remaining"],
+        "referral_code": code,
+        "referral_link": f"{FRONTEND_URL}/playground.html?ref={code}" if code else None,
+    }
 
 @app.get("/v1/usage")
 async def usage(
@@ -490,52 +529,6 @@ async def usage(
         "logs": logs.data or [],
     }
 
-
-@app.post("/v1/testing/grant")
-async def grant_testing_tokens(
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-    authorization: Optional[str] = Header(None),
-):
-    auth = await authenticate_api_key(x_api_key, authorization)
-    try:
-        marker = (
-            supabase.table("usage_logs")
-            .select("id")
-            .eq("user_id", auth["user_id"])
-            .eq("endpoint", "/v1/testing/grant")
-            .limit(1)
-            .execute()
-        )
-        if marker.data:
-            raise HTTPException(status_code=409, detail="Testing token grant has already been claimed.")
-
-        new_balance = auth["tokens_remaining"] + TEST_GRANT_TOKENS
-        updated = (
-            supabase.table("profiles")
-            .update({"token_balance": new_balance})
-            .eq("id", auth["user_id"])
-            .eq("token_balance", auth["tokens_remaining"])
-            .execute()
-        )
-        if not updated.data:
-            raise HTTPException(status_code=409, detail="Balance changed. Please retry.")
-
-        # A zero-cost ledger entry acts as the one-time claim marker.
-        supabase.table("usage_logs").insert({
-            "user_id": auth["user_id"],
-            "endpoint": "/v1/testing/grant",
-            "tokens_deducted": 0,
-        }).execute()
-
-        return {
-            "success": True,
-            "tokens_granted": TEST_GRANT_TOKENS,
-            "tokens_remaining": new_balance,
-        }
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Testing grant failed: {exc}")
 
 @app.post("/v1/referrals/claim")
 async def claim_referral_tokens(
@@ -571,23 +564,23 @@ async def claim_referral_tokens(
     return {"success": True, "tokens_granted": 100, "tokens_remaining": new_balance}
 
 
-@app.post("/v1/survey")
-async def submit_survey(
-    submission: SurveySubmission,
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-    authorization: Optional[str] = Header(None),
-):
-    auth = await authenticate_api_key(x_api_key, authorization)
+#@app.post("/v1/survey")
+#async def submit_survey(
+  #  submission: SurveySubmission,
+   # x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+   # authorization: Optional[str] = Header(None),
+#):
+  #  auth = await authenticate_api_key(x_api_key, authorization)
     
-    supabase.table("surveys").insert({
-        "user_id": auth["user_id"],
-        "q1_answer": submission.q1_answer,
-        "q2_answer": submission.q2_answer,
-        "q3_answer": submission.q3_answer,
-        "q4_answers": submission.q4_answers,
-    }).execute()
+  #  supabase.table("surveys").insert({
+      #  "user_id": auth["user_id"],
+     #   "q1_answer": submission.q1_answer,
+    #    "q2_answer": submission.q2_answer,
+      #  "q3_answer": submission.q3_answer,
+       # "q4_answers": submission.q4_answers,
+   # }).execute()
     
-    return {"success": True, "message": "Survey recorded successfully."}
+    #return {"success": True, "message": "Survey recorded successfully."}
 
 
 @app.delete("/auth/me")
