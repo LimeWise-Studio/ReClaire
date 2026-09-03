@@ -356,9 +356,43 @@ def _default_username_from_identity(user) -> Optional[str]:
 
 def create_profile(user_id: str, username: Optional[str] = None, referral_code: Optional[str] = None) -> Dict[str, Any]:
     existing = supabase.table("profiles").select("*").eq("id", user_id).limit(1).execute()
-    if existing.data:
-        return existing.data[0]
 
+    if existing.data:
+        profile = existing.data[0]
+        updates = {}
+
+        # Backfill whatever the trigger-created row is missing, no matter
+        # how old or how it originally got created.
+        if not profile.get("referral_code"):
+            own_code = generate_referral_code()
+            for _ in range(5):
+                clash = supabase.table("profiles").select("id").eq("referral_code", own_code).limit(1).execute()
+                if not clash.data:
+                    break
+                own_code = generate_referral_code()
+            updates["referral_code"] = own_code
+
+        if not profile.get("username") and username:
+            updates["username"] = username
+
+        if not profile.get("referrer_id") and referral_code:
+            referrer = (
+                supabase.table("profiles")
+                .select("id")
+                .eq("referral_code", referral_code.strip().upper())
+                .limit(1)
+                .execute()
+            )
+            if referrer.data and referrer.data[0]["id"] != user_id:
+                updates["referrer_id"] = referrer.data[0]["id"]
+
+        if updates:
+            updated = supabase.table("profiles").update(updates).eq("id", user_id).execute()
+            profile = updated.data[0] if updated.data else {**profile, **updates}
+
+        return profile
+
+    # Fallback path — only runs if no trigger-created row exists yet.
     referrer_id = None
     if referral_code:
         referrer = (
