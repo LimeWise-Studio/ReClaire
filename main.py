@@ -344,6 +344,16 @@ def generate_referral_code(length: int = 8) -> str:
     alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no ambiguous chars
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
+def _default_username_from_identity(user) -> Optional[str]:
+    meta = getattr(user, "user_metadata", None) or {}
+    for key in ("user_name", "preferred_username", "full_name", "name"):
+        value = meta.get(key)
+        if value:
+            return str(value)[:50]
+    if getattr(user, "email", None):
+        return user.email.split("@")[0][:50]
+    return None
+
 def create_profile(user_id: str, username: Optional[str] = None, referral_code: Optional[str] = None) -> Dict[str, Any]:
     existing = supabase.table("profiles").select("*").eq("id", user_id).limit(1).execute()
     if existing.data:
@@ -386,7 +396,7 @@ def create_profile(user_id: str, username: Optional[str] = None, referral_code: 
     return created.data[0]
 
 async def finalize_login(user, username: Optional[str] = None, referral_code: Optional[str] = None) -> Dict[str, Any]:
-    profile = create_profile(user.id, username, referral_code)
+    profile = create_profile(user.id, username or _default_username_from_identity(user), referral_code)
     has_active_key = (
         supabase.table("api_keys")
         .select("id")
