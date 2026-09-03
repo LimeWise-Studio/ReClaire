@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Playground</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --text: #12151A;
@@ -94,6 +95,21 @@
   }
 
   .empty-state a:hover { text-decoration: underline; }
+
+  .logout-btn {
+    margin-top: 28px;
+    padding: 9px 16px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: #FFFFFF;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .logout-btn:hover { color: var(--text); border-color: var(--text-faint); }
 </style>
 </head>
 <body>
@@ -131,6 +147,8 @@
     <div class="label">User ID</div>
     <div class="value mono" id="pUserId">—</div>
   </div>
+
+  <button class="logout-btn" id="logoutBtn">Log out</button>
 </div>
 
 <div class="empty-state" id="emptyState">
@@ -139,7 +157,22 @@
 </div>
 
 <script>
+  // ====== CONFIGURE THESE (must match signup.html) ======
+  const SUPABASE_URL = "https://lbraefssokojulyfmmjd.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicmFlZnNzb2tvanVseWZtbWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMjQyODksImV4cCI6MjEwMzYwMDI4OX0.e_jmB4jS_-cwKAraZpspPhEW_K4l2mbhhPZAlgN_y1E";
+  const SIGNUP_URL = "https://limewise-studio.github.io/ReClaire/signup.html";
+  // ========================================================
+
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   const SESSION_KEY = 'rc_session';
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await sb.auth.signOut();       // ends the underlying Supabase session
+    localStorage.removeItem(SESSION_KEY);
+    window.location.href = SIGNUP_URL;
+  });
 
   function maskApiKey(key) {
     if (!key) return null;
