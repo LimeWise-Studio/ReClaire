@@ -151,6 +151,11 @@ class AuthCredentials(BaseModel):
     #q3_answer: str
     #q4_answers: List[str]
 
+class SessionCompleteRequest(BaseModel):
+    access_token: str
+    username: Optional[str] = None
+    referral_code: Optional[str] = None
+
 class AuthResponse(BaseModel):
     success: bool
     user: Dict[str, Any]
@@ -383,6 +388,29 @@ def create_profile(user_id: str, username: Optional[str] = None, referral_code: 
         raise HTTPException(status_code=500, detail="Could not create user profile.")
     return created.data[0]
 
+async def finalize_login(user, username: Optional[str] = None, referral_code: Optional[str] = None) -> Dict[str, Any]:
+    profile = create_profile(user.id, username, referral_code)
+    has_active_key = (
+        supabase.table("api_keys")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_active", True)
+        .limit(1)
+        .execute()
+    )
+    api_key = None
+    if not has_active_key.data:
+        api_key = await issue_api_key(user.id)
+
+    code = profile.get("referral_code")
+    return {
+        "success": True,
+        "user": {"id": user.id, "email": user.email, "username": profile.get("username")},
+        "api_key": api_key,
+        "tokens_remaining": int(profile.get("token_balance") or 0),
+        "referral_code": code,
+        "referral_link": f"{FRONTEND_URL}/playground.html?ref={code}" if code else None,
+    }
 
 async def issue_api_key(user_id: str) -> str:
     raw_key, hashed_key = generate_api_key()
@@ -582,6 +610,22 @@ async def claim_referral_tokens(
     
     #return {"success": True, "message": "Survey recorded successfully."}
 
+@app.post("/auth/session/complete", response_model=AuthResponse)
+async def complete_session(payload: SessionCompleteRequest):
+    """Finishes provisioning an account for any flow where Supabase already
+    handed the frontend a valid session — OAuth (Google/GitHub) or clicking
+    the email confirmation link."""
+    _require_supabase()
+    try:
+        user_response = supabase.auth.get_user(payload.access_token)
+        user = user_response.user
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid or expired session.")
+        return await finalize_login(user, payload.username, payload.referral_code)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Session verification failed.")
 
 @app.delete("/auth/me")
 async def delete_account(
