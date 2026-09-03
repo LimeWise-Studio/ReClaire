@@ -136,9 +136,6 @@ class CrawlOptions(BaseModel):
     limit: int = Field(5, ge=1, le=50)
     scrape_options: Optional[ScrapeOptions] = None
 
-class OAuthSyncRequest(BaseModel):
-    access_token: str
-
 class AuthCredentials(BaseModel):
     email: str
     password: str = Field(min_length=8, max_length=128)
@@ -468,30 +465,7 @@ async def login(credentials: AuthCredentials):
         if not user:
             raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-        # First successful login = confirmed email = real signup moment.
-        profile = create_profile(user.id, credentials.username, credentials.referral_code)
-
-        has_active_key = (
-            supabase.table("api_keys")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("is_active", True)
-            .limit(1)
-            .execute()
-        )
-        api_key = None
-        if not has_active_key.data:
-            api_key = await issue_api_key(user.id)
-
-        code = profile.get("referral_code")
-        return {
-            "success": True,
-            "user": {"id": user.id, "email": user.email, "username": profile.get("username")},
-            "api_key": api_key,
-            "tokens_remaining": int(profile.get("token_balance") or 0),
-            "referral_code": code,
-            "referral_link": f"{FRONTEND_URL}/playground.html?ref={code}" if code else None,
-        }
+        return await finalize_login(user, credentials.username, credentials.referral_code)
     except HTTPException:
         raise
     except Exception:
@@ -707,6 +681,7 @@ async def base_scrape_pipeline(
     
     # Execute network request to define html_content prior to parsing
     html_content = await fetch_dynamic_content(url) 
+    clean_url: str
 
     # Step 1 Content Prioritization: Strip noise tags and structural elements
     soup = BeautifulSoup(html_content, "html.parser")
