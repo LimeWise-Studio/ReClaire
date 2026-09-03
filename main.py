@@ -598,7 +598,8 @@ async def complete_session(payload: SessionCompleteRequest):
         return await finalize_login(user, payload.username, payload.referral_code)
     except HTTPException:
         raise
-    except Exception:
+    except Exception as exc:
+        print(f"[session/complete] verification failed: {exc}")
         raise HTTPException(status_code=401, detail="Session verification failed.")
 
 @app.delete("/auth/me")
