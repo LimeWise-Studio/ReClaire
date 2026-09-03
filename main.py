@@ -415,6 +415,7 @@ async def issue_api_key(user_id: str) -> str:
     inserted = supabase.table("api_keys").insert({
         "user_id": user_id,
         "hashed_key": hashed_key,
+        "key_hint": raw_key[:10],  # short preview only — full key is never stored
         "is_active": True,
     }).execute()
     if not inserted.data:
