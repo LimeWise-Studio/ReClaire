@@ -169,8 +169,13 @@
   const SESSION_KEY = 'rc_session';
 
   document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await sb.auth.signOut();       // ends the underlying Supabase session
-    localStorage.removeItem(SESSION_KEY);
+    await sb.auth.signOut();
+    const existing = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    if (existing.api_key) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ api_key: existing.api_key }));
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+    }
     window.location.href = SIGNUP_URL;
   });
 
