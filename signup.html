@@ -400,7 +400,9 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Could not finish signing you in.');
 
-      localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+      const existing = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+      const merged = { ...data, api_key: data.api_key || existing.api_key };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(merged));
       localStorage.removeItem(PENDING_USERNAME_KEY);
       localStorage.removeItem(REF_KEY);
       window.location.href = PLAYGROUND_URL;
