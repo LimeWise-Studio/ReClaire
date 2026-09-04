@@ -553,7 +553,7 @@ async def regenerate_api_key(
         "api_key": new_key,
         "tokens_remaining": auth["tokens_remaining"],
         "referral_code": code,
-        "referral_link": f"{FRONTEND_URL}/playground.html?ref={code}" if code else None,
+        "referral_link": f"{FRONTEND_URL}/signup.html?ref={code}" if code else None,
     }
 
 @app.get("/v1/usage")
@@ -618,7 +618,34 @@ async def claim_referral_tokens(
     
     return {"success": True, "tokens_granted": 100, "tokens_remaining": new_balance}
 
+@app.get("/v1/referrals/status")
+async def referral_status(
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None),
+):
+    auth = await authenticate_api_key(x_api_key, authorization)
+    user_id = auth["user_id"]
 
+    profile = supabase.table("profiles").select("referral_code").eq("id", user_id).limit(1).execute()
+    code = profile.data[0].get("referral_code") if profile.data else None
+
+    referrals = supabase.table("profiles").select("id", count="exact").eq("referrer_id", user_id).execute()
+    ref_count = referrals.count if referrals.count else 0
+
+    marker = supabase.table("usage_logs").select("id").eq("user_id", user_id).eq("endpoint", "/v1/referrals/claim").limit(1).execute()
+    claimed = bool(marker.data)
+
+    return {
+        "success": True,
+        "referral_code": code,
+        "referral_link": f"{FRONTEND_URL}/signup.html?ref={code}" if code else None,
+        "referral_count": ref_count,
+        "referrals_required": 5,
+        "bonus_tokens": 100,
+        "claimed": claimed,
+        "can_claim": ref_count >= 5 and not claimed,
+    }
+    
 #@app.post("/v1/survey")
 #async def submit_survey(
   #  submission: SurveySubmission,
