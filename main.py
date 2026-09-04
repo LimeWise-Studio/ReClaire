@@ -596,10 +596,18 @@ async def claim_referral_tokens(
     
     if ref_count < 5:
         raise HTTPException(status_code=400, detail=f"5 successful referrals required. Current count: {ref_count}")
-        
-    # Grant 100 tokens
-    new_balance = auth["tokens_remaining"] + 100
-    supabase.table("profiles").update({"token_balance": new_balance}).eq("id", user_id).execute()
+
+    current_balance = auth["tokens_remaining"]
+    new_balance = current_balance + 100
+    updated = (
+        supabase.table("profiles")
+        .update({"token_balance": new_balance})
+        .eq("id", user_id)
+        .eq("token_balance", current_balance)
+        .execute()
+    )
+    if not updated.data:
+        raise HTTPException(status_code=409, detail="Token balance changed during the request. Please retry.")
     
     # Mark as claimed via zero-cost ledger entry
     supabase.table("usage_logs").insert({
@@ -724,27 +732,11 @@ async def base_scrape_pipeline(
     only_main_content: bool = True,
     remove_tags: List[str] = None
 ) -> Dict[str, Any]:
-    
-    # Execute network request to define html_content prior to parsing
-    html_content = await fetch_dynamic_content(url) 
-    clean_url: str
 
-    # Step 1 Content Prioritization: Strip noise tags and structural elements
-    soup = BeautifulSoup(html_content, "html.parser")
-    default_noise_tags = remove_tags or ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript", "svg"]
-    
-    for tag in default_noise_tags:
-        for el in soup.find_all(tag):
-            el.decompose()
+    clean_url = clean_input_url(url)
+    used_dynamic_fetch = False
 
-    # Heuristic removal of common ad/cookie element containers
-    for el in soup.find_all(class_=re.compile(r'(banner|cookie|ad-container|advertisement|social-share|sidebar)', re.I)):
-        el.decompose()
-
-    target = (soup.find("main") or soup.find("article") or soup.body or soup) if only_main_content else (soup.body or soup)
-    markdown_text = md(str(target), heading_style="ATX").strip()
-
-    # Check for PDF
+    # PDF short-circuit
     if clean_url.lower().split("?")[0].endswith(".pdf"):
         try:
             async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=20.0) as client:
@@ -756,7 +748,8 @@ async def base_scrape_pipeline(
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"Failed to extract PDF: {str(e)}")
 
-    # Fetch standard HTTP HTML
+    # Standard HTTP fetch, falling back to Playwright only if needed
+    html_content = None
     try:
         async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=15.0) as client:
             res = await client.get(clean_url)
@@ -778,11 +771,12 @@ async def base_scrape_pipeline(
     if not html_content:
         raise HTTPException(status_code=502, detail="Empty content received from site.")
 
-    # Parse HTML and convert to Markdown
     soup = BeautifulSoup(html_content, "html.parser")
-    for tag in (remove_tags or ["script", "style", "nav", "footer", "header", "aside", "form"]):
+    for tag in (remove_tags or ["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "noscript", "svg"]):
         for el in soup.find_all(tag):
             el.decompose()
+    for el in soup.find_all(class_=re.compile(r'(banner|cookie|ad-container|advertisement|social-share|sidebar)', re.I)):
+        el.decompose()
 
     target = (soup.find("main") or soup.find("article") or soup.body or soup) if only_main_content else (soup.body or soup)
     markdown_text = md(str(target), heading_style="ATX").strip()
