@@ -1,652 +1,404 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ReClaire - Web Intelligence Engine</title>
-  <link rel="icon" type="image/png" href="favicon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet" />
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Ubuntu', 'sans-serif'], mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'] },
-          colors: {
-            bg: 'var(--bg)', surface: 'var(--surface)', 'surface-hover': 'var(--surface-hover)',
-            border: 'var(--border)', text: 'var(--text)', muted: 'var(--muted)',
-            accent: 'var(--accent)', 'accent-soft': 'var(--accent-soft)',
-          },
-          boxShadow: {
-            'soft': '0 4px 24px rgba(0, 0, 0, 0.03)',
-            'soft-dark': '0 4px 24px rgba(0, 0, 0, 0.2)',
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    /* Theme Variables */
-    :root {
-      --bg: #F7F7F5; --surface: #FFFFFF; --surface-hover: #F0F0ED;
-      --border: #E2E5EA; --text: #12151A; --muted: #5B6472;
-      --accent: #2A4FE0; --accent-soft: rgba(42, 79, 224, 0.1);
-    }
-    .dark {
-      --bg: #0B0B0B; --surface: #141414; --surface-hover: #1F1F1F;
-      --border: #2A2A2A; --text: #FFFFFF; --muted: #9BA3AF;
-      --accent: #EFD09E; --accent-soft: rgba(239, 208, 158, 0.1);
-    }
+/* ReClaire playground script — paste this entire file inside the existing <script> tag. */
+(() => {
+  'use strict';
 
-    body { background-color: var(--bg); color: var(--text); }
-    
-    /* Logo Mask for dynamic coloring */
-    .logo-mask {
-      mask-image: url('reclaire-logo.svg');
-      -webkit-mask-image: url('reclaire-logo.svg');
-      mask-size: contain; -webkit-mask-size: contain;
-      mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat;
-      mask-position: center; -webkit-mask-position: center;
-    }
+  const SUPABASE_URL = 'https://lbraefssokojulyfmmjd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicmFlZnNzb2tvanVseWZtbWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMjQyODksImV4cCI6MjEwMzYwMDI4OX0.e_jmB4jS_-cwKAraZpspPhEW_K4l2mbhhPZAlgN_y1E';
+  const SIGNUP_URL = 'https://limewise-studio.github.io/ReClaire/signup.html';
+  const DEFAULT_API_BASE = 'https://reclaire-api.onrender.com';
+  const SESSION_KEY = 'rc_session';
+  const TASKS_KEY = 'rc_recent_tasks';
+  const THEME_KEY = 'rc_theme';
+  const SIDEBAR_KEY = 'rc_sidebar_position';
 
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  const { createClient } = window.supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    /* Transitions & Animations */
-    .fade-in { animation: fadeIn 0.2s ease-in-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* Typing indicator */
-    .typing-cursor::after {
-      content: '|'; animation: blink 1s step-end infinite; color: var(--accent);
-    }
-    @keyframes blink { 50% { opacity: 0; } }
-  </style>
-</head>
-<body class="h-screen flex overflow-hidden selection:bg-accent selection:text-bg transition-colors duration-200">
+  let session = readJSON(SESSION_KEY, null);
+  let recentTasks = readJSON(TASKS_KEY, []);
+  let apiBase = localStorage.getItem('rc_backend_url') || DEFAULT_API_BASE;
+  let currentView = 'playground';
+  let isBusy = false;
+  let batchId = null;
+  let batchDownloadReady = false;
+  let selectedTaskId = null;
+  let loadingTimer = null;
+  let phraseTimer = null;
 
-  <!-- Toast Alert Container -->
-  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+  function readJSON(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+    catch { return fallback; }
+  }
 
-  <!-- Mobile Sidebar Overlay -->
-  <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden"></div>
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  }
 
-  <!-- Sidebar (Now Toggleable) -->
-  <aside id="sidebar" class="w-64 bg-surface border-r border-border flex flex-col h-full flex-shrink-0 z-40 fixed lg:relative transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
-    <div class="h-16 flex items-center px-6 border-b border-border justify-between lg:justify-start">
-      <!-- Dynamic Logo -->
-      <div class="flex items-center">
-        <div class="logo-mask w-6 h-6 bg-black dark:bg-[#EFD09E]"></div>
-        <span class="ml-3 font-bold text-lg tracking-tight">ReClaire</span>
-      </div>
-      <!-- Close Sidebar Button (Mobile only) -->
-      <button id="closeSidebarBtn" class="lg:hidden p-2 text-muted hover:text-text">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    
-    <!-- Token Display Moved Higher -->
-    <div class="p-4 border-b border-border">
-      <div class="bg-surface-hover rounded-xl p-4 border border-border">
-        <span class="text-xs font-bold uppercase tracking-wider text-muted block mb-1">Tokens Remaining</span>
-        <div class="flex items-end gap-2">
-          <svg class="w-5 h-5 text-accent mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          <span id="navTokens" class="text-2xl font-bold leading-none">--</span>
-        </div>
-      </div>
-    </div>
+  function icon(name, size = 18) {
+    const paths = {
+      menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+      message: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 8.7 4a8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.4z"/>',
+      scrape: '<path d="M4 7h10M4 12h16M4 17h10"/><circle cx="18" cy="7" r="2"/><circle cx="18" cy="17" r="2"/>',
+      crawl: '<circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/><circle cx="12" cy="3" r="1.5"/><circle cx="12" cy="21" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="21" cy="12" r="1.5"/>',
+      map: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>',
+      activity: '<path d="M3 12h4l2-7 4 14 2-7h6"/>',
+      usage: '<path d="M4 19V5M4 19h16"/><path d="m8 15 3-3 3 2 5-6"/>',
+      key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l2 2M14 9l2 2"/>',
+      logout: '<path d="M10 17l5-5-5-5M15 12H3"/><path d="M21 19V5a2 2 0 0 0-2-2h-5"/>',
+      copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+      check: '<path d="m5 12 4 4L19 6"/>',
+      download: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+      external: '<path d="M14 3h7v7M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>',
+      arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+      sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+      moon: '<path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 6.5 6.5 0 0 0 21 12.8z"/>',
+      chevron: '<path d="m6 9 6 6 6-6"/>',
+      x: '<path d="M6 6l12 12M18 6 6 18"/>',
+      plus: '<path d="M12 5v14M5 12h14"/>',
+      refresh: '<path d="M20 11a8 8 0 1 0 1 4"/><path d="M20 4v7h-7"/>'
+    };
+    return `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || ''}</svg>`;
+  }
 
-    <!-- Navigation -->
-    <nav class="p-4 space-y-1 flex-1">
-      <a href="#" data-view="playground" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg bg-accent-soft text-accent font-medium transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M4 5h16M4 9h10M4 13h16M4 17h8"/><path d="m17 15 4 4m0-4-4 4"/></svg>
-        Playground
-      </a>
-      <a href="#" data-view="batch" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:text-text hover:bg-surface-hover transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        Batch Ops
-      </a>
-      <a href="#" data-view="apikeys" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:text-text hover:bg-surface-hover transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-        API Keys
-      </a>
-    </nav>
-  </aside>
+  function currentUser() {
+    return session?.user || {};
+  }
+  function username() {
+    return currentUser().username || currentUser().email?.split('@')[0] || 'User';
+  }
+  function initial() { return username().trim().charAt(0).toUpperCase() || 'U'; }
+  function maskedKey(key) {
+    if (!key) return 'Not available';
+    return key.length <= 3 ? key : key.slice(0, 3) + '•'.repeat(Math.min(key.length - 3, 28));
+  }
+  function formatTime(value) {
+    if (!value) return '—';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString([], {dateStyle:'medium', timeStyle:'short'});
+  }
+  function endpointLabel(endpoint) {
+    return String(endpoint || '').replace(/^\/v1\//, '').replace(/^\//, '') || 'operation';
+  }
+  function getTheme() {
+    return localStorage.getItem(THEME_KEY) || 'light';
+  }
+  function getSidebarPosition() {
+    return localStorage.getItem(SIDEBAR_KEY) || 'right';
+  }
+  function saveTasks() {
+    recentTasks = recentTasks.slice(0, 20);
+    localStorage.setItem(TASKS_KEY, JSON.stringify(recentTasks));
+  }
+  function addTask(task) {
+    recentTasks.unshift({...task, id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now())});
+    saveTasks();
+  }
 
-  <!-- Main Area -->
-  <main class="flex-1 flex flex-col h-full overflow-hidden relative">
-    
-    <!-- Topbar -->
-    <header class="h-16 bg-surface border-b border-border flex items-center justify-between px-4 lg:px-6 flex-shrink-0 z-10 shadow-sm dark:shadow-none">
-      <div class="flex items-center gap-3">
-        <!-- Open Sidebar Button -->
-        <button id="openSidebarBtn" class="lg:hidden p-2 rounded-lg text-muted hover:bg-surface-hover transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
-        <h1 class="font-bold text-lg hidden sm:block" id="headerTitle">Workspace</h1>
-      </div>
-      
-      <div class="flex items-center gap-4 ml-auto">
-        <button id="themeToggle" class="p-2 rounded-lg text-muted hover:bg-surface-hover transition-colors" title="Toggle Theme">
-          <svg class="w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-          <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        </button>
-        <!-- Username only -->
-        <div class="flex items-center gap-2 pl-4 border-l border-border cursor-pointer">
-          <div class="w-8 h-8 rounded-full bg-accent-soft text-accent flex items-center justify-center font-bold text-sm">
-            <span id="userInitial">U</span>
+  function shell() {
+    return `
+      <div id="app" data-theme="${esc(getTheme())}" data-sidebar="${esc(getSidebarPosition())}">
+        <header class="topbar">
+          <div class="brand-group">
+            <a class="brand" href="#" data-view="playground" aria-label="ReClaire">
+              <span class="brand-logo" aria-hidden="true"></span>
+            </a>
+            <div class="top-user"><span class="avatar">${esc(initial())}</span><span>${esc(username())}</span></div>
           </div>
-          <span id="topUsername" class="font-medium text-sm">--</span>
-        </div>
-      </div>
-    </header>
+          <div class="top-actions">
+            <div class="token-pill"><span id="topTokens">—</span><span>tokens</span></div>
+            <button class="icon-btn" id="menuBtn" aria-label="Open navigation">${icon('menu', 21)}</button>
+          </div>
+        </header>
 
-    <!-- Scrollable Content -->
-    <div class="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
-      <div class="max-w-5xl mx-auto flex flex-col xl:flex-row gap-8 items-start">
-        
-        <!-- Left Column: Dynamic View Container -->
-        <div class="w-full xl:w-7/12 space-y-6 relative">
-          
-          <!-- VIEW: PLAYGROUND -->
-          <div id="view-playground" class="view-section space-y-6">
-            <div class="bg-surface border border-border rounded-2xl p-6 shadow-soft dark:shadow-soft-dark">
-              <h2 class="text-xs font-bold uppercase tracking-wider text-muted mb-4">Extraction Request</h2>
-              
-              <form id="extractForm" class="space-y-4">
-                <!-- URL Input (Fixed https://) -->
-                <div>
-                  <label class="block text-xs font-semibold text-muted mb-1.5">Target URL</label>
-                  <div class="relative flex items-center border border-border rounded-xl bg-surface-hover overflow-hidden focus-within:ring-2 focus-within:ring-accent-soft focus-within:border-accent transition-all">
-                    <span class="pl-4 pr-1 text-muted font-mono text-sm select-none">https://</span>
-                    <input type="text" id="urlInput" required class="w-full h-12 bg-transparent text-text pr-3 outline-none placeholder-transparent font-mono" placeholder="domain.com" />
-                    <!-- Animated Placeholder Overlay -->
-                    <div id="urlPlaceholder" class="absolute left-[78px] font-mono pointer-events-none text-muted transition-opacity"></div>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Custom Mode Select -->
-                  <div class="relative">
-                    <label class="block text-xs font-semibold text-muted mb-1.5">Mode</label>
-                    <button type="button" id="modeTrigger" class="w-full h-12 flex items-center justify-between px-4 border border-border rounded-xl bg-surface-hover font-medium focus:ring-2 focus:ring-accent-soft focus:border-accent transition-all">
-                      <span id="modeDisplay" class="flex items-center gap-2">Scrape</span>
-                      <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    <!-- Mode Dropdown -->
-                    <div id="modeDropdown" class="hidden absolute top-[72px] left-0 w-full bg-surface border border-border rounded-xl shadow-soft dark:shadow-soft-dark z-30 p-1 fade-in">
-                      <button type="button" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface-hover font-medium text-sm mode-option active" data-val="scrape">Scrape</button>
-                      <button type="button" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface-hover font-medium text-sm mode-option" data-val="crawl">Crawl</button>
-                      <button type="button" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface-hover font-medium text-sm mode-option" data-val="map">Map</button>
-                    </div>
-                  </div>
-
-                  <!-- Custom Multi-Format Select -->
-                  <div class="relative" id="formatContainer">
-                    <label class="block text-xs font-semibold text-muted mb-1.5">Formats</label>
-                    <button type="button" id="formatTrigger" class="w-full h-12 flex items-center justify-between px-4 border border-border rounded-xl bg-surface-hover font-medium focus:ring-2 focus:ring-accent-soft focus:border-accent transition-all">
-                      <span id="formatDisplay">Markdown</span>
-                      <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    <!-- Format Dropdown -->
-                    <div id="formatDropdown" class="hidden absolute top-[72px] left-0 w-full bg-surface border border-border rounded-xl shadow-soft dark:shadow-soft-dark z-30 p-2 fade-in max-h-60 overflow-y-auto">
-                      <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
-                        <input type="checkbox" value="markdown" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent" checked>
-                        <span class="text-sm font-medium">Markdown</span>
-                      </label>
-                      <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
-                        <input type="checkbox" value="html" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
-                        <span class="text-sm font-medium">Clean HTML</span>
-                      </label>
-                      <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
-                        <input type="checkbox" value="summary" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
-                        <span class="text-sm font-medium">Summary (AI)</span>
-                      </label>
-                      <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
-                        <input type="checkbox" value="questions" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
-                        <span class="text-sm font-medium">Q&A (AI)</span>
-                      </label>
-                      <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
-                        <input type="checkbox" value="json" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
-                        <span class="text-sm font-medium">Structured JSON</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Conditional Q&A Input -->
-                <div id="qaWrap" class="hidden fade-in">
-                  <label class="block text-xs font-semibold text-muted mb-1.5">Question / Prompt</label>
-                  <input type="text" id="qaInput" class="w-full h-12 border border-border rounded-xl bg-surface-hover text-text px-4 outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent transition-all" placeholder="What are the key takeaways?" />
-                </div>
-
-                <!-- Submit -->
-                <button type="submit" id="executeBtn" class="w-full h-12 mt-2 bg-accent text-bg rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                  Execute Pipeline
-                </button>
-              </form>
+        <div class="scrim" id="scrim"></div>
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-head">
+            <span class="eyebrow">Workspace</span>
+            <button class="icon-btn" id="closeSidebar" aria-label="Close navigation">${icon('x')}</button>
+          </div>
+          <button class="support-button" data-view="support">${icon('message')}<span>Support</span></button>
+          <div class="profile-card">
+            <span class="avatar large">${esc(initial())}</span>
+            <div class="profile-copy"><strong>${esc(username())}</strong><span>${esc(currentUser().email || '—')}</span></div>
+          </div>
+          <nav>
+            <div class="nav-section"><div class="nav-title">Playground</div>
+              <button class="nav-btn active" data-view="playground">${icon('scrape')}<span>Scrape</span></button>
+              <button class="nav-btn" data-view="playground" data-mode="crawl">${icon('crawl')}<span>Crawl</span></button>
+              <button class="nav-btn" data-view="playground" data-mode="map">${icon('map')}<span>Map</span></button>
             </div>
-
-            <!-- Get Then Write: Output Container -->
-            <div id="outputContainer" class="hidden fade-in">
-              <!-- Loading State -->
-              <div id="outputLoading" class="bg-surface border border-border rounded-2xl p-10 flex flex-col items-center justify-center text-center shadow-soft dark:shadow-soft-dark">
-                <svg class="w-8 h-8 text-accent animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                <h3 class="font-bold text-lg mb-1">Extracting Intelligence</h3>
-                <p class="text-sm text-muted">Running dynamic fallback and parsing data...</p>
-              </div>
-
-              <!-- Result State -->
-              <div id="outputResult" class="hidden bg-surface border border-border rounded-2xl overflow-hidden shadow-soft dark:shadow-soft-dark flex flex-col max-h-[800px]">
-                <div class="h-14 border-b border-border bg-surface-hover flex items-center justify-between px-5">
-                  <div class="flex items-center gap-3 overflow-hidden">
-                    <div class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
-                    <span class="font-medium text-sm truncate max-w-[200px] md:max-w-md" id="resUrl">https://...</span>
-                  </div>
-                  <div class="flex items-center gap-2 text-xs font-bold text-muted bg-surface border border-border px-3 py-1.5 rounded-lg">
-                    Cost: <span id="resCost" class="text-accent">--</span>
-                  </div>
-                </div>
-                <!-- Replaced textContent with innerHTML and updated styling for parsed Markdown -->
-                <div class="p-5 overflow-y-auto flex-1 font-mono text-sm leading-relaxed text-muted bg-[#F8F9FA] dark:bg-[#121212] break-words" id="resContent">
-                  <!-- Content Injected Here -->
-                </div>
-              </div>
+            <div class="nav-section"><div class="nav-title">Account</div>
+              <button class="nav-btn" data-view="activity">${icon('activity')}<span>Activity logs</span></button>
+              <button class="nav-btn" data-view="usage">${icon('usage')}<span>Usage</span></button>
+              <button class="nav-btn" data-view="keys">${icon('key')}<span>API keys</span></button>
             </div>
-          </div>
-
-          <!-- VIEW: BATCH OPS -->
-          <div id="view-batch" class="view-section hidden space-y-6 fade-in">
-            <div class="bg-surface border border-border rounded-2xl p-6 shadow-soft dark:shadow-soft-dark">
-              <h2 class="text-xs font-bold uppercase tracking-wider text-muted mb-4">Batch Operations</h2>
-              <p class="text-sm text-muted mb-6">Process multiple domains concurrently. Paste URLs below (one per line) without the protocol.</p>
-              
-              <div class="space-y-4">
-                <div class="relative flex border border-border rounded-xl bg-surface-hover focus-within:ring-2 focus-within:ring-accent-soft focus-within:border-accent transition-all">
-                  <div class="px-3 pt-3 text-muted font-mono text-sm border-r border-border bg-surface-hover rounded-l-xl select-none leading-[1.6]">
-                    https://<br>https://<br>https://
-                  </div>
-                  <textarea id="batchInput" class="w-full h-40 bg-transparent text-text p-3 outline-none font-mono text-sm leading-[1.6] resize-none" placeholder="news.ycombinator.com&#10;en.wikipedia.org/wiki/API&#10;github.com/trending"></textarea>
-                </div>
-                
-                <button type="button" class="w-full h-12 bg-accent text-bg rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                  Execute Batch Pipeline
-                </button>
-              </div>
+          </nav>
+          <div class="sidebar-bottom">
+            <button class="logout-link" id="logoutBtn">${icon('logout')}<span>Log out</span></button>
+            <div class="sidebar-token"><span>Token balance</span><strong id="sideTokens">—</strong></div>
+            <div class="sidebar-links">
+              <a href="privacy.html">Privacy Policy ${icon('external', 13)}</a>
+              <a href="docs.html">Documentation ${icon('external', 13)}</a>
+              <a href="terms.html">Terms of Service ${icon('external', 13)}</a>
             </div>
+            <div class="appearance-row"><span>${getTheme() === 'dark' ? icon('moon',15) : icon('sun',15)}<span>Theme</span></span><button id="themeBtn" class="theme-switch">${getTheme() === 'dark' ? 'Dark' : 'Light'}</button></div>
+            <div class="sidebar-setting"><span>Panel</span><select id="sidebarPosition"><option value="right" ${getSidebarPosition()==='right'?'selected':''}>Right</option><option value="left" ${getSidebarPosition()==='left'?'selected':''}>Left</option></select></div>
           </div>
+        </aside>
 
+        <main class="main" id="main"></main>
+        <div class="toast" id="toast"></div>
+      </div>`;
+  }
+
+  const baseStyles = `
+    @import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap');
+    :root{--bg:#f7f7f5;--surface:#fff;--surface2:#f0f0ed;--surface3:#e6e6e1;--text:#0b0b0b;--text2:#303030;--muted:#707070;--border:#deded8;--border2:#bdbdb5;--accent:#111;--accentSoft:#ecece8;--gold:#8b6a22;--goldSoft:#f4ecd7;--success:#16703b;--danger:#b3261e;--shadow:0 18px 55px rgba(0,0,0,.08);--topbar:66px;--sidebar:270px;--radius:16px}
+    #app[data-theme="dark"]{--bg:#0b0b0b;--surface:#141414;--surface2:#1b1b1b;--surface3:#242424;--text:#fff;--text2:#dedede;--muted:#9b9b9b;--border:#303030;--border2:#494949;--accent:#EFD09E;--accentSoft:rgba(239,208,158,.12);--gold:#EFD09E;--goldSoft:rgba(239,208,158,.12);--success:#68c892;--danger:#ff8078;--shadow:0 22px 65px rgba(0,0,0,.35)}
+    *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:'Ubuntu',sans-serif} body{min-height:100vh} button,input,select,textarea{font:inherit} button,a{color:inherit} button{cursor:pointer}
+    .topbar{position:fixed;z-index:50;top:0;left:0;right:0;height:var(--topbar);display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(18px)}
+    .brand-group,.top-actions,.top-user,.support-button,.nav-btn,.logout-link,.appearance-row>span{display:flex;align-items:center}.brand-group{gap:16px}.brand{display:block;width:108px;height:32px}.brand-logo{display:block;width:108px;height:32px;background:var(--accent);mask:url('reclaire-logo.svg') center/contain no-repeat;-webkit-mask:url('reclaire-logo.svg') center/contain no-repeat}.top-user{gap:9px;font-size:14px;color:var(--text2)}
+    .avatar{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--surface3);border:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text)}.avatar.large{width:42px;height:42px;font-size:16px}
+    .top-actions{gap:12px}.token-pill{display:flex;align-items:center;gap:5px;padding:8px 11px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:12px;color:var(--muted)}.token-pill span:first-child{color:var(--text);font-weight:700}.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)}.icon-btn:hover{border-color:var(--border2);background:var(--surface2)}.icon{flex:none}
+    .sidebar{position:fixed;z-index:70;top:0;bottom:0;width:var(--sidebar);padding:18px;overflow-y:auto;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow);transition:transform .24s ease;right:0}.sidebar[data-open="false"]{transform:translateX(105%)}#app[data-sidebar="left"] .sidebar{left:0;right:auto;border-left:0;border-right:1px solid var(--border)}#app[data-sidebar="left"] .sidebar[data-open="false"]{transform:translateX(-105%)}
+    .sidebar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.eyebrow,.nav-title{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}.profile-card{display:flex;gap:11px;align-items:center;padding:13px;border:1px solid var(--border);background:var(--surface2);border-radius:13px;margin:14px 0 20px}.profile-copy{min-width:0;display:flex;flex-direction:column;gap:4px}.profile-copy strong{font-size:14px}.profile-copy span{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}.support-button{width:100%;gap:9px;padding:10px 11px;border:1px solid var(--border);background:transparent;border-radius:11px;color:var(--text);font-size:13px}.support-button:hover{background:var(--surface2)}.nav-section{margin-top:20px}.nav-title{margin:0 9px 7px}.nav-btn{width:100%;gap:10px;border:0;background:transparent;padding:10px 9px;border-radius:10px;color:var(--muted);text-align:left;font-size:13px}.nav-btn:hover,.nav-btn.active{background:var(--surface2);color:var(--text)}.nav-btn.active .icon{color:var(--gold)}
+    .sidebar-bottom{margin-top:25px;padding-top:15px;border-top:1px solid var(--border)}.logout-link{gap:9px;width:100%;border:0;background:transparent;padding:9px;color:var(--danger);font-size:13px;text-align:left}.sidebar-token{margin-top:32px;padding:14px;border-radius:13px;background:var(--surface2);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.sidebar-token span{font-size:12px;color:var(--muted)}.sidebar-token strong{font-size:18px}.sidebar-links{display:flex;flex-direction:column;gap:4px;margin-top:15px}.sidebar-links a{display:flex;justify-content:space-between;align-items:center;text-decoration:none;padding:8px 2px;font-size:12px;color:var(--muted)}.sidebar-links a:hover{color:var(--text)}.appearance-row,.sidebar-setting{display:flex;align-items:center;justify-content:space-between;margin-top:14px;font-size:12px;color:var(--muted)}.appearance-row>span{gap:7px}.theme-switch,.sidebar-setting select{border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:8px;padding:6px 8px;font-size:11px}.scrim{position:fixed;z-index:60;inset:0;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .2s}.scrim.open{opacity:1;pointer-events:auto}
+    .main{min-height:100vh;padding:calc(var(--topbar) + 52px) 24px 70px;max-width:1050px;margin:0 auto}.hero{text-align:center;margin:20px auto 35px}.hero-logo{width:180px;height:62px;margin:0 auto 21px;background:var(--accent);mask:url('reclaire-logo.svg') center/contain no-repeat;-webkit-mask:url('reclaire-logo.svg') center/contain no-repeat}.hero h1{font-size:28px;font-weight:500;margin:0;height:38px;opacity:1;transition:opacity .22s}.hero-sub{margin:9px 0 0;color:var(--muted);font-size:13px}
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 28px rgba(0,0,0,.035);padding:18px}.panel+.panel{margin-top:16px}.control-grid{display:grid;grid-template-columns:160px 170px 1fr auto auto;gap:9px;align-items:center}.field,.select,.textarea{width:100%;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:11px;outline:none}.field,.select{height:45px;padding:0 13px}.field:focus,.select:focus,.textarea:focus{border-color:var(--border2)}.url-wrap{position:relative}.url-wrap .field{padding-left:63px}.url-prefix{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);pointer-events:none}.btn{height:45px;border:1px solid var(--border);border-radius:11px;padding:0 15px;background:var(--surface);color:var(--text);display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:500}.btn:hover{background:var(--surface2)}.btn.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}.btn.primary:hover{opacity:.9}.btn.subtle{background:var(--surface2)}.btn.danger{color:var(--danger)}.extra-field{margin-top:10px}.textarea{min-height:90px;padding:12px 13px;resize:vertical}.schema-area{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px}.batch-panel{display:none;margin-top:10px}.batch-panel.show{display:block}.batch-title{font-size:12px;font-weight:500;margin-bottom:10px}.batch-row{display:grid;grid-template-columns:26px 1fr;gap:8px;margin-bottom:7px}.batch-row span{height:45px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}.batch-row .field{padding-left:13px}.batch-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:9px}
+    .loading{display:none;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin-top:12px}.loading.show{display:flex}.spinner{width:15px;height:15px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    .output-panel{min-height:210px}.output-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}.panel-title{font-size:13px;font-weight:500}.output-actions{display:flex;gap:7px;margin-top:12px;justify-content:flex-end}.output-empty{min-height:160px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:13px}.raw-output{white-space:pre-wrap;overflow:auto;max-height:520px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:15px;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace}.ai-output{font-size:14px;line-height:1.7}.ai-output h2,.ai-output h3{font-size:17px;margin:0 0 8px;font-weight:700}.ai-output p{margin:0 0 12px}.ai-output strong{font-weight:700}.ai-output ul{padding-left:20px;margin:0 0 13px}.file-actions{display:flex;gap:8px;margin-top:12px}.recent{margin-top:16px}.recent-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}.recent-list{display:flex;flex-direction:column;gap:7px}.recent-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--border);border-radius:11px;background:var(--surface)}.recent-meta{min-width:0}.recent-meta strong{font-size:12px;font-weight:500}.recent-meta span{display:block;margin-top:4px;color:var(--muted);font-size:11px}.small-btn{height:32px;padding:0 10px;font-size:11px}.no-data{color:var(--muted);font-size:12px;padding:18px 4px}
+    .page-head{margin:20px 0 22px}.page-head h1{font-size:24px;font-weight:500;margin:0 0 6px}.page-head p{font-size:13px;color:var(--muted);margin:0}.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.stat-card{padding:18px;border:1px solid var(--border);background:var(--surface);border-radius:14px}.stat-label{font-size:12px;color:var(--muted)}.stat-value{font-size:24px;margin-top:9px}.stat-note{font-size:11px;color:var(--muted);margin-top:5px}.referral-card{margin-top:14px}.referral-line{display:flex;gap:8px}.referral-line .field{flex:1}.claim-row{display:flex;align-items:center;justify-content:space-between;margin-top:11px;color:var(--muted);font-size:11px}.cost-table{width:100%;border-collapse:collapse;font-size:12px}.cost-table th,.cost-table td{text-align:left;padding:10px 6px;border-bottom:1px solid var(--border)}.cost-table th{color:var(--muted);font-weight:400}.cost-table td:last-child{text-align:right}.log-list{display:flex;flex-direction:column}.log-row{display:grid;grid-template-columns:1.2fr .5fr 1fr;gap:10px;padding:13px 0;border-bottom:1px solid var(--border);font-size:12px}.log-row span:nth-child(2){text-align:center}.muted{color:var(--muted)}.key-display{display:flex;gap:8px}.key-display .field{font-family:ui-monospace,SFMono-Regular,monospace}.key-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}.code-stack{display:flex;flex-direction:column;gap:10px}.code-example{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface2)}.code-label{display:flex;justify-content:space-between;padding:9px 11px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted)}.code-example pre{margin:0;padding:13px;overflow:auto;font:11px/1.6 ui-monospace,SFMono-Regular,monospace}.support-form{display:flex;flex-direction:column;gap:11px}.support-form label{font-size:11px;color:var(--muted)}.support-form .field,.support-form .textarea{margin-top:5px}.support-actions{display:flex;justify-content:flex-end;margin-top:3px}.toast{position:fixed;z-index:100;bottom:24px;left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--text);color:var(--bg);border-radius:10px;padding:10px 13px;font-size:12px;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:800px){.control-grid{grid-template-columns:1fr 1fr}.url-wrap{grid-column:1/-1}.control-grid .btn{width:100%}.main{padding-left:15px;padding-right:15px}.top-user span:last-child{display:none}.brand{width:94px}.brand-logo{width:94px}.hero-logo{width:155px}.hero h1{font-size:23px}.log-row{grid-template-columns:1fr .5fr}.log-row span:last-child{grid-column:1/-1}}
+    @media(max-width:520px){.topbar{padding:0 13px}.token-pill{display:none}.control-grid{grid-template-columns:1fr}.url-wrap{grid-column:auto}.stat-grid{grid-template-columns:1fr}.file-actions,.support-actions{flex-direction:column}.btn{width:100%}.output-actions{flex-wrap:wrap}.sidebar{width:min(310px,88vw)}}
+  `;
+
+  function injectStyles() {
+    const style = document.createElement('style');
+    style.id = 'reclaire-runtime-styles';
+    style.textContent = baseStyles;
+    document.head.appendChild(style);
+    let favicon = document.querySelector('link[rel="icon"]');
+    if (!favicon) { favicon = document.createElement('link'); favicon.rel = 'icon'; document.head.appendChild(favicon); }
+    favicon.href = 'favicon.png';
+    document.title = 'ReClaire — Playground';
+  }
+
+  function openSidebar() { document.getElementById('sidebar').setAttribute('data-open','true'); document.getElementById('scrim').classList.add('open'); }
+  function closeSidebar() { document.getElementById('sidebar').setAttribute('data-open','false'); document.getElementById('scrim').classList.remove('open'); }
+  function toast(message) { const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2400); }
+
+  async function api(path, options = {}) {
+    if (!session?.api_key) throw new Error('Your API key is not available in this session. Regenerate it from API keys.');
+    const headers = {'Content-Type':'application/json','X-API-Key':session.api_key,...(options.headers||{})};
+    const res = await fetch(`${apiBase.replace(/\/$/,'')}${path}`, {...options,headers});
+    let data = null;
+    try { data = await res.json(); } catch {}
+    if (!res.ok) throw new Error(data?.detail || data?.message || `Request failed (${res.status})`);
+    return data;
+  }
+
+  function setTokens(value) {
+    const text = value == null ? '—' : String(value);
+    ['topTokens','sideTokens'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=text; });
+    if (session) { session.tokens_remaining = value; localStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
+  }
+
+  async function refreshMe() {
+    try { const data=await api('/auth/me'); setTokens(data.tokens_remaining); } catch (e) { console.warn(e); }
+  }
+
+  function startLoading() {
+    const box=document.getElementById('loading'); if(!box) return;
+    const messages=['Processing URL...','extracting...','Almost done...','Just a second...','Perfecting...']; let i=0;
+    box.querySelector('.loading-text').textContent=messages[i];
+    clearInterval(loadingTimer); loadingTimer=setInterval(()=>{i=(i+1)%messages.length; box.querySelector('.loading-text').textContent=messages[i]},3000);
+    box.classList.add('show');
+  }
+  function stopLoading(){clearInterval(loadingTimer);const box=document.getElementById('loading');if(box)box.classList.remove('show')}
+
+  function renderMarkdownish(text) {
+    const source=String(text||'').trim();
+    if(!source) return '<div class="output-empty">No response content returned.</div>';
+    const lines=source.split(/\r?\n/); let html=''; let listOpen=false;
+    const closeList=()=>{if(listOpen){html+='</ul>';listOpen=false}};
+    for(const raw of lines){const line=raw.trim(); if(!line){closeList();continue}
+      const h=line.replace(/^#{1,3}\s+/,'');
+      if(/^#{1,3}\s+/.test(line)){closeList();html+=`<h2>${esc(h)}</h2>`;continue}
+      if(/^[-*]\s+/.test(line)){if(!listOpen){html+='<ul>';listOpen=true}html+=`<li>${inlineFormat(line.replace(/^[-*]\s+/,''))}</li>`;continue}
+      closeList(); html+=`<p>${inlineFormat(line)}</p>`;
+    } closeList(); return html;
+  }
+  function inlineFormat(s){
+    let out=esc(s); out=out.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>'); out=out.replace(/`(.+?)`/g,'<strong>$1</strong>'); return out;
+  }
+
+  function filenameFor(format,url){
+    let host='output'; try{host=new URL(url).hostname.replace(/^www\./,'').replace(/[^a-z0-9.-]/gi,'_')}catch{}
+    return `${host || 'reclaire'}-${format === 'raw_html' ? 'raw.html' : format === 'html' ? 'html' : format === 'json' ? 'json' : 'md'}`;
+  }
+  function downloadText(content, filename, mime='text/plain'){const blob=new Blob([content],{type:mime});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+  function downloadJson(obj,filename){downloadText(JSON.stringify(obj,null,2),filename,'application/json')}
+
+  function renderPlayground(mode='scrape') {
+    currentView='playground';
+    document.getElementById('main').innerHTML=`
+      <section class="hero"><div class="hero-logo"></div><h1 id="heroPhrase">What's for today?</h1><p class="hero-sub">Turn URLs into clean, usable data.</p></section>
+      <section class="panel">
+        <div class="control-grid">
+          <select class="select" id="modeSelect" aria-label="Mode">
+            <option value="scrape" ${mode==='scrape'?'selected':''}>Scrape</option><option value="crawl" ${mode==='crawl'?'selected':''}>Crawl</option><option value="map" ${mode==='map'?'selected':''}>Map</option>
+          </select>
+          <select class="select" id="formatSelect" aria-label="Format"></select>
+          <div class="url-wrap"><span class="url-prefix">https://</span><input class="field" id="urlInput" placeholder="example.com" autocomplete="off" /></div>
+          <button class="btn primary" id="runBtn">${icon('arrow',16)}<span>Run</span></button>
+          <button class="btn" id="batchBtn">${icon('plus',16)}<span>Batch</span></button>
         </div>
+        <div id="extraFields"></div>
+        <div class="batch-panel" id="batchPanel"></div>
+        <div class="loading" id="loading"><span class="spinner"></span><span class="loading-text">Processing URL...</span></div>
+      </section>
+      <section class="panel output-panel"><div class="output-head"><div class="panel-title">Output</div></div><div id="output"><div class="output-empty">Run an operation to see the result here.</div></div><div class="output-actions" id="outputActions"></div></section>
+      <section class="recent"><div class="recent-head"><div class="panel-title">Recent tasks</div><button class="btn small-btn" id="clearRecent">Clear</button></div><div class="recent-list" id="recentList"></div></section>`;
 
-        <!-- Right: Recent Extractions -->
-        <div class="w-full xl:w-5/12">
-          <div class="bg-surface border border-border rounded-2xl p-5 shadow-soft dark:shadow-soft-dark h-[500px] flex flex-col">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-muted mb-4">Recent Extractions</h2>
-            
-            <div id="recentList" class="flex-1 overflow-y-auto space-y-2 pr-1">
-              <!-- Empty State -->
-              <div id="recentEmpty" class="h-full flex flex-col items-center justify-center text-center text-muted">
-                <svg class="w-8 h-8 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <p class="text-sm">No recent activity found.</p>
-              </div>
-              <!-- Items injected via JS -->
-            </div>
-          </div>
-        </div>
+    const modeSelect=document.getElementById('modeSelect');
+    const formatSelect=document.getElementById('formatSelect');
+    const batchBtn=document.getElementById('batchBtn');
+    const urlInput=document.getElementById('urlInput');
+    const placeholders=['example.com','docs.example.com','news.example.com/article','example.com/pricing','example.com/about'];
+    let ph=0,pos=0,deleting=false;
+    clearInterval(renderPlayground.phTimer); renderPlayground.phTimer=setInterval(()=>{if(!urlInput||document.activeElement===urlInput)return;const value=placeholders[ph];if(!deleting){pos++;urlInput.placeholder=value.slice(0,pos);if(pos>=value.length){deleting=true;setTimeout(()=>{},700)}}else{pos--;urlInput.placeholder=value.slice(0,pos);if(pos<=0){deleting=false;ph=(ph+1)%placeholders.length}}},100);
 
-      </div>
-    </div>
-  </main>
-
-  <script>
-    // --- 1. CONFIG & SESSION MANAGEMENT ---
-    const API_BASE = "https://reclaire-api.onrender.com"; 
-    const SESSION_KEY = 'rc_session';
-    
-    let session = null;
-    let selectedMode = 'scrape';
-    let recentExtractions = JSON.parse(localStorage.getItem('rc_recent') || '[]');
-
-    function initSession() {
-      try { session = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch(e) {}
-      if (session && session.user) {
-        const username = session.user.username || session.user.email?.split('@')[0] || 'User';
-        document.getElementById('topUsername').textContent = username;
-        document.getElementById('userInitial').textContent = username.charAt(0).toUpperCase();
-        if(session.tokens_remaining !== undefined) {
-          document.getElementById('navTokens').textContent = session.tokens_remaining;
-        }
-      }
+    function setFormats(){
+      const formats=[['markdown','Markdown'],['html','HTML'],['raw_html','Raw HTML'],['summary','Summary'],['questions','Q&A'],['json','Structured JSON']];
+      formatSelect.innerHTML=formats.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+      formatSelect.parentElement.style.display=modeSelect.value==='map'?'none':'';
+      if(modeSelect.value==='crawl') formatSelect.value='markdown';
+      renderExtra();
+      batchBtn.style.display=modeSelect.value==='scrape'?'inline-flex':'none';
     }
+    function renderExtra(){
+      const format=formatSelect.value;
+      document.getElementById('extraFields').innerHTML = modeSelect.value!=='scrape' ? '' : format==='questions' ? `<div class="extra-field"><input class="field" id="questionInput" placeholder="Ask a question about this page..." /></div>` : format==='json' ? `<div class="extra-field"><textarea class="textarea schema-area" id="schemaInput" placeholder='{"type":"object","properties":{"title":{"type":"string"}}}'></textarea></div>` : '';
+    }
+    modeSelect.addEventListener('change',()=>{setFormats(); if(modeSelect.value!=='scrape'){document.getElementById('batchPanel').classList.remove('show')}});
+    formatSelect.addEventListener('change',renderExtra);
+    batchBtn.addEventListener('click',toggleBatch);
+    document.getElementById('runBtn').addEventListener('click',runCurrent);
+    document.getElementById('clearRecent').addEventListener('click',()=>{recentTasks=[];saveTasks();renderRecent()});
+    setFormats(); renderRecent(); updatePlaygroundActive(mode); startHeroCycle();
+  }
 
-    // --- 2. THEME & UTILS ---
-    const themeToggle = document.getElementById('themeToggle');
-    const html = document.documentElement;
-    themeToggle.addEventListener('click', () => {
-      html.classList.toggle('dark');
-      localStorage.setItem('reclaire_theme', html.classList.contains('dark') ? 'dark' : 'light');
+  function updatePlaygroundActive(mode){
+    document.querySelectorAll('.nav-btn[data-view="playground"]').forEach(b=>{
+      const buttonMode=b.dataset.mode || 'scrape';
+      b.classList.toggle('active', buttonMode===mode);
     });
-    if(localStorage.getItem('reclaire_theme') === 'light') html.classList.remove('dark');
+  }
 
-    function showToast(msg, isError = false) {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = `p-3 px-4 rounded-xl text-sm font-medium shadow-lg border fade-in flex items-center gap-2 ${isError ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:border-red-800/50 dark:text-red-400' : 'bg-surface text-text border-border'}`;
-      toast.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isError ? 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' : 'M5 13l4 4L19 7'}"/></svg> ${msg}`;
-      container.appendChild(toast);
-      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 4000);
-    }
+  function toggleBatch(){
+    const panel=document.getElementById('batchPanel'); if(panel.classList.contains('show')){panel.classList.remove('show');return}
+    panel.classList.add('show'); panel.innerHTML=`<div class="batch-title">Batch scrape · 5 URLs maximum <span class="muted">ZIP export is Markdown.</span></div>${Array.from({length:5},(_,i)=>`<div class="batch-row"><span>${i+1}</span><div class="url-wrap"><span class="url-prefix">https://</span><input class="field batch-url" placeholder="example.com" data-index="${i}" /></div></div>`).join('')}<div class="batch-actions"><button class="btn small-btn" id="cancelBatch">Cancel</button><button class="btn primary small-btn" id="runBatch">Run batch</button><button class="btn small-btn" id="downloadBatch" disabled>${icon('download',14)}Download .zip</button></div>`;
+    document.getElementById('cancelBatch').onclick=()=>panel.classList.remove('show');
+    document.getElementById('runBatch').onclick=runBatch;
+    document.getElementById('downloadBatch').onclick=downloadBatch;
+  }
 
-    // --- 3. UI BEHAVIORS ---
-
-    // Sidebar Toggle Logic
-    const sidebar = document.getElementById('sidebar');
-    const sidebarOverlay = document.getElementById('sidebarOverlay');
-    const openSidebarBtn = document.getElementById('openSidebarBtn');
-    const closeSidebarBtn = document.getElementById('closeSidebarBtn');
-
-    function toggleSidebar(forceOpen) {
-      const isOpen = !sidebar.classList.contains('-translate-x-full');
-      const newState = forceOpen !== undefined ? forceOpen : !isOpen;
-      
-      if (newState) {
-        sidebar.classList.remove('-translate-x-full');
-        sidebarOverlay.classList.remove('hidden');
-      } else {
-        sidebar.classList.add('-translate-x-full');
-        sidebarOverlay.classList.add('hidden');
+  async function runCurrent(){
+    if(isBusy)return; const mode=document.getElementById('modeSelect').value; const format=document.getElementById('formatSelect').value; const raw=document.getElementById('urlInput').value.trim();
+    if(!raw){toast('Enter a URL first.');return}
+    isBusy=true; startLoading();
+    try{
+      let data;
+      if(mode==='scrape'){
+        const body={url:raw,formats:[format],use_js_fallback:true,only_main_content:true};
+        if(format==='questions'){const q=document.getElementById('questionInput')?.value.trim();if(!q)throw new Error('Enter a question for Q&A.');body.user_question=q}
+        if(format==='json'){const rawSchema=document.getElementById('schemaInput')?.value.trim();if(!rawSchema)throw new Error('Enter a JSON schema.');try{body.json_schema=JSON.parse(rawSchema)}catch{throw new Error('JSON schema is not valid JSON.')}}
+        data=await api('/v1/scrape',{method:'POST',body:JSON.stringify(body)});
+      }else if(mode==='map'){
+        data=await api('/v1/map',{method:'POST',body:JSON.stringify({url:raw,limit:100,include_subdomains:false})});
+      }else{
+        data=await api('/v1/crawl',{method:'POST',body:JSON.stringify({url:raw,limit:5,scrape_options:{url:raw,formats:['markdown'],use_js_fallback:true,only_main_content:true}})});
       }
+      setTokens(data.tokens_remaining); renderResult(data,mode,format,raw);
+      addTask({mode,format:mode==='map'?'links':format,url:raw,timestamp:new Date().toISOString(),data}); renderRecent();
+    }catch(e){showError(e.message)}finally{stopLoading();isBusy=false}
+  }
+
+  async function runBatch(){
+    if(isBusy)return; const urls=[...document.querySelectorAll('.batch-url')].map(x=>x.value.trim()).filter(Boolean); if(!urls.length){toast('Add at least one URL.');return}
+    const format=document.getElementById('formatSelect').value; if(format==='questions'){toast('Q&A is not supported for batch scraping.');return}
+    isBusy=true; startLoading(); batchDownloadReady=false;
+    try{
+      const data=await api('/v1/batch-scrape',{method:'POST',body:JSON.stringify({urls,formats:[format],use_js_fallback:true,only_main_content:true})});
+      batchId=data.batch_id; setTokens(data.tokens_remaining); renderBatchResult(data,format); document.getElementById('downloadBatch').disabled=false; batchDownloadReady=true;
+      addTask({mode:'batch',format,url:`${data.completed}/${data.total} completed`,timestamp:new Date().toISOString(),data});renderRecent();
+    }catch(e){showError(e.message)}finally{stopLoading();isBusy=false}
+  }
+  async function downloadBatch(){if(!batchId||!batchDownloadReady)return;try{const res=await fetch(`${apiBase}/v1/batch-scrape/${batchId}/download`,{headers:{'X-API-Key':session.api_key}});if(!res.ok){let d={};try{d=await res.json()}catch{}throw new Error(d.detail||`Download failed (${res.status})`)}const blob=await res.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`reclaire-batch-${batchId.slice(0,8)}.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}catch(e){toast(e.message)}}
+
+  function renderResult(data,mode,format,url){
+    const out=document.getElementById('output'), actions=document.getElementById('outputActions'); actions.innerHTML='';
+    let content='', raw=false, filename=filenameFor(format,url), mime='text/plain';
+    if(mode==='map'){content=data.links||[];raw=true;filename=filenameFor('json',url);mime='application/json';}
+    else if(mode==='crawl'){content=(data.data||[]).map(r=>`URL: ${r.url}\nStatus: ${r.status}\n${r.markdown||r.error||''}`).join('\n\n');raw=true;filename=filenameFor('markdown',url);}
+    else if(format==='summary'){content=data.summary||''}
+    else if(format==='questions'){content=data.answer||''}
+    else if(format==='json'){content=data.json;raw=true;filename=filenameFor('json',url);mime='application/json'}
+    else if(format==='markdown' || format==='html' || format==='raw_html'){
+      const backendKey=format==='markdown'?'markdown':format;
+      if (data[backendKey] !== undefined && data[backendKey] !== null) content = data[backendKey]; else {content=`The backend completed the scrape, but /v1/scrape currently does not return the ${format} payload.\n\nURL: ${data.url||url}\nTokens deducted: ${data.tokens_deducted ?? '—'}`;raw=true}
     }
-    openSidebarBtn.addEventListener('click', () => toggleSidebar(true));
-    closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
-    sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+    if(typeof content==='object')content=JSON.stringify(content,null,2);
+    if(raw) out.innerHTML=`<pre class="raw-output">${esc(content)}</pre>`; else out.innerHTML=`<div class="ai-output">${renderMarkdownish(content)}</div>`;
+    const copy=document.createElement('button');copy.className='btn small-btn';copy.innerHTML=icon('copy',14)+'<span>Copy</span>';copy.onclick=()=>copyText(String(typeof content==='object'?JSON.stringify(content,null,2):content),copy);
+    actions.appendChild(copy);
+    const dl=document.createElement('button');dl.className='btn small-btn';dl.innerHTML=icon('download',14)+'<span>Download</span>';dl.onclick=()=>downloadText(String(content),filename,mime);actions.appendChild(dl);
+  }
+  function renderBatchResult(data,format){const out=document.getElementById('output');out.innerHTML='<div class="output-empty">Batch finished. Use Download .zip in the batch panel.</div>';document.getElementById('outputActions').innerHTML=''}
+  function showError(message){document.getElementById('output').innerHTML=`<div class="ai-output"><h2>Something went wrong</h2><p>${esc(message)}</p></div>`;document.getElementById('outputActions').innerHTML='';toast(message)}
+  async function copyText(text,button){try{await navigator.clipboard.writeText(text);button.innerHTML=icon('check',14)+'<span>Copied</span>';setTimeout(()=>button.innerHTML=icon('copy',14)+'<span>Copy</span>',1800)}catch{toast('Copy is unavailable in this browser.')}}
 
-    // View Switching Logic (Nav)
-    const navLinks = document.querySelectorAll('.nav-link');
-    const viewSections = document.querySelectorAll('.view-section');
-    const headerTitle = document.getElementById('headerTitle');
+  function renderRecent(){const list=document.getElementById('recentList');if(!list)return;if(!recentTasks.length){list.innerHTML='<div class="no-data">No recent tasks yet.</div>';return}list.innerHTML=recentTasks.map(t=>`<div class="recent-item"><div class="recent-meta"><strong>${esc(t.mode)} · ${esc(t.format)}</strong><span>${esc(t.url)} · ${esc(formatTime(t.timestamp))}</span></div><button class="btn small-btn" data-task="${esc(t.id)}">Load</button></div>`).join('');list.querySelectorAll('[data-task]').forEach(b=>b.onclick=()=>loadTask(b.dataset.task))}
+  function loadTask(id){const task=recentTasks.find(t=>t.id===id);if(!task)return;selectedTaskId=id;const mode=task.mode==='batch'?'scrape':task.mode;document.getElementById('modeSelect').value=mode;const fs=document.getElementById('formatSelect');if(fs)fs.value=task.mode==='map'?'markdown':task.format;document.getElementById('urlInput').value=task.url.startsWith('http')?task.url.replace(/^https?:\/\//,''):task.url;updatePlaygroundActive(mode);if(task.mode==='batch'){renderBatchResult(task.data,task.format)}else{renderResult(task.data,task.mode,task.mode==='map'?'markdown':task.format,task.url)}toast('Recent task loaded.')}
 
-    navLinks.forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const targetView = link.getAttribute('data-view');
-        
-        // Update Nav UI
-        navLinks.forEach(l => {
-          l.classList.remove('bg-accent-soft', 'text-accent');
-          l.classList.add('text-muted');
-        });
-        link.classList.remove('text-muted');
-        link.classList.add('bg-accent-soft', 'text-accent');
-        
-        // Update Title
-        headerTitle.textContent = link.textContent.trim();
+  function startHeroCycle(){const phrases=["What's for today?","Let's mark it down","Need a summary?","Let's map it out","From URL to LLM ready markdown"];let i=0;clearInterval(phraseTimer);phraseTimer=setInterval(()=>{const h=document.getElementById('heroPhrase');if(!h)return;h.style.opacity='0';setTimeout(()=>{i=(i+1)%phrases.length;h.textContent=phrases[i];h.style.opacity='1'},220)},60000)}
 
-        // Switch Views
-        viewSections.forEach(v => v.classList.add('hidden'));
-        const activeView = document.getElementById(`view-${targetView}`);
-        if(activeView) activeView.classList.remove('hidden');
+  async function renderActivity(){document.getElementById('main').innerHTML='<div class="page-head"><h1>Activity logs</h1><p>Recent API operations recorded for your account.</p></div><section class="panel"><div id="activityContent"><div class="no-data">Loading…</div></div></section>';try{const d=await api('/v1/usage');setTokens(d.tokens_remaining);const logs=d.logs||[];document.getElementById('activityContent').innerHTML=logs.length?`<div class="log-list">${logs.map(l=>`<div class="log-row"><span>${esc(l.endpoint)}</span><span>${esc(l.tokens_deducted)} tokens</span><span class="muted">${esc(formatTime(l.created_at))}</span></div>`).join('')}</div>`:'<div class="no-data">No activity yet.</div>'}catch(e){showPageError('activityContent',e.message)}}
 
-        // Close sidebar on mobile after clicking
-        if (window.innerWidth < 1024) toggleSidebar(false);
-      });
-    });
+  async function renderUsage(){
+    document.getElementById('main').innerHTML=`<div class="page-head"><h1>Usage</h1><p>Tokens, account activity and referral rewards.</p></div><div class="stat-grid"><div class="stat-card"><div class="stat-label">Available tokens</div><div class="stat-value" id="usageTokens">—</div></div><div class="stat-card"><div class="stat-label">Next refill</div><div class="stat-value" id="refillDate">—</div><div class="stat-note">30 days from sign-up</div></div><div class="stat-card"><div class="stat-label">Operations logged</div><div class="stat-value" id="opCount">—</div><div class="stat-note">Latest 100 logs available from backend</div></div><div class="stat-card"><div class="stat-label">Priority points</div><div class="stat-value">0</div><div class="stat-note">Not implemented yet</div></div></div><section class="panel referral-card"><div class="panel-title">Referral reward</div><p class="muted" style="font-size:12px;line-height:1.5">Invite 5 users with your link to unlock 100 tokens.</p><div class="referral-line"><input class="field" id="refLink" readonly value="Loading…"><button class="btn" id="copyRef">${icon('copy',14)}Copy</button></div><div class="claim-row"><span id="refStatus">Checking referrals…</span><button class="btn small-btn" id="claimRef">Claim 100 tokens</button></div></section><section class="panel"><div class="panel-title" style="margin-bottom:8px">Token costs</div><table class="cost-table"><thead><tr><th>Operation / format</th><th>Cost</th></tr></thead><tbody><tr><td>Scrape — Markdown</td><td>1 token</td></tr><tr><td>Scrape — HTML</td><td>2 tokens</td></tr><tr><td>Scrape — Raw HTML</td><td>2 tokens</td></tr><tr><td>Scrape — Summary</td><td>4 tokens</td></tr><tr><td>Scrape — Q&amp;A</td><td>4 tokens</td></tr><tr><td>Scrape — Structured JSON</td><td>3 tokens</td></tr><tr><td>Playwright fallback</td><td>+2 tokens</td></tr><tr><td>Map</td><td>1 token</td></tr><tr><td>Crawl</td><td>1 token / successful page</td></tr><tr><td>Batch scrape</td><td>same scrape cost / successful URL</td></tr><tr><td>Batch summary / Q&amp;A</td><td>3 tokens</td></tr></tbody></table></section>`;
+    try{
+      const [u,r]=await Promise.all([api('/v1/usage'),api('/v1/referrals/status')]);
+      setTokens(u.tokens_remaining);document.getElementById('usageTokens').textContent=u.tokens_remaining;document.getElementById('opCount').textContent=(u.logs||[]).length;document.getElementById('refLink').value=r.referral_link||'—';document.getElementById('refStatus').textContent=r.claimed?'Reward already claimed.':`${r.referral_count}/${r.referrals_required} referrals`;document.getElementById('claimRef').disabled=!r.can_claim;document.getElementById('copyRef').onclick=()=>copyText(r.referral_link||'',document.getElementById('copyRef'));document.getElementById('claimRef').onclick=claimReferral;
+      const sessionInfo=await sb.auth.getSession();const created=sessionInfo?.data?.session?.user?.created_at||currentUser().created_at;if(created){const d=new Date(created);d.setDate(d.getDate()+30);document.getElementById('refillDate').textContent=d.toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'})}else document.getElementById('refillDate').textContent='Unavailable';
+    }catch(e){showPageError('refStatus',e.message)}
+  }
+  async function claimReferral(){try{const d=await api('/v1/referrals/claim');setTokens(d.tokens_remaining);toast('100 tokens added.');renderUsage()}catch(e){toast(e.message)}}
 
-    // URL Placeholder Animation (Domain only)
-    const urlInput = document.getElementById('urlInput');
-    const urlPlaceholder = document.getElementById('urlPlaceholder');
-    const examples = ['news.ycombinator.com', 'en.wikipedia.org/wiki/API', 'github.com/trending'];
-    let exIdx = 0, charIdx = 0, isDeleting = false;
+  async function renderKeys(){document.getElementById('main').innerHTML=`<div class="page-head"><h1>API keys</h1><p>Use your ReClaire key to connect your applications to the backend.</p></div><section class="panel"><div class="panel-title">API key</div><div class="key-display" style="margin-top:10px"><input class="field" id="keyDisplay" readonly value="${esc(maskedKey(session.api_key))}"><button class="btn" id="copyKey">${icon('copy',14)}Copy key</button></div><div class="key-note">The full key is only available when ReClaire returns it at creation or regeneration. Keep it private.</div><div style="margin-top:10px"><button class="btn" id="regenKey">${icon('refresh',14)}Regenerate key</button></div></section><section class="panel"><div class="panel-title">Backend connection</div><div class="key-display" style="margin-top:10px"><input class="field" id="backendUrl" value="${esc(apiBase)}"><button class="btn" id="saveBackend">Save</button></div></section><section class="panel"><div class="panel-title" style="margin-bottom:11px">API usage & examples</div><div class="code-stack" id="codeExamples"></div></section>`;
+    document.getElementById('copyKey').onclick=()=>session.api_key?copyText(session.api_key,document.getElementById('copyKey')):toast('The full key is not stored in this session. Regenerate it to receive a new key.');
+    document.getElementById('saveBackend').onclick=()=>{const v=document.getElementById('backendUrl').value.trim().replace(/\/$/,'');try{new URL(v)}catch{toast('Enter a valid backend URL.');return}apiBase=v;localStorage.setItem('rc_backend_url',v);toast('Backend URL saved.')};
+    document.getElementById('regenKey').onclick=regenerateKey;renderCodeExamples();
+  }
+  function renderCodeExamples(){const key=session.api_key||'YOUR_RECLAIRE_API_KEY';const examples=[['Standard Static Scrape (1 token)',`curl -X POST "${apiBase}/v1/scrape" \\\n  -H "X-API-Key: ${key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "url": "https://example.com",\n    "formats": ["markdown"]\n  }'`],['Dynamic Scrape with Playwright Fallback (3 tokens)',`curl -X POST "${apiBase}/v1/scrape" \\\n  -H "X-API-Key: ${key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "url": "https://example.com",\n    "formats": ["markdown"],\n    "use_js_fallback": true\n  }'`],['Scrape with AI Summary (+3 format tokens)',`curl -X POST "${apiBase}/v1/scrape" \\\n  -H "X-API-Key: ${key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "url": "https://example.com",\n    "formats": ["markdown", "summary"]\n  }'`],['Map Site Links (1 token)',`curl -X POST "${apiBase}/v1/map" \\\n  -H "X-API-Key: ${key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "url": "https://example.com"\n  }'`],['Crawl Entire Site (1 token per successful page)',`curl -X POST "${apiBase}/v1/crawl" \\\n  -H "X-API-Key: ${key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "url": "https://example.com",\n    "limit": 5\n  }'`]];document.getElementById('codeExamples').innerHTML=examples.map(([label,code])=>`<div class="code-example"><div class="code-label"><span>${esc(label)}</span><button class="icon-btn" style="width:30px;height:30px" data-copy-code="${encodeURIComponent(code)}">${icon('copy',14)}</button></div><pre>${esc(code)}</pre></div>`).join('');document.querySelectorAll('[data-copy-code]').forEach(b=>b.onclick=()=>copyText(decodeURIComponent(b.dataset.copyCode),b))}
+  async function regenerateKey(){if(!confirm('Regenerate your API key? The current key will be revoked.'))return;try{const d=await api('/auth/api-key/regenerate',{method:'POST',body:'{}'});if(d.api_key){session.api_key=d.api_key;session.user=d.user?.username?{...session.user,username:d.user.username}:session.user;session.tokens_remaining=d.tokens_remaining;localStorage.setItem(SESSION_KEY,JSON.stringify(session));toast('New API key created.');renderKeys()}}catch(e){toast(e.message)}}
 
-    function typeEffect() {
-      if(urlInput.value.length > 0) {
-        urlPlaceholder.style.opacity = '0';
-        setTimeout(typeEffect, 500);
-        return;
-      }
-      urlPlaceholder.style.opacity = '1';
-      
-      const current = examples[exIdx];
-      urlPlaceholder.innerHTML = current.substring(0, charIdx) + '<span class="typing-cursor"></span>';
-      
-      if (!isDeleting && charIdx < current.length) { charIdx++; setTimeout(typeEffect, 60); }
-      else if (isDeleting && charIdx > 0) { charIdx--; setTimeout(typeEffect, 30); }
-      else {
-        isDeleting = !isDeleting;
-        if (!isDeleting) exIdx = (exIdx + 1) % examples.length;
-        setTimeout(typeEffect, isDeleting ? 1500 : 300);
-      }
-    }
-    typeEffect();
-    urlInput.addEventListener('input', () => { urlPlaceholder.style.opacity = urlInput.value ? '0' : '1'; });
+  function renderSupport(){document.getElementById('main').innerHTML=`<div class="page-head"><h1>Support</h1><p>Send a message to the ReClaire support team.</p></div><section class="panel"><form class="support-form" id="supportForm"><label>Email<input class="field" id="supportEmail" value="${esc(currentUser().email||'')}" readonly></label><label>Subject<input class="field" id="supportSubject" placeholder="How can we help?"></label><label>Message<textarea class="textarea" id="supportMessage" placeholder="Describe the issue or question…"></textarea></label><div class="support-actions"><button class="btn primary" type="submit">Open email</button></div></form><p class="muted" style="font-size:11px;margin:12px 0 0">Support: reclaire.support@gmail.com</p></section>`;document.getElementById('supportForm').onsubmit=e=>{e.preventDefault();const subject=document.getElementById('supportSubject').value.trim();const message=document.getElementById('supportMessage').value.trim();if(!subject||!message){toast('Add a subject and message.');return}window.location.href=`mailto:reclaire.support@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`From: ${currentUser().email||''}\n\n${message}`)}`}}
+  function showPageError(id,msg){const el=document.getElementById(id);if(el)el.textContent=msg}
 
-    // Custom Dropdowns Logic
-    function setupDropdown(triggerId, dropId) {
-      const trigger = document.getElementById(triggerId);
-      const drop = document.getElementById(dropId);
-      trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.querySelectorAll('[id$="Dropdown"]').forEach(d => { if(d.id !== dropId) d.classList.add('hidden'); });
-        drop.classList.toggle('hidden');
-      });
-      document.addEventListener('click', (e) => { if(!drop.contains(e.target)) drop.classList.add('hidden'); });
-    }
-    setupDropdown('modeTrigger', 'modeDropdown');
-    setupDropdown('formatTrigger', 'formatDropdown');
+  async function navigate(view, mode){closeSidebar();currentView=view;document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view && (!mode || b.dataset.mode===mode)));if(view==='playground')renderPlayground(mode||'scrape');else if(view==='activity')await renderActivity();else if(view==='usage')await renderUsage();else if(view==='keys')await renderKeys();else if(view==='support')renderSupport()}
 
-    // Format Logic and Validation
-    const formatCbs = document.querySelectorAll('.format-cb');
-    const qaWrap = document.getElementById('qaWrap');
-    
-    function updateFormatDisplay() {
-      const selected = Array.from(formatCbs).filter(cb => cb.checked).map(cb => cb.value);
-      const display = document.getElementById('formatDisplay');
-      
-      if (selectedMode !== 'scrape') {
-        display.textContent = 'N/A';
-      } else {
-        if(selected.length === 0) display.textContent = 'None';
-        else if (selected.length === 1) display.textContent = selected[0].charAt(0).toUpperCase() + selected[0].slice(1);
-        else display.textContent = `${selected.length} Formats Selected`;
-      }
+  function setTheme(theme){localStorage.setItem(THEME_KEY,theme);const app=document.getElementById('app');app.dataset.theme=theme;const btn=document.getElementById('themeBtn');if(btn)btn.textContent=theme==='dark'?'Dark':'Light';const side=btn?.parentElement?.querySelector('span');if(side)side.innerHTML=`${theme==='dark'?icon('moon',15):icon('sun',15)}<span>Theme</span>`}
+  function setSidebarPosition(pos){localStorage.setItem(SIDEBAR_KEY,pos);document.getElementById('app').dataset.sidebar=pos}
 
-      // Show QA input conditionally only in scrape mode
-      qaWrap.style.display = (selected.includes('questions') && selectedMode === 'scrape') ? 'block' : 'none';
-    }
-    
-    formatCbs.forEach(cb => cb.addEventListener('change', updateFormatDisplay));
+  async function logout(){try{if(session?.api_key)await api('/auth/logout',{method:'POST',body:'{}'})}catch(e){console.warn(e)}try{await sb.auth.signOut()}catch(e){console.warn(e)}localStorage.removeItem(SESSION_KEY);window.location.href=SIGNUP_URL}
 
-    // Mode Select Handle - WITH RESET LOGIC
-    document.querySelectorAll('.mode-option').forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        selectedMode = e.target.dataset.val;
-        document.getElementById('modeDisplay').innerHTML = e.target.innerText;
-        document.getElementById('modeDropdown').classList.add('hidden');
-        
-        // Mode conditional logic to purge/restore formats UI
-        if (selectedMode === 'map' || selectedMode === 'crawl') {
-          document.getElementById('formatContainer').style.display = 'none';
-          document.getElementById('qaWrap').style.display = 'none';
-          
-          // Clear all checked formats
-          formatCbs.forEach(cb => cb.checked = false);
-          document.getElementById('qaInput').value = ''; 
-        } else {
-          document.getElementById('formatContainer').style.display = 'block';
-          // Ensure at least markdown is selected when returning to scrape
-          if (!Array.from(formatCbs).some(cb => cb.checked)) {
-            formatCbs[0].checked = true;
-          }
-        }
-        updateFormatDisplay();
-      });
-    });
+  function bindGlobal(){document.getElementById('menuBtn').onclick=openSidebar;document.getElementById('closeSidebar').onclick=closeSidebar;document.getElementById('scrim').onclick=closeSidebar;document.getElementById('logoutBtn').onclick=logout;document.getElementById('themeBtn').onclick=()=>setTheme(getTheme()==='dark'?'light':'dark');document.getElementById('sidebarPosition').onchange=e=>setSidebarPosition(e.target.value);document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();navigate(el.dataset.view,el.dataset.mode)}));document.getElementById('sidebar').setAttribute('data-open','false')}
 
-    updateFormatDisplay();
+  async function init(){
+    if(!session?.user){window.location.href=SIGNUP_URL;return}
+    injectStyles();document.body.innerHTML=shell();bindGlobal();setTokens(session.tokens_remaining);await refreshMe();renderPlayground('scrape');
+  }
 
-
-    // --- 4. RECENT EXTRACTIONS LOGIC ---
-    const recentList = document.getElementById('recentList');
-    const recentEmpty = document.getElementById('recentEmpty');
-
-    function renderRecent() {
-      if (recentExtractions.length === 0) {
-        recentEmpty.style.display = 'flex';
-        recentList.innerHTML = '';
-        recentList.appendChild(recentEmpty);
-        return;
-      }
-      recentEmpty.style.display = 'none';
-      recentList.innerHTML = '';
-      
-      recentExtractions.forEach((item, index) => {
-        const el = document.createElement('div');
-        el.className = "p-3 border border-border rounded-xl bg-surface hover:bg-surface-hover cursor-pointer transition-colors flex justify-between items-center";
-        el.innerHTML = `
-          <div class="overflow-hidden mr-3">
-            <span class="block text-xs font-bold text-text truncate">${item.url}</span>
-            <span class="block text-[10px] text-muted mt-1 uppercase tracking-wide">${item.mode} • ${item.formats.join(', ')}</span>
-          </div>
-          <div class="text-[10px] font-bold text-accent bg-accent-soft px-2 py-1 rounded-md shrink-0">Open</div>
-        `;
-        el.addEventListener('click', () => {
-           // If on mobile/tablet and recent is clicked, ensure we are on playground view
-           document.querySelector('[data-view="playground"]').click();
-           loadOutputData(item);
-        });
-        recentList.appendChild(el);
-      });
-    }
-    
-    function addRecent(data) {
-      recentExtractions.unshift(data);
-      if(recentExtractions.length > 20) recentExtractions.pop();
-      localStorage.setItem('rc_recent', JSON.stringify(recentExtractions));
-      renderRecent();
-    }
-
-
-    // --- 5. "GET THEN WRITE" & MARKDOWN PARSER LOGIC ---
-    const extractForm = document.getElementById('extractForm');
-    const outputContainer = document.getElementById('outputContainer');
-    const outputLoading = document.getElementById('outputLoading');
-    const outputResult = document.getElementById('outputResult');
-    
-    function parseMarkdown(text) {
-      if (!text) return 'No readable text returned.';
-      // Convert Markdown headers to stylized bold HTML and handle line breaks
-      return text
-        .replace(/^### (.*$)/gim, '<strong class="text-base text-text block mt-5 mb-2">$1</strong>')
-        .replace(/^## (.*$)/gim, '<strong class="text-lg text-text block mt-5 mb-2">$1</strong>')
-        .replace(/^# (.*$)/gim, '<strong class="text-xl text-text block mt-6 mb-2">$1</strong>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-text">$1</strong>')
-        .replace(/\n/g, '<br>');
-    }
-
-    function loadOutputData(data) {
-      outputContainer.classList.remove('hidden');
-      outputLoading.classList.add('hidden');
-      outputResult.classList.remove('hidden');
-      
-      document.getElementById('resUrl').textContent = data.url;
-      document.getElementById('resCost').textContent = data.cost !== undefined ? data.cost : '--';
-      
-      // Aggregate string for parsing
-      let displayStr = '';
-      if(data.markdown) displayStr += `### MARKDOWN ###\n\n${data.markdown}\n\n`;
-      if(data.summary) displayStr += `### SUMMARY ###\n\n${data.summary}\n\n`;
-      if(data.answer) displayStr += `### Q&A ANSWER ###\n\n${data.answer}\n\n`;
-      if(data.links) displayStr += `### MAPPED LINKS (${data.links.length}) ###\n\n${data.links.join('\n')}`;
-      if(data.data) displayStr += JSON.stringify(data.data, null, 2);
-      
-      // Inject parsed HTML
-      document.getElementById('resContent').innerHTML = parseMarkdown(displayStr);
-    }
-
-    extractForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      // Concatenate the protocol since input only holds domain
-      const rawInput = urlInput.value.replace(/^https?:\/\//, '');
-      const targetUrl = 'https://' + rawInput; 
-      
-      const formats = Array.from(formatCbs).filter(cb => cb.checked).map(cb => cb.value);
-      const question = document.getElementById('qaInput').value;
-
-      if(selectedMode === 'scrape' && formats.length === 0) {
-        showToast('Please select at least one format.', true); return;
-      }
-
-      // UI: Loading State
-      outputContainer.classList.remove('hidden');
-      outputLoading.classList.remove('hidden');
-      outputResult.classList.add('hidden');
-      
-      let endpoint = `/v1/${selectedMode}`;
-      let payload = { url: targetUrl };
-      
-      if (selectedMode === 'scrape') {
-        payload.formats = formats;
-        if(formats.includes('questions')) payload.user_question = question;
-      } else if (selectedMode === 'map' || selectedMode === 'crawl') {
-        payload.limit = 5; 
-      }
-
-      const apiKey = session?.api_key || localStorage.getItem('rc_temp_key');
-
-      try {
-        const res = await fetch(`${API_BASE}${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(apiKey ? { 'X-API-Key': apiKey } : {})
-          },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'API request failed');
-        
-        showToast('Extraction successful');
-        if(data.tokens_remaining !== undefined) {
-          document.getElementById('navTokens').textContent = data.tokens_remaining;
-          if(session) { session.tokens_remaining = data.tokens_remaining; localStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
-        }
-
-        const resultObj = {
-          url: data.url || targetUrl,
-          mode: selectedMode,
-          formats: selectedMode === 'scrape' ? formats : [selectedMode],
-          cost: data.tokens_deducted,
-          markdown: data.markdown,
-          summary: data.summary,
-          answer: data.answer,
-          links: data.links,
-          data: data.data
-        };
-
-        addRecent(resultObj);
-        loadOutputData(resultObj);
-
-      } catch (err) {
-        outputContainer.classList.add('hidden');
-        showToast(err.message, true);
-      }
-    });
-
-    // Boot
-    initSession();
-    renderRecent();
-
-  </script>
-</body>
-</html>
+  init();
+})();
