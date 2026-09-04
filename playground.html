@@ -1,1024 +1,924 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ReClaire — Interactive API Playground</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f7f7f5">
+<title>ReClaire — Web Intelligence Playground</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root {
-    --bg: #F7F7F5;
-    --surface: #FFFFFF;
-    --surface2: #F0F0ED;
-    --surface3: #E6E6E1;
-    --text: #0B0B0B;
-    --text-muted: #707070;
-    --border: #DEDED8;
-    --border-hover: #BDBD35;
-    --accent: #111111;
-    --accent-soft: rgba(17, 17, 17, 0.06);
-    --gold: #8B6A22;
-    --gold-soft: #F4ECD7;
-    --success: #16703B;
-    --danger: #B3261E;
-    --radius: 12px;
-    --shadow: 0 12px 32px rgba(0,0,0,0.06);
-    --mono: ui-monospace, 'SFMono-Regular', 'Roboto Mono', Menlo, Consolas, monospace;
-  }
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface2: #f0f0ed;
+  --surface3: #e6e6e1;
+  --text: #0b0b0b;
+  --text2: #303030;
+  --muted: #707070;
+  --border: #deded8;
+  --border2: #bdbdb5;
+  --accent: #111111;
+  --accentSoft: #ecece8;
+  --gold: #8b6a22;
+  --goldSoft: #f4ecd7;
+  --success: #16703b;
+  --danger: #b3261e;
+  --shadow: 0 18px 55px rgba(0,0,0,.08);
+  --topbar: 66px;
+  --sidebar: 270px;
+  --radius: 16px;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
 
-  [data-theme="dark"] {
-    --bg: #0B0B0B;
-    --surface: #141414;
-    --surface2: #1B1B1B;
-    --surface3: #242424;
-    --text: #FFFFFF;
-    --text-muted: #9B9B9B;
-    --border: #303030;
-    --border-hover: #494949;
-    --accent: #EFD09E;
-    --accent-soft: rgba(239, 208, 158, 0.12);
-    --gold: #EFD09E;
-    --gold-soft: rgba(239, 208, 158, 0.12);
-    --success: #68C892;
-    --danger: #FF8078;
-    --shadow: 0 16px 48px rgba(0,0,0,0.4);
-  }
+[data-theme=dark] {
+  --bg: #0b0b0b;
+  --surface: #141414;
+  --surface2: #1b1b1b;
+  --surface3: #242424;
+  --text: #ffffff;
+  --text2: #dedede;
+  --muted: #9b9b9b;
+  --border: #303030;
+  --border2: #494949;
+  --accent: #EFD09E;
+  --accentSoft: rgba(239,208,158,.12);
+  --gold: #EFD09E;
+  --goldSoft: rgba(239,208,158,.12);
+  --success: #68c892;
+  --danger: #ff8078;
+  --shadow: 0 22px 65px rgba(0,0,0,.35);
+}
 
-  * { box-sizing: border-box; }
+* { box-sizing: border-box; }
+html { height: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.55 'Ubuntu', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
 
-  body {
-    margin: 0;
-    min-height: 100vh;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Ubuntu', -apple-system, BlinkMacSystemFont, sans-serif;
-    display: flex;
-    flex-direction: column;
-  }
+button, input, textarea, select { font: inherit; }
+button { border: 0; color: inherit; cursor: pointer; }
+a { text-decoration: none; color: inherit; }
+svg { display: block; }
+.hidden { display: none !important; }
+.mono { font-family: var(--mono); }
+.muted { color: var(--muted); }
 
-  button, input, textarea, select { font: inherit; }
+/* Buttons & Inputs */
+.btn {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-weight: 750;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+.btn:hover { transform: translateY(-1px); border-color: var(--border2); }
+.btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.btn.ghost { background: transparent; }
+.btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+}
+.icon-btn:hover { background: var(--surface2); }
+.input {
+  width: 100%;
+  height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  outline: 0;
+  padding: 0 13px;
+}
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accentSoft); }
 
-  /* Navbar */
-  .navbar {
-    height: 64px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-  }
+/* App Layout */
+.app-shell { height: 100dvh; display: flex; flex-direction: column; }
+.topbar {
+  height: var(--topbar);
+  flex: 0 0 var(--topbar);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 50;
+}
+.top-left, .top-right { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.brand-title { font-weight: 850; letter-spacing: -.035em; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.token-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface2);
+  font-size: 12px;
+  font-weight: 750;
+}
+.account-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.avatar {
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  background: var(--accentSoft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 850;
+}
 
-  .nav-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 700;
-    font-size: 16px;
-    letter-spacing: -0.02em;
-    text-decoration: none;
-    color: var(--text);
-  }
+.workspace { min-height: 0; flex: 1; display: flex; position: relative; }
+.sidebar {
+  width: var(--sidebar);
+  flex: 0 0 var(--sidebar);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 14px 12px 25px;
+  z-index: 40;
+  transition: transform .22s ease;
+}
+.sidebar.right { border-right: 0; border-left: 1px solid var(--border); order: 3; }
+.nav-group { margin: 12px 0; }
+.nav-title { padding: 0 9px 6px; color: var(--muted); font-size: 9px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.nav-item {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  color: var(--text2);
+  margin: 2px 0;
+  font-weight: 650;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--accentSoft); color: var(--accent); font-weight: 750; }
 
-  .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+.main { min-width: 0; min-height: 0; flex: 1; overflow: hidden; background: var(--bg); position: relative; }
+.page { height: 100%; overflow-y: auto; padding: 32px 32px 70px; scrollbar-gutter: stable; }
+.page-header { margin-bottom: 24px; }
+.page-header h1 { margin: 0; font-size: 26px; letter-spacing: -.04em; }
+.page-header p { margin: 6px 0 0; color: var(--muted); }
 
-  .token-badge {
-    background: var(--gold-soft);
-    color: var(--gold);
-    padding: 6px 12px;
-    border-radius: 99px;
-    font-size: 12px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+/* Playground Specific UI */
+.playground-inner { width: min(900px, 100%); margin: auto; }
+.main-brand { text-align: center; margin-bottom: 28px; }
+.main-brand h1 { font: 600 40px/1 Georgia, serif; letter-spacing: -.05em; margin: 0; }
+.main-brand p { max-width: 650px; margin: 10px auto 0; color: var(--muted); }
 
-  .icon-btn {
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface);
-    color: var(--text);
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    transition: background 0.15s;
-  }
-  .icon-btn:hover { background: var(--surface2); }
+.input-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); }
+.input-row { display: grid; grid-template-columns: 160px 1fr 150px; gap: 8px; align-items: center; }
+.input-row.no-format { grid-template-columns: 160px 1fr; }
+.custom-select, .format-trigger, .url-shell { min-height: 50px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface2); }
+.custom-select, .format-trigger { padding: 0 13px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 750; }
+.url-shell { display: flex; align-items: center; overflow: hidden; }
+.url-prefix { color: var(--muted); font: 11px var(--mono); padding-left: 13px; }
+.url-input { min-width: 0; flex: 1; height: 48px; border: 0; outline: 0; background: transparent; color: var(--text); padding: 0 11px 0 3px; }
+.execute { min-height: 50px; width: 100%; border-radius: 11px; background: var(--accent); color: var(--bg); font-weight: 850; }
+.question-wrap { margin-top: 9px; }
+.question-input { width: 100%; height: 46px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface2); color: var(--text); padding: 0 13px; outline: 0; }
 
-  /* Layout Container */
-  .app-container {
-    max-width: 1100px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 28px 20px 80px;
-    flex: 1;
-  }
+.batch-trigger { width: 100%; min-height: 40px; margin-top: 10px; border: 1px dashed var(--border2); border-radius: 10px; background: transparent; font-weight: 750; }
+.batch-trigger:hover { background: var(--surface2); }
+.batch-panel { margin-top: 12px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); padding: 14px; }
+.batch-rows { display: grid; gap: 8px; margin: 10px 0; }
+.batch-row { display: grid; grid-template-columns: 32px 1fr; gap: 8px; align-items: center; }
+.batch-num { font: 11px var(--mono); color: var(--muted); text-align: center; }
 
-  /* Navigation Tabs */
-  .tabs {
-    display: flex;
-    gap: 8px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 24px;
-  }
+/* Output & Cards */
+.output-area { margin-top: 28px; }
+.output-empty { min-height: 180px; border: 1px dashed var(--border2); border-radius: 15px; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); }
+.result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 15px; overflow: hidden; margin-bottom: 14px; }
+.result-head { padding: 13px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.result-body { padding: 18px; }
+.code-box { margin: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 11px; padding: 14px; overflow: auto; max-height: 500px; white-space: pre-wrap; word-break: break-word; font: 12px/1.65 var(--mono); color: var(--text2); }
+.ai-output { color: var(--text2); font-size: 14px; line-height: 1.6; }
+.ai-output h2 { font-size: 18px; margin: 16px 0 8px; color: var(--text); }
+.ai-output h3 { font-size: 15px; margin: 14px 0 6px; color: var(--text); }
+.ai-output p { margin: 8px 0; }
+.ai-output ul { padding-left: 20px; }
 
-  .tab-btn {
-    padding: 10px 18px;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-weight: 500;
-    font-size: 14px;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.15s;
-  }
+/* Panels & Tables */
+.card-panel { border: 1px solid var(--border); background: var(--surface); border-radius: 15px; padding: 20px; margin-bottom: 16px; }
+.referral-card { border: 1px solid var(--border); background: var(--surface); border-radius: 15px; padding: 22px; margin-bottom: 20px; }
+.referral-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 14px; }
+.referral-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+.ref-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.ref-box label { display: block; font-size: 10px; text-transform: uppercase; font-weight: 850; color: var(--muted); margin-bottom: 4px; }
+.ref-box .val { font-size: 15px; font-weight: 750; word-break: break-all; }
 
-  .tab-btn:hover { color: var(--text); }
-  .tab-btn.active {
-    color: var(--text);
-    border-bottom-color: var(--accent);
-    font-weight: 700;
-  }
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 13px; padding: 16px; }
+.stat-box span { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; font-weight: 850; }
+.stat-box strong { display: block; font-size: 24px; margin-top: 4px; letter-spacing: -.03em; }
 
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 550px; }
+th, td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; font-size: 12px; }
+th { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+tr:last-child td { border-bottom: 0; }
 
-  /* Cards & Grid */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow);
-  }
+/* Empty Session View */
+.empty-state { display: none; text-align: center; padding: 80px 20px; max-width: 440px; margin: auto; }
+.empty-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 36px; box-shadow: var(--shadow); }
+.empty-card h2 { margin: 0 0 10px; font-size: 20px; }
+.empty-card p { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
 
-  .card-title {
-    font-size: 15px;
-    font-weight: 700;
-    margin: 0 0 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
+/* Toast Notifications */
+.toast-stack { position: fixed; right: 16px; bottom: 16px; z-index: 100; display: grid; gap: 8px; width: min(340px, calc(100vw - 32px)); }
+.toast { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 11px 13px; box-shadow: var(--shadow); }
+.toast strong { display: block; font-size: 12px; }
+.toast span { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
 
-  .grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-
-  /* Form Controls */
-  .form-group {
-    margin-bottom: 16px;
-  }
-
-  .form-group label {
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-  }
-
-  .input-text, .select-box, .textarea-box {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface2);
-    color: var(--text);
-    outline: none;
-    transition: border-color 0.15s;
-  }
-
-  .input-text:focus, .select-box:focus, .textarea-box:focus {
-    border-color: var(--accent);
-  }
-
-  .textarea-box {
-    resize: vertical;
-    min-height: 90px;
-    font-family: var(--mono);
-    font-size: 13px;
-  }
-
-  /* Format Pills */
-  .pill-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .pill {
-    padding: 6px 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface2);
-    font-size: 12px;
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.15s;
-  }
-
-  .pill.selected {
-    background: var(--accent);
-    color: var(--bg);
-    border-color: var(--accent);
-    font-weight: 700;
-  }
-
-  /* Buttons */
-  .btn {
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 13px;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: transform 0.1s, background 0.15s;
-  }
-
-  .btn:hover { background: var(--surface2); }
-  .btn:active { transform: translateY(1px); }
-
-  .btn.primary {
-    background: var(--accent);
-    color: var(--bg);
-    border-color: var(--accent);
-  }
-
-  .btn.danger {
-    color: var(--danger);
-    border-color: var(--danger);
-  }
-
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  /* Account Info Table */
-  .info-panel {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  .info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-
-  .info-row:last-child { border-bottom: none; }
-
-  .info-label {
-    font-size: 12px;
-    color: var(--text-muted);
-    font-weight: 500;
-  }
-
-  .info-value {
-    font-size: 13px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .info-value.mono { font-family: var(--mono); font-size: 12px; }
-
-  /* Output & Code Viewer */
-  .code-viewer {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px;
-    font-family: var(--mono);
-    font-size: 12px;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-all;
-    max-height: 450px;
-    overflow-y: auto;
-    color: var(--text);
-  }
-
-  /* Table */
-  .table-responsive { overflow-x: auto; }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-
-  th, td {
-    padding: 10px 14px;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-  }
-
-  th {
-    color: var(--text-muted);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  /* Empty State */
-  .empty-state {
-    display: none;
-    text-align: center;
-    padding: 80px 20px;
-  }
-
-  .empty-state h2 { font-size: 20px; margin-bottom: 8px; }
-  .empty-state p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
-
-  /* Toast Notification */
-  .toast-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .toast {
-    background: var(--surface);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--accent);
-    padding: 12px 16px;
-    border-radius: 8px;
-    box-shadow: var(--shadow);
-    font-size: 12px;
-    animation: slideIn 0.2s ease;
-  }
-
-  @keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-
-  @media (max-width: 768px) {
-    .grid-2 { grid-template-columns: 1fr; }
-    .navbar { padding: 0 16px; }
-    .app-container { padding: 16px 12px 60px; }
-  }
+@media(max-width: 768px) {
+  .sidebar { position: fixed; top: var(--topbar); bottom: 0; left: 0; transform: translateX(-105%); width: min(280px, 85vw); }
+  .sidebar.open { transform: translateX(0); }
+  .input-row, .input-row.no-format { grid-template-columns: 1fr; }
+  .referral-grid, .stats-grid { grid-template-columns: 1fr; }
+  .page { padding: 20px 15px 50px; }
+}
 </style>
 </head>
 <body data-theme="light">
 
-<!-- Navbar -->
-<header class="navbar">
-  <a href="playground.html" class="nav-brand">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-      <path d="M4 5h16M4 9h10M4 13h16M4 17h8"/><path d="m17 15 4 4m0-4-4 4"/>
-    </svg>
-    ReClaire Playground
-  </a>
-
-  <div class="nav-right">
-    <div class="token-badge" id="navTokenBadge">
-      ⚡ <span id="navTokens">0</span> tokens
-    </div>
-    <button class="icon-btn" id="themeToggleBtn" title="Toggle Theme">
-      🌙
-    </button>
-    <button class="btn danger" id="logoutBtn" style="padding: 6px 12px; font-size: 12px;">Log out</button>
+<!-- SESSION EMPTY STATE VIEW -->
+<div class="empty-state" id="emptyState">
+  <div class="empty-card">
+    <h2>Session Required</h2>
+    <p>No active session found on this device.</p>
+    <a href="https://limewise-studio.github.io/ReClaire/signup.html" class="btn primary">Go to sign up &rarr;</a>
   </div>
-</header>
+</div>
 
-<!-- Main App Shell -->
-<main class="app-container" id="appShell">
-  <!-- Tabs Navigation -->
-  <nav class="tabs">
-    <button class="tab-btn active" onclick="switchTab('playground')">API Playground</button>
-    <button class="tab-btn" onclick="switchTab('account')">Account & Keys</button>
-    <button class="tab-btn" onclick="switchTab('usage')">Usage History</button>
-  </nav>
+<!-- MAIN APP PLAYGROUND SHELL -->
+<div id="appShell" class="app-shell" style="display: none;">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="top-left">
+      <button class="icon-btn" id="mobileMenuBtn" aria-label="Toggle Menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+      </button>
+      <div class="brand-title">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 9h10M4 13h16M4 17h8"/><path d="m17 15 4 4m0-4-4 4"/></svg>
+        ReClaire
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="token-badge">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M8 10h8M8 14h8"/></svg>
+        <span id="topbarTokens">—</span> tokens
+      </div>
+      <button class="icon-btn" id="themeToggleBtn" title="Toggle Theme">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41-1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
+      <div class="account-chip">
+        <div class="avatar" id="userAvatar">U</div>
+        <span style="font-weight:750; font-size:12px;" id="topbarUsername">User</span>
+      </div>
+    </div>
+  </header>
 
-  <!-- TAB 1: API PLAYGROUND -->
-  <section id="tab-playground" class="tab-content active">
-    <div class="grid-2">
-      <!-- Left Column: Request Builder -->
-      <div class="card">
-        <h2 class="card-title">Request Builder</h2>
-
-        <div class="form-group">
-          <label for="apiMode">API Endpoint Mode</label>
-          <select id="apiMode" class="select-box" onchange="handleModeChange()">
-            <option value="scrape">Single Scrape (/v1/scrape)</option>
-            <option value="batch-scrape">Batch Scrape (/v1/batch-scrape)</option>
-            <option value="map">Site Mapper (/v1/map)</option>
-            <option value="crawl">Web Crawler (/v1/crawl)</option>
-            <option value="batch-query">Batch Intelligence Query (/v1/batch-query)</option>
-          </select>
-        </div>
-
-        <!-- Single URL Input -->
-        <div class="form-group" id="groupSingleUrl">
-          <label for="targetUrl">Target URL</label>
-          <input type="text" id="targetUrl" class="input-text" placeholder="https://example.com/article" value="https://fastapi.tiangolo.com" />
-        </div>
-
-        <!-- Multiple URLs Input -->
-        <div class="form-group" id="groupBatchUrls" style="display: none;">
-          <label for="batchUrls">Target URLs (Up to 5, one per line)</label>
-          <textarea id="batchUrls" class="textarea-box" placeholder="https://example.com/page1&#10;https://example.com/page2">https://fastapi.tiangolo.com&#10;https://python.org</textarea>
-        </div>
-
-        <!-- Formats Selector -->
-        <div class="form-group" id="groupFormats">
-          <label>Extraction Formats</label>
-          <div class="pill-group" id="formatPills">
-            <div class="pill selected" data-value="markdown" onclick="toggleFormat(this)">Markdown</div>
-            <div class="pill" data-value="html" onclick="toggleFormat(this)">Clean HTML</div>
-            <div class="pill" data-value="raw_html" onclick="toggleFormat(this)">Raw HTML</div>
-            <div class="pill" data-value="summary" onclick="toggleFormat(this)">AI Summary</div>
-            <div class="pill" data-value="questions" onclick="toggleFormat(this)">Q&A Answer</div>
-            <div class="pill" data-value="json" onclick="toggleFormat(this)">Structured JSON</div>
-          </div>
-        </div>
-
-        <!-- User Question / Prompt Input -->
-        <div class="form-group" id="groupQuestion" style="display: none;">
-          <label for="userQuestion">User Question / Extraction Prompt</label>
-          <input type="text" id="userQuestion" class="input-text" placeholder="What is the core feature described on this page?" />
-        </div>
-
-        <!-- Mode Specific Controls (Map / Crawl) -->
-        <div class="form-group" id="groupLimit" style="display: none;">
-          <label for="limitInput">Page / Link Limit</label>
-          <input type="number" id="limitInput" class="input-text" value="5" min="1" max="100" />
-        </div>
-
-        <div class="form-group" id="groupBatchQueryMode" style="display: none;">
-          <label for="batchQueryMode">Batch Query Strategy</label>
-          <select id="batchQueryMode" class="select-box">
-            <option value="summary">Synthesize Multi-Source Summary</option>
-            <option value="questions">Answer Question Across Sources</option>
-          </select>
-        </div>
-
-        <!-- JS Fallback Toggle -->
-        <div class="form-group" id="groupJsToggle">
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; color: var(--text);">
-            <input type="checkbox" id="useJsFallback" checked /> Enable Playwright JS Dynamic Rendering
-          </label>
-        </div>
-
-        <button class="btn primary" id="executeBtn" style="width: 100%;" onclick="executeApiCall()">
-          🚀 Execute Request
+  <!-- WORKSPACE -->
+  <div class="workspace">
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar" id="sidebar">
+      <div class="nav-group">
+        <div class="nav-title">WORKSPACE</div>
+        <button class="nav-item active" data-page="playground">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 9h10M4 13h16M4 17h8"/><path d="m17 15 4 4m0-4-4 4"/></svg>
+          Playground
+        </button>
+        <button class="nav-item" data-page="usage">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5M4 19h16"/><path d="M7 16v-3M12 16V8M17 16v-6"/></svg>
+          Usage & Referrals
+        </button>
+        <button class="nav-item" data-page="apikey">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2 2 2-3 3-2-2-2 2"/></svg>
+          API Credentials
+        </button>
+        <button class="nav-item" data-page="settings">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M19.4 15l.1.1-1.7 2.9-.2-.1a3 3 0 0 0-4.2 1.1V19h-3.4v-.2a3 3 0 0 0-4.2-1.1l-.2.1-1.7-2.9.1-.1a3 3 0 0 0 0-5l-.1-.1 1.7-2.9.2.1a3 3 0 0 0 4.2-1.1V5h3.4v.2a3 3 0 0 0 4.2 1.1l.2-.1 1.7 2.9-.1.1a3 3 0 0 0 0 5Z"/></svg>
+          Settings
         </button>
       </div>
 
-      <!-- Right Column: Response Viewer & cURL Preview -->
-      <div>
-        <!-- Live cURL Box -->
-        <div class="card">
-          <div class="card-title">
-            <span>Generated cURL Command</span>
-            <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="copyCurl()">Copy cURL</button>
-          </div>
-          <div class="code-viewer" id="curlPreview">Generating...</div>
-        </div>
+      <div class="nav-group" style="margin-top: auto; padding-top: 30px;">
+        <button class="nav-item" id="logoutBtn" style="color: var(--danger);">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5"/><path d="m14 8 4 4-4 4M8 12h10"/></svg>
+          Log Out
+        </button>
+      </div>
+    </aside>
 
-        <!-- Live Response Output -->
-        <div class="card">
-          <div class="card-title">
-            <span>Response Output</span>
-            <div id="batchDownloadWrap" style="display: none;">
-              <a id="batchDownloadBtn" href="#" class="btn primary" style="padding: 4px 10px; font-size: 11px; text-decoration: none;">Download ZIP</a>
+    <!-- MAIN VIEWS CONTAINER -->
+    <main class="main">
+      <!-- 1. PLAYGROUND TAB VIEW -->
+      <div class="page" id="viewPlayground">
+        <div class="playground-inner">
+          <div class="main-brand">
+            <h1>Web Intelligence Engine</h1>
+            <p>Scrape markdown, map site architectures, and synthesize web content on demand.</p>
+          </div>
+
+          <div class="input-panel">
+            <div class="input-row" id="inputRow">
+              <select class="custom-select" id="modeSelect">
+                <option value="scrape">Scrape</option>
+                <option value="crawl">Crawl</option>
+                <option value="map">Map</option>
+              </select>
+
+              <div class="url-shell">
+                <span class="url-prefix">https://</span>
+                <input type="text" class="url-input" id="urlInput" placeholder="example.com/article" />
+              </div>
+
+              <select class="custom-select" id="formatSelect">
+                <option value="markdown">Markdown</option>
+                <option value="html">HTML</option>
+                <option value="raw_html">Raw HTML</option>
+                <option value="summary">Summary</option>
+                <option value="questions">Q&A Answer</option>
+                <option value="json">Structured JSON</option>
+              </select>
+            </div>
+
+            <div class="question-wrap hidden" id="questionWrap">
+              <input type="text" class="question-input" id="questionInput" placeholder="Enter your question for AI synthesis on this page..." />
+            </div>
+
+            <button class="batch-trigger" id="batchToggleBtn">+ Switch to Multi-URL Batch Processing</button>
+
+            <!-- BATCH PANEL -->
+            <div class="batch-panel hidden" id="batchPanel">
+              <div style="font-weight: 750; margin-bottom: 8px; font-size: 13px;">Batch Execution List (Max 5 URLs)</div>
+              <div class="batch-rows" id="batchRows">
+                <div class="batch-row"><span class="batch-num">01</span><input type="text" class="input batch-url" placeholder="https://example.com/page-1" /></div>
+                <div class="batch-row"><span class="batch-num">02</span><input type="text" class="input batch-url" placeholder="https://example.com/page-2" /></div>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn ghost" id="addBatchRowBtn" style="font-size: 12px;">+ Add URL</button>
+                <button class="btn ghost" id="downloadBatchZipBtn" style="font-size: 12px;" disabled>Download Batch Zip</button>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px;">
+              <button class="execute" id="executeBtn">Run Intelligence Task</button>
             </div>
           </div>
-          <div class="code-viewer" id="responseOutput">// Send a request to preview API output...</div>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- TAB 2: ACCOUNT & API KEYS -->
-  <section id="tab-account" class="tab-content">
-    <div class="card">
-      <h2 class="card-title">Account Credentials</h2>
-      <div class="info-panel">
-        <div class="info-row">
-          <span class="info-label">Email Address</span>
-          <span class="info-value" id="pEmail">—</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Username</span>
-          <span class="info-value" id="pUsername">—</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">User ID</span>
-          <span class="info-value mono" id="pUserId">—</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">API Key</span>
-          <div class="info-value mono">
-            <span id="pApiKey">—</span>
-            <button class="btn" style="padding: 2px 8px; font-size: 11px;" onclick="copyApiKey()">Copy</button>
-            <button class="btn danger" style="padding: 2px 8px; font-size: 11px;" onclick="regenerateApiKey()">Regenerate</button>
-          </div>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Tokens Remaining</span>
-          <span class="info-value" id="pTokens">—</span>
-        </div>
-      </div>
-    </div>
+          <!-- OUTPUT AREA -->
+          <div class="output-area">
+            <div class="output-empty" id="outputEmpty">
+              <div>Enter a target URL above to extract markdown, map site links, or run AI synthesis.</div>
+            </div>
 
-    <div class="card">
-      <h2 class="card-title">Referral Program</h2>
-      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-        Invite 5 friends using your referral link to claim 100 free tokens!
-      </p>
-      <div class="info-panel">
-        <div class="info-row">
-          <span class="info-label">Referral Code</span>
-          <span class="info-value mono" id="pReferralCode">—</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Referral Link</span>
-          <div class="info-value mono">
-            <span id="pReferralLink" style="word-break: break-all;">—</span>
-            <button class="btn" style="padding: 2px 8px; font-size: 11px;" onclick="copyReferralLink()">Copy Link</button>
+            <div class="result-card hidden" id="resultCard">
+              <div class="result-head">
+                <strong id="resultTitle">Task Result</strong>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn ghost" id="copyResultBtn" style="min-height:34px; font-size:12px;">Copy Result</button>
+                  <button class="btn ghost" id="copyCurlBtn" style="min-height:34px; font-size:12px;">Copy cURL</button>
+                </div>
+              </div>
+              <div class="result-body">
+                <div id="aiFormattedResult" class="ai-output hidden"></div>
+                <pre class="code-box" id="codeResult"></pre>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <button class="btn primary" style="margin-top: 16px;" onclick="claimReferrals()">🎁 Claim 100 Referral Tokens</button>
-    </div>
-  </section>
 
-  <!-- TAB 3: USAGE HISTORY -->
-  <section id="tab-usage" class="tab-content">
-    <div class="card">
-      <h2 class="card-title">Token Usage Logs</h2>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Endpoint</th>
-              <th>Tokens Deducted</th>
-            </tr>
-          </thead>
-          <tbody id="usageTableBody">
-            <tr><td colspan="3" style="text-align:center; color: var(--text-muted);">Loading usage logs...</td></tr>
-          </tbody>
-        </table>
+      <!-- 2. USAGE & REFERRALS TAB VIEW -->
+      <div class="page hidden" id="viewUsage">
+        <div class="page-header">
+          <h1>Usage & Referral Program</h1>
+          <p>Monitor your token consumption and invite friends to earn bonus tokens.</p>
+        </div>
+
+        <!-- REQUIRED REFERRAL PANEL -->
+        <div class="referral-card">
+          <div class="referral-head">
+            <div>
+              <h2 style="margin: 0 0 4px; font-size: 18px;">Earn Referral Rewards</h2>
+              <p style="margin:0; color: var(--muted); font-size: 13px;">Share your link with 5 other people to instantly earn 100 tokens</p>
+            </div>
+            <button class="btn primary" id="claimReferralBtn">Claim Reward</button>
+          </div>
+
+          <div class="referral-grid">
+            <div class="ref-box">
+              <label>Your Referral Code</label>
+              <div class="val mono" id="refCodeVal">—</div>
+            </div>
+            <div class="ref-box">
+              <label>Signed Up Users</label>
+              <div class="val" id="refCountVal">0 users</div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <input type="text" class="input mono" id="refLinkInput" readonly value="" style="font-size: 12px;" />
+            <button class="btn" id="copyRefLinkBtn">Copy Link</button>
+          </div>
+        </div>
+
+        <!-- STATS GRID -->
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span>Tokens Balance</span>
+            <strong id="usageTokensVal">—</strong>
+          </div>
+          <div class="stat-box">
+            <span>Total Logged Operations</span>
+            <strong id="usageLogsCountVal">0</strong>
+          </div>
+          <div class="stat-box">
+            <span>Account Status</span>
+            <strong style="color: var(--success); font-size: 18px; margin-top: 8px;">Active</strong>
+          </div>
+        </div>
+
+        <!-- USAGE LOGS TABLE -->
+        <div class="card-panel" style="padding: 0;">
+          <div style="padding: 16px; border-bottom: 1px solid var(--border); font-weight: 750;">Recent API Requests</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Endpoint</th>
+                  <th>Tokens Deducted</th>
+                </tr>
+              </thead>
+              <tbody id="usageLogsTable">
+                <tr><td colspan="3" style="text-align:center; color: var(--muted);">No logs loaded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
-  </section>
-</main>
 
-<!-- Unauthenticated Empty State -->
-<div class="empty-state" id="emptyState">
-  <h2>No Session Found</h2>
-  <p>Please log in or create an account to access the ReClaire API Playground.</p>
-  <a href="signup.html" class="btn primary" style="text-decoration: none;">Go to Sign Up &rarr;</a>
+      <!-- 3. API CREDENTIALS TAB VIEW -->
+      <div class="page hidden" id="viewApikey">
+        <div class="page-header">
+          <h1>API Credentials</h1>
+          <p>Your API key allows authenticating programmatic requests to the ReClaire API.</p>
+        </div>
+
+        <div class="card-panel">
+          <label style="display: block; font-size: 11px; font-weight: 850; color: var(--muted); text-transform: uppercase; margin-bottom: 8px;">Active API Key</label>
+          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <input type="text" class="input mono" id="apiKeyDisplay" readonly value="—" />
+            <button class="btn" id="copyApiKeyBtn">Copy Key</button>
+          </div>
+          <button class="btn danger" id="regenerateKeyBtn">Regenerate Key</button>
+        </div>
+      </div>
+
+      <!-- 4. SETTINGS TAB VIEW -->
+      <div class="page hidden" id="viewSettings">
+        <div class="page-header">
+          <h1>Settings</h1>
+          <p>Manage workspace configuration and account details.</p>
+        </div>
+
+        <div class="card-panel">
+          <h3 style="margin: 0 0 12px;">Account Information</h3>
+          <div style="display: grid; gap: 10px; font-size: 13px;">
+            <div><strong>Email:</strong> <span id="settingsEmail">—</span></div>
+            <div><strong>User ID:</strong> <span id="settingsUserId" class="mono">—</span></div>
+            <div><strong>Username:</strong> <span id="settingsUsername">—</span></div>
+          </div>
+        </div>
+
+        <div class="card-panel">
+          <h3 style="margin: 0 0 12px;">API Server Endpoint</h3>
+          <input type="text" class="input mono" id="apiBaseInput" value="https://reclaire-api.onrender.com" />
+          <button class="btn primary" id="saveApiBaseBtn" style="margin-top: 10px;">Save Endpoint</button>
+        </div>
+      </div>
+    </main>
+  </div>
 </div>
 
-<!-- Toast Stack -->
-<div class="toast-container" id="toastContainer"></div>
+<div id="toastStack" class="toast-stack"></div>
 
 <script>
-  // ============================================================
-  // CONFIGURATION & SETUP
-  // ============================================================
-  const API_BASE = localStorage.getItem('reclaire_api_base') || "https://reclaire-api.onrender.com";
+  // ====== CONFIGURE THESE (must match signup.html) ======
   const SUPABASE_URL = "https://lbraefssokojulyfmmjd.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicmFlZnNzb2tvanVseWZtbWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMjQyODksImV4cCI6MjEwMzYwMDI4OX0.e_jmB4jS_-cwKAraZpspPhEW_K4l2mbhhPZAlgN_y1E";
   const SIGNUP_URL = "https://limewise-studio.github.io/ReClaire/signup.html";
   const SESSION_KEY = 'rc_session';
+  // ========================================================
 
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  let currentSession = null;
-  let activeApiKey = null;
+  let API_BASE = localStorage.getItem('reclaire_api_base') || 'https://reclaire-api.onrender.com';
 
-  // ============================================================
-  // INITIALIZATION & AUTHENTICATION
-  // ============================================================
-  async function init() {
-    setupTheme();
+  const state = {
+    session: null,
+    currentPage: 'playground',
+    isBatchMode: false,
+    lastResult: null,
+    lastBatchId: null,
+    referralCount: 0
+  };
 
-    // 1. Check for Supabase OAuth or Email confirmation hash callback
-    if (window.location.hash.includes('access_token')) {
-      const params = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = params.get('access_token');
-      if (accessToken) {
-        try {
-          const res = await fetch(`${API_BASE}/auth/session/complete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ access_token: accessToken })
-          });
-          if (res.ok) {
-            const sessionData = await res.json();
-            localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
-            window.history.replaceState(null, '', window.location.pathname);
-          }
-        } catch (e) {
-          console.error("Failed to complete OAuth session", e);
-        }
-      }
-    }
+  const $ = id => document.getElementById(id);
 
-    // 2. Load Local Session
-    const raw = localStorage.getItem(SESSION_KEY);
+  function notify(title, message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<strong>${title}</strong><span>${message}</span>`;
+    $('toastStack').appendChild(toast);
+    setTimeout(() => toast.remove(), 4200);
+  }
+
+  function maskApiKey(key) {
+    if (!key) return null;
+    if (key.length <= 6) return key;
+    return key.slice(0, 5) + '•'.repeat(Math.min(key.length - 5, 20));
+  }
+
+  function getSession() {
     try {
-      currentSession = raw ? JSON.parse(raw) : null;
+      const raw = localStorage.getItem(SESSION_KEY);
+      return raw ? JSON.parse(raw) : null;
     } catch (e) {
-      currentSession = null;
+      return null;
     }
-
-    if (!currentSession || !currentSession.user) {
-      document.getElementById('appShell').style.display = 'none';
-      document.getElementById('emptyState').style.display = 'block';
-      return;
-    }
-
-    activeApiKey = currentSession.api_key || localStorage.getItem('reclaire_api_key');
-
-    // Populate Account View
-    populateAccountView();
-    updateCurlPreview();
-    fetchUsageHistory();
   }
 
-  function populateAccountView() {
-    const user = currentSession.user || {};
-    document.getElementById('pEmail').textContent = user.email || '—';
-    document.getElementById('pUsername').textContent = user.username || '—';
-    document.getElementById('pUserId').textContent = user.id || '—';
-
-    document.getElementById('pApiKey').textContent = activeApiKey ? maskKey(activeApiKey) : 'Stored in session';
-    document.getElementById('pReferralCode').textContent = currentSession.referral_code || '—';
-    document.getElementById('pReferralLink').textContent = currentSession.referral_link || '—';
-
-    const tokens = currentSession.tokens_remaining !== undefined ? currentSession.tokens_remaining : 0;
-    document.getElementById('pTokens').textContent = tokens;
-    document.getElementById('navTokens').textContent = tokens;
+  function saveSession(session) {
+    state.session = session;
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    updateUIHeader();
   }
 
-  // ============================================================
-  // UI & NAVIGATION HELPERS
-  // ============================================================
-  function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-    document.getElementById(`tab-${tabName}`).classList.add('active');
-    event.target.classList.add('active');
+  function updateUIHeader() {
+    if (!state.session) return;
+    const user = state.session.user || {};
+    $('topbarUsername').textContent = user.username || user.email || 'User';
+    $('userAvatar').textContent = (user.username || user.email || 'U').charAt(0).toUpperCase();
+    $('topbarTokens').textContent = state.session.tokens_remaining !== undefined ? state.session.tokens_remaining : '—';
   }
 
-  function toggleFormat(pill) {
-    pill.classList.toggle('selected');
-    const selectedPills = document.querySelectorAll('#formatPills .pill.selected');
-    const selectedValues = Array.from(selectedPills).map(p => p.getAttribute('data-value'));
+  async function apiCall(endpoint, method = 'GET', body = null) {
+    const session = getSession();
+    if (!session || !session.api_key) throw new Error("Missing API Key session.");
 
-    if (selectedValues.includes('questions') || selectedValues.includes('extract')) {
-      document.getElementById('groupQuestion').style.display = 'block';
-    } else {
-      document.getElementById('groupQuestion').style.display = 'none';
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-API-Key': session.api_key
+    };
+
+    const options = { method, headers };
+    if (body) options.body = JSON.stringify(body);
+
+    const res = await fetch(`${API_BASE}${endpoint}`, options);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || data.message || `Request failed (${res.status})`);
     }
-    updateCurlPreview();
+    return data;
   }
 
-  function handleModeChange() {
-    const mode = document.getElementById('apiMode').value;
-    document.getElementById('groupSingleUrl').style.display = (mode === 'batch-scrape' || mode === 'batch-query') ? 'none' : 'block';
-    document.getElementById('groupBatchUrls').style.display = (mode === 'batch-scrape' || mode === 'batch-query') ? 'block' : 'none';
-    document.getElementById('groupFormats').style.display = (mode === 'scrape' || mode === 'batch-scrape') ? 'block' : 'none';
-    document.getElementById('groupLimit').style.display = (mode === 'map' || mode === 'crawl') ? 'block' : 'none';
-    document.getElementById('groupBatchQueryMode').style.display = (mode === 'batch-query') ? 'block' : 'none';
-    document.getElementById('groupQuestion').style.display = (mode === 'batch-query') ? 'block' : 'none';
-
-    updateCurlPreview();
-  }
-
-  // ============================================================
-  // LIVE CURL GENERATOR
-  // ============================================================
-  function updateCurlPreview() {
-    const mode = document.getElementById('apiMode').value;
-    const key = activeApiKey || "YOUR_API_KEY";
-    let body = {};
-    let endpoint = `/v1/${mode}`;
-
-    if (mode === 'scrape') {
-      const selectedPills = document.querySelectorAll('#formatPills .pill.selected');
-      const formats = Array.from(selectedPills).map(p => p.getAttribute('data-value'));
-      body = {
-        url: document.getElementById('targetUrl').value || "https://example.com",
-        formats: formats.length ? formats : ["markdown"],
-        use_js_fallback: document.getElementById('useJsFallback').checked
-      };
-      if (formats.includes('questions')) {
-        body.user_question = document.getElementById('userQuestion').value || "What is this page about?";
-      }
-    } else if (mode === 'batch-scrape') {
-      const urls = document.getElementById('batchUrls').value.split('\n').filter(u => u.trim());
-      body = {
-        urls: urls.length ? urls : ["https://example.com"],
-        formats: ["markdown"],
-        use_js_fallback: document.getElementById('useJsFallback').checked
-      };
-    } else if (mode === 'map') {
-      body = {
-        url: document.getElementById('targetUrl').value || "https://example.com",
-        limit: parseInt(document.getElementById('limitInput').value) || 5
-      };
-    } else if (mode === 'crawl') {
-      body = {
-        url: document.getElementById('targetUrl').value || "https://example.com",
-        limit: parseInt(document.getElementById('limitInput').value) || 5
-      };
-    } else if (mode === 'batch-query') {
-      const urls = document.getElementById('batchUrls').value.split('\n').filter(u => u.trim());
-      body = {
-        urls: urls,
-        mode: document.getElementById('batchQueryMode').value,
-        user_question: document.getElementById('userQuestion').value || "Synthesize key insights"
-      };
-    }
-
-    const curl = `curl -X POST "${API_BASE}${endpoint}" \\\n  -H "Content-Type: application/json" \\\n  -H "X-API-Key: ${key}" \\\n  -d '${JSON.stringify(body, null, 2)}'`;
-    document.getElementById('curlPreview').textContent = curl;
-  }
-
-  document.querySelectorAll('input, select, textarea').forEach(el => {
-    el.addEventListener('input', updateCurlPreview);
-  });
-
-  // ============================================================
-  // API CALL EXECUTION
-  // ============================================================
-  async function executeApiCall() {
-    const mode = document.getElementById('apiMode').value;
-    const executeBtn = document.getElementById('executeBtn');
-    const responseOutput = document.getElementById('responseOutput');
-    document.getElementById('batchDownloadWrap').style.display = 'none';
-
-    if (!activeApiKey) {
-      showToast("Missing API Key. Please regenerate in Account tab.");
-      return;
-    }
-
-    executeBtn.disabled = true;
-    executeBtn.innerHTML = "⏳ Processing...";
-    responseOutput.textContent = "// Sending request to ReClaire API backend...";
-
-    let body = {};
-    let endpoint = `/v1/${mode}`;
-
-    if (mode === 'scrape') {
-      const selectedPills = document.querySelectorAll('#formatPills .pill.selected');
-      const formats = Array.from(selectedPills).map(p => p.getAttribute('data-value'));
-      body = {
-        url: document.getElementById('targetUrl').value,
-        formats: formats.length ? formats : ["markdown"],
-        use_js_fallback: document.getElementById('useJsFallback').checked
-      };
-      if (formats.includes('questions')) {
-        body.user_question = document.getElementById('userQuestion').value;
-      }
-    } else if (mode === 'batch-scrape') {
-      body = {
-        urls: document.getElementById('batchUrls').value.split('\n').filter(u => u.trim()),
-        formats: ["markdown"],
-        use_js_fallback: document.getElementById('useJsFallback').checked
-      };
-    } else if (mode === 'map') {
-      body = {
-        url: document.getElementById('targetUrl').value,
-        limit: parseInt(document.getElementById('limitInput').value) || 5
-      };
-    } else if (mode === 'crawl') {
-      body = {
-        url: document.getElementById('targetUrl').value,
-        limit: parseInt(document.getElementById('limitInput').value) || 5
-      };
-    } else if (mode === 'batch-query') {
-      body = {
-        urls: document.getElementById('batchUrls').value.split('\n').filter(u => u.trim()),
-        mode: document.getElementById('batchQueryMode').value,
-        user_question: document.getElementById('userQuestion').value
-      };
-    }
-
+  async function fetchReferralCount(userId) {
     try {
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': activeApiKey
-        },
-        body: JSON.stringify(body)
-      });
+      const { count } = await sb
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('referrer_id', userId);
+      return count || 0;
+    } catch (e) {
+      return 0;
+    }
+  }
 
-      const data = await res.json();
-      responseOutput.textContent = JSON.stringify(data, null, 2);
+  async function loadUsageData() {
+    try {
+      const data = await apiCall('/v1/usage');
+      if (data.tokens_remaining !== undefined) {
+        state.session.tokens_remaining = data.tokens_remaining;
+        saveSession(state.session);
+      }
+      $('usageTokensVal').textContent = data.tokens_remaining ?? '—';
+      $('usageLogsCountVal').textContent = (data.logs || []).length;
 
-      if (res.ok) {
-        showToast("Request executed successfully!");
-        if (data.tokens_remaining !== undefined) {
-          updateTokenCount(data.tokens_remaining);
-        }
-        if (data.batch_id) {
-          const dlBtn = document.getElementById('batchDownloadBtn');
-          dlBtn.href = `${API_BASE}/v1/batch-scrape/${data.batch_id}/download`;
-          document.getElementById('batchDownloadWrap').style.display = 'block';
-        }
-        fetchUsageHistory();
+      const tbody = $('usageLogsTable');
+      if (!data.logs || data.logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--muted);">No usage logs recorded yet.</td></tr>';
       } else {
-        showToast(`Error: ${data.detail || "API call failed"}`);
+        tbody.innerHTML = data.logs.map(log => `
+          <tr>
+            <td>${new Date(log.created_at).toLocaleString()}</td>
+            <td class="mono">${log.endpoint}</td>
+            <td>${log.tokens_deducted}</td>
+          </tr>
+        `).join('');
+      }
+
+      if (state.session.user && state.session.user.id) {
+        state.referralCount = await fetchReferralCount(state.session.user.id);
+        $('refCountVal').textContent = `${state.referralCount} users`;
       }
     } catch (err) {
-      responseOutput.textContent = `// Network or Server Error:\n${err.message}`;
-      showToast("Failed to connect to API backend.");
-    } finally {
-      executeBtn.disabled = false;
-      executeBtn.innerHTML = "🚀 Execute Request";
+      notify('Usage Error', err.message);
     }
   }
 
-  // ============================================================
-  // ACCOUNT & REFERRAL ACTIONS
-  // ============================================================
-  async function regenerateApiKey() {
-    if (!confirm("Are you sure? Your current API key will be invalidated immediately.")) return;
+  function navigateTo(pageId) {
+    state.currentPage = pageId;
+    document.querySelectorAll('.nav-item[data-page]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.page === pageId);
+    });
 
-    try {
-      const res = await fetch(`${API_BASE}/auth/api-key/regenerate`, {
-        method: 'POST',
-        headers: { 'X-API-Key': activeApiKey }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        activeApiKey = data.api_key;
-        localStorage.setItem('reclaire_api_key', data.api_key);
-        currentSession.api_key = data.api_key;
-        localStorage.setItem(SESSION_KEY, JSON.stringify(currentSession));
-        
-        populateAccountView();
-        updateCurlPreview();
-        showToast("API Key regenerated successfully!");
-      } else {
-        showToast("Failed to regenerate API Key.");
-      }
-    } catch (e) {
-      showToast("Error connecting to server.");
+    ['viewPlayground', 'viewUsage', 'viewApikey', 'viewSettings'].forEach(id => {
+      $(id).classList.add('hidden');
+    });
+
+    if (pageId === 'playground') $('viewPlayground').classList.remove('hidden');
+    if (pageId === 'usage') {
+      $('viewUsage').classList.remove('hidden');
+      loadUsageData();
+    }
+    if (pageId === 'apikey') {
+      $('viewApikey').classList.remove('hidden');
+      $('apiKeyDisplay').value = maskApiKey(state.session.api_key) || '—';
+    }
+    if (pageId === 'settings') {
+      $('viewSettings').classList.remove('hidden');
+      $('settingsEmail').textContent = state.session.user?.email || '—';
+      $('settingsUserId').textContent = state.session.user?.id || '—';
+      $('settingsUsername').textContent = state.session.user?.username || '—';
+      $('apiBaseInput').value = API_BASE;
     }
   }
 
-  async function claimReferrals() {
-    try {
-      const res = await fetch(`${API_BASE}/v1/referrals/claim`, {
-        method: 'POST',
-        headers: { 'X-API-Key': activeApiKey }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        updateTokenCount(data.tokens_remaining);
-        showToast(`Success! +100 tokens granted.`);
-      } else {
-        showToast(data.detail || "Referral claim condition not met.");
-      }
-    } catch (e) {
-      showToast("Failed to claim referral bonus.");
+  // ====== LOGOUT HANDLER (From playground.html script) ======
+  $('logoutBtn').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    const existing = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    if (existing.api_key) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ api_key: existing.api_key }));
+    } else {
+      localStorage.removeItem(SESSION_KEY);
     }
-  }
-
-  async function fetchUsageHistory() {
-    if (!activeApiKey) return;
-    try {
-      const res = await fetch(`${API_BASE}/v1/usage`, {
-        headers: { 'X-API-Key': activeApiKey }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const tbody = document.getElementById('usageTableBody');
-        tbody.innerHTML = '';
-        if (!data.logs || data.logs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--text-muted);">No usage history recorded yet.</td></tr>';
-          return;
-        }
-        data.logs.forEach(log => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${new Date(log.created_at).toLocaleString()}</td>
-            <td><code>${log.endpoint}</code></td>
-            <td style="color: var(--gold); font-weight:700;">-${log.tokens_deducted}</td>
-          `;
-          tbody.appendChild(row);
-        });
-      }
-    } catch (e) {
-      console.error("Failed to fetch usage history", e);
-    }
-  }
-
-  // ============================================================
-  // LOGOUT & UTILITIES
-  // ============================================================
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    try {
-      await sb.auth.signOut();
-    } catch (e) {}
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem('reclaire_api_key');
     window.location.href = SIGNUP_URL;
   });
 
-  function maskKey(key) {
-    if (!key) return "—";
-    if (key.length <= 6) return key;
-    return key.slice(0, 6) + "•".repeat(16);
-  }
+  // ====== INITIALIZATION (From playground.html script) ======
+  (function init() {
+    const session = getSession();
 
-  function updateTokenCount(count) {
-    if (currentSession) currentSession.tokens_remaining = count;
-    document.getElementById('pTokens').textContent = count;
-    document.getElementById('navTokens').textContent = count;
-  }
-
-  function copyApiKey() {
-    if (activeApiKey) {
-      navigator.clipboard.writeText(activeApiKey);
-      showToast("API Key copied to clipboard!");
+    if (!session || !session.user || !session.api_key) {
+      $('appShell').style.display = 'none';
+      $('emptyState').style.display = 'block';
+      return;
     }
-  }
 
-  function copyReferralLink() {
-    const link = document.getElementById('pReferralLink').textContent;
-    if (link && link !== '—') {
-      navigator.clipboard.writeText(link);
-      showToast("Referral link copied!");
-    }
-  }
+    state.session = session;
+    $('emptyState').style.display = 'none';
+    $('appShell').style.display = 'flex';
 
-  function copyCurl() {
-    const curl = document.getElementById('curlPreview').textContent;
-    navigator.clipboard.writeText(curl);
-    showToast("cURL command copied!");
-  }
+    updateUIHeader();
 
-  function showToast(msg) {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = msg;
-    container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
-  }
+    // Populate Referral details
+    const refCode = session.referral_code || '—';
+    const refLink = session.referral_link || `${SIGNUP_URL}?ref=${refCode}`;
+    $('refCodeVal').textContent = refCode;
+    $('refLinkInput').value = refLink;
 
-  function setupTheme() {
-    const saved = localStorage.getItem('reclaire_theme') || 'light';
-    document.body.setAttribute('data-theme', saved);
-    document.getElementById('themeToggleBtn').addEventListener('click', () => {
-      const next = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      document.body.setAttribute('data-theme', next);
-      localStorage.setItem('reclaire_theme', next);
+    // Attach Navigation listeners
+    document.querySelectorAll('.nav-item[data-page]').forEach(btn => {
+      btn.addEventListener('click', () => navigateTo(btn.dataset.page));
     });
-  }
 
-  // Run initial setup
-  init();
+    // Theme Toggle
+    $('themeToggleBtn').addEventListener('click', () => {
+      const current = document.body.dataset.theme;
+      const target = current === 'dark' ? 'light' : 'dark';
+      document.body.dataset.theme = target;
+    });
+
+    // Format selection visibility
+    $('formatSelect').addEventListener('change', (e) => {
+      if (e.target.value === 'questions' || e.target.value === 'summary') {
+        $('questionWrap').classList.remove('hidden');
+      } else {
+        $('questionWrap').classList.add('hidden');
+      }
+    });
+
+    // Mode Selector visibility adjustments
+    $('modeSelect').addEventListener('change', (e) => {
+      const isScrape = e.target.value === 'scrape';
+      $('formatSelect').style.display = isScrape ? 'block' : 'none';
+      $('inputRow').classList.toggle('no-format', !isScrape);
+    });
+
+    // Batch toggle
+    $('batchToggleBtn').addEventListener('click', () => {
+      state.isBatchMode = !state.isBatchMode;
+      $('batchPanel').classList.toggle('hidden', !state.isBatchMode);
+      $('batchToggleBtn').textContent = state.isBatchMode ? '– Switch to Single URL Processing' : '+ Switch to Multi-URL Batch Processing';
+    });
+
+    // Add Batch Row
+    $('addBatchRowBtn').addEventListener('click', () => {
+      const container = $('batchRows');
+      const count = container.children.length;
+      if (count >= 5) {
+        notify('Batch Limit', 'Maximum 5 URLs per batch.');
+        return;
+      }
+      const numStr = (count + 1).toString().padStart(2, '0');
+      const row = document.createElement('div');
+      row.className = 'batch-row';
+      row.innerHTML = `<span class="batch-num">${numStr}</span><input type="text" class="input batch-url" placeholder="https://example.com/page-${count + 1}" />`;
+      container.appendChild(row);
+    });
+
+    // Task Execution
+    $('executeBtn').addEventListener('click', async () => {
+      const mode = $('modeSelect').value;
+      const format = $('formatSelect').value;
+      const question = $('questionInput').value.trim();
+      $('executeBtn').disabled = true;
+      $('executeBtn').textContent = 'Processing...';
+
+      try {
+        let result = null;
+
+        if (state.isBatchMode) {
+          const urls = [...document.querySelectorAll('.batch-url')].map(i => i.value.trim()).filter(Boolean);
+          if (urls.length === 0) throw new Error('Please enter at least one target URL.');
+
+          if (mode === 'scrape' && format !== 'questions' && format !== 'summary') {
+            result = await apiCall('/v1/batch-scrape', 'POST', { urls, formats: [format] });
+            state.lastBatchId = result.batch_id;
+            $('downloadBatchZipBtn').disabled = false;
+          } else {
+            result = await apiCall('/v1/batch-query', 'POST', {
+              urls,
+              mode: format === 'questions' ? 'questions' : 'summary',
+              user_question: question || undefined
+            });
+          }
+        } else {
+          let rawUrl = $('urlInput').value.trim();
+          if (!rawUrl) throw new Error('Please enter a valid web URL.');
+          if (!rawUrl.startsWith('http')) rawUrl = 'https://' + rawUrl;
+
+          if (mode === 'scrape') {
+            result = await apiCall('/v1/scrape', 'POST', {
+              url: rawUrl,
+              formats: [format],
+              user_question: question || undefined
+            });
+          } else if (mode === 'map') {
+            result = await apiCall('/v1/map', 'POST', { url: rawUrl, limit: 100 });
+          } else if (mode === 'crawl') {
+            result = await apiCall('/v1/crawl', 'POST', { url: rawUrl, limit: 5 });
+          }
+        }
+
+        state.lastResult = result;
+        if (result.tokens_remaining !== undefined) {
+          state.session.tokens_remaining = result.tokens_remaining;
+          saveSession(state.session);
+        }
+
+        // Render Output
+        $('outputEmpty').classList.add('hidden');
+        $('resultCard').classList.remove('hidden');
+        $('codeResult').textContent = JSON.stringify(result, null, 2);
+
+        if (result.markdown || result.summary || result.answer) {
+          $('aiFormattedResult').classList.remove('hidden');
+          $('aiFormattedResult').innerHTML = `<p>${result.markdown || result.summary || result.answer}</p>`;
+        } else {
+          $('aiFormattedResult').classList.add('hidden');
+        }
+
+        notify('Task Complete', 'Operation executed successfully.');
+      } catch (err) {
+        notify('Execution Error', err.message);
+      } finally {
+        $('executeBtn').disabled = false;
+        $('executeBtn').textContent = 'Run Intelligence Task';
+      }
+    });
+
+    // Copying Actions
+    $('copyResultBtn').addEventListener('click', () => {
+      if (!state.lastResult) return;
+      navigator.clipboard.writeText(JSON.stringify(state.lastResult, null, 2));
+      notify('Copied', 'Results copied to clipboard.');
+    });
+
+    $('copyCurlBtn').addEventListener('click', () => {
+      const curl = `curl -X POST "${API_BASE}/v1/scrape" \\\n  -H "X-API-Key: ${state.session.api_key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"url": "${$('urlInput').value || 'https://example.com'}", "formats": ["markdown"]}'`;
+      navigator.clipboard.writeText(curl);
+      notify('Copied cURL', 'cURL command copied to clipboard.');
+    });
+
+    $('copyRefLinkBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText($('refLinkInput').value);
+      notify('Copied', 'Referral link copied.');
+    });
+
+    $('copyApiKeyBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText(state.session.api_key);
+      notify('Copied Key', 'Full API key copied.');
+    });
+
+    // Claim Referral Reward
+    $('claimReferralBtn').addEventListener('click', async () => {
+      try {
+        const data = await apiCall('/v1/referrals/claim', 'POST');
+        if (data.tokens_remaining !== undefined) {
+          state.session.tokens_remaining = data.tokens_remaining;
+          saveSession(state.session);
+        }
+        notify('Reward Granted', `Earned 100 bonus tokens! New Balance: ${data.tokens_remaining}`);
+        loadUsageData();
+      } catch (err) {
+        notify('Claim Failed', err.message);
+      }
+    });
+
+    // Regenerate Key
+    $('regenerateKeyBtn').addEventListener('click', async () => {
+      if (!confirm('Are you sure? Your old API key will stop working immediately.')) return;
+      try {
+        const data = await apiCall('/auth/api-key/regenerate', 'POST');
+        if (data.api_key) {
+          state.session.api_key = data.api_key;
+          saveSession(state.session);
+          $('apiKeyDisplay').value = maskApiKey(data.api_key);
+          notify('Key Regenerated', 'Your new API key has been generated.');
+        }
+      } catch (err) {
+        notify('Regeneration Failed', err.message);
+      }
+    });
+
+    // Download Batch Zip
+    $('downloadBatchZipBtn').addEventListener('click', () => {
+      if (!state.lastBatchId) return;
+      window.open(`${API_BASE}/v1/batch-scrape/${state.lastBatchId}/download`, '_blank');
+    });
+
+    // Save API Base
+    $('saveApiBaseBtn').addEventListener('click', () => {
+      const val = $('apiBaseInput').value.trim();
+      if (val) {
+        API_BASE = val;
+        localStorage.setItem('reclaire_api_base', val);
+        notify('Settings Saved', 'API Endpoint updated.');
+      }
+    });
+  })();
 </script>
+
 </body>
 </html>
