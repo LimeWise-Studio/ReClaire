@@ -36,7 +36,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL")  # <--- Replace or set ENV
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")  # <--- Replace or set ENV
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 DEFAULT_TOKEN_BALANCE = int(os.environ.get("DEFAULT_TOKEN_BALANCE", "100"))
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://yourapp.com")  # used to build referral links
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://limewise-studio.github.io/ReClaire")  # used to build referral links
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # <--- Replace or set ENV
 
 # Initialize Supabase Client
@@ -450,7 +450,7 @@ async def finalize_login(user, username: Optional[str] = None, referral_code: Op
         "api_key": api_key,
         "tokens_remaining": int(profile.get("token_balance") or 0),
         "referral_code": code,
-        "referral_link": f"{FRONTEND_URL}/playground.html?ref={code}" if code else None,
+        "referral_link": f"{FRONTEND_URL}/signup.html?ref={code}" if code else None,
     }
 
 async def issue_api_key(user_id: str) -> str:
@@ -1156,7 +1156,7 @@ async def batch_query_endpoint(
         raise HTTPException(status_code=402, detail=f"Insufficient tokens. Required: {cost}")
 
     # 2. Concurrently scrape up to 5 target URLs
-    semaphore = asyncio.Semaphore(5)
+    semaphore = asyncio.Semaphore(2)
     async def fetch_target(target_url: str):
         async with semaphore:
             try:
