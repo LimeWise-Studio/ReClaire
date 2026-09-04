@@ -888,10 +888,25 @@ async def scrape_endpoint(
         json_prompt = f"Extract structured data matching the requested schema.\nSchema: {json.dumps(options.json_schema)}\n\nContent:\n{markdown[:25000]}"
         result_data["json"] = run_gemini_transform(json_prompt, response_json=True, schema=options.json_schema)
 
-    # PHASE 3: Deduct & Commit Tokens (Only happens if Phase 2 fully succeeds)
-    actual_cost = token_cost_for_scrape(options.formats, scrape_base["used_dynamic_fetch"])
-    new_balance = await commit_token_deduction(user_id, current_balance, actual_cost, "/v1/scrape")
-
+    # PHASE 3: Deduct & Commit Tokens
+    actual_cost = token_cost_for_scrape(
+        options.formats,
+        scrape_base["used_dynamic_fetch"]
+    )
+    
+    new_balance = await commit_token_deduction(
+        user_id,
+        current_balance,
+        actual_cost,
+        "/v1/scrape"
+    )
+    
+     # Always return the core scraped representations.
+# AI formats are added below when requested.
+    result_data["markdown"] = scrape_base["markdown"]
+    result_data["html"] = scrape_base["clean_html"]
+    result_data["raw_html"] = scrape_base["raw_html"]
+    
     result_data["tokens_deducted"] = actual_cost
     result_data["tokens_remaining"] = new_balance
     
