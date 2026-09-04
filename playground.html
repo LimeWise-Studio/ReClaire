@@ -76,32 +76,25 @@
   <!-- Toast Alert Container -->
   <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
 
-  <!-- Sidebar -->
-  <aside class="w-64 bg-surface border-r border-border flex flex-col justify-between h-full flex-shrink-0 z-20">
-    <div>
-      <div class="h-16 flex items-center px-6 border-b border-border">
-        <!-- Dynamic Logo -->
+  <!-- Mobile Sidebar Overlay -->
+  <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden"></div>
+
+  <!-- Sidebar (Now Toggleable) -->
+  <aside id="sidebar" class="w-64 bg-surface border-r border-border flex flex-col h-full flex-shrink-0 z-40 fixed lg:relative transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+    <div class="h-16 flex items-center px-6 border-b border-border justify-between lg:justify-start">
+      <!-- Dynamic Logo -->
+      <div class="flex items-center">
         <div class="logo-mask w-6 h-6 bg-black dark:bg-[#EFD09E]"></div>
         <span class="ml-3 font-bold text-lg tracking-tight">ReClaire</span>
       </div>
-      <nav class="p-4 space-y-1">
-        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-accent-soft text-accent font-medium transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M4 5h16M4 9h10M4 13h16M4 17h8"/><path d="m17 15 4 4m0-4-4 4"/></svg>
-          Playground
-        </a>
-        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:text-text hover:bg-surface-hover transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          Batch Ops
-        </a>
-        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:text-text hover:bg-surface-hover transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-          API Keys
-        </a>
-      </nav>
+      <!-- Close Sidebar Button (Mobile only) -->
+      <button id="closeSidebarBtn" class="lg:hidden p-2 text-muted hover:text-text">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
     </div>
     
-    <!-- Token Display at Bottom -->
-    <div class="p-4 border-t border-border mt-auto">
+    <!-- Token Display Moved Higher -->
+    <div class="p-4 border-b border-border">
       <div class="bg-surface-hover rounded-xl p-4 border border-border">
         <span class="text-xs font-bold uppercase tracking-wider text-muted block mb-1">Tokens Remaining</span>
         <div class="flex items-end gap-2">
@@ -110,14 +103,36 @@
         </div>
       </div>
     </div>
+
+    <!-- Navigation -->
+    <nav class="p-4 space-y-1 flex-1">
+      <a href="#" data-view="playground" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg bg-accent-soft text-accent font-medium transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M4 5h16M4 9h10M4 13h16M4 17h8"/><path d="m17 15 4 4m0-4-4 4"/></svg>
+        Playground
+      </a>
+      <a href="#" data-view="batch" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:text-text hover:bg-surface-hover transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Batch Ops
+      </a>
+      <a href="#" data-view="apikeys" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:text-text hover:bg-surface-hover transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+        API Keys
+      </a>
+    </nav>
   </aside>
 
   <!-- Main Area -->
   <main class="flex-1 flex flex-col h-full overflow-hidden relative">
     
     <!-- Topbar -->
-    <header class="h-16 bg-surface border-b border-border flex items-center justify-between px-6 flex-shrink-0 z-10 shadow-sm dark:shadow-none">
-      <h1 class="font-bold text-lg hidden sm:block">Workspace</h1>
+    <header class="h-16 bg-surface border-b border-border flex items-center justify-between px-4 lg:px-6 flex-shrink-0 z-10 shadow-sm dark:shadow-none">
+      <div class="flex items-center gap-3">
+        <!-- Open Sidebar Button -->
+        <button id="openSidebarBtn" class="lg:hidden p-2 rounded-lg text-muted hover:bg-surface-hover transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <h1 class="font-bold text-lg hidden sm:block" id="headerTitle">Workspace</h1>
+      </div>
       
       <div class="flex items-center gap-4 ml-auto">
         <button id="themeToggle" class="p-2 rounded-lg text-muted hover:bg-surface-hover transition-colors" title="Toggle Theme">
@@ -138,111 +153,139 @@
     <div class="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
       <div class="max-w-5xl mx-auto flex flex-col xl:flex-row gap-8 items-start">
         
-        <!-- Left: Input Playground -->
-        <div class="w-full xl:w-7/12 space-y-6">
-          <div class="bg-surface border border-border rounded-2xl p-6 shadow-soft dark:shadow-soft-dark">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-muted mb-4">Extraction Request</h2>
-            
-            <form id="extractForm" class="space-y-4">
-              <!-- URL Input -->
-              <div>
-                <label class="block text-xs font-semibold text-muted mb-1.5">Target URL</label>
-                <div class="relative flex items-center border border-border rounded-xl bg-surface-hover overflow-hidden focus-within:ring-2 focus-within:ring-accent-soft focus-within:border-accent transition-all">
-                  <span class="pl-4 text-muted"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg></span>
-                  <input type="url" id="urlInput" required class="w-full h-12 bg-transparent text-text px-3 outline-none placeholder-transparent" placeholder="https://" />
-                  <!-- Animated Placeholder Overlay -->
-                  <div id="urlPlaceholder" class="absolute left-10 pointer-events-none text-muted transition-opacity"></div>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Custom Mode Select -->
-                <div class="relative">
-                  <label class="block text-xs font-semibold text-muted mb-1.5">Mode</label>
-                  <button type="button" id="modeTrigger" class="w-full h-12 flex items-center justify-between px-4 border border-border rounded-xl bg-surface-hover font-medium focus:ring-2 focus:ring-accent-soft focus:border-accent transition-all">
-                    <span id="modeDisplay" class="flex items-center gap-2">Scrape</span>
-                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                  </button>
-                  <!-- Mode Dropdown -->
-                  <div id="modeDropdown" class="hidden absolute top-[72px] left-0 w-full bg-surface border border-border rounded-xl shadow-soft dark:shadow-soft-dark z-30 p-1 fade-in">
-                    <button type="button" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface-hover font-medium text-sm mode-option active" data-val="scrape">Scrape</button>
-                    <button type="button" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface-hover font-medium text-sm mode-option" data-val="crawl">Crawl</button>
-                    <button type="button" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface-hover font-medium text-sm mode-option" data-val="map">Map</button>
+        <!-- Left Column: Dynamic View Container -->
+        <div class="w-full xl:w-7/12 space-y-6 relative">
+          
+          <!-- VIEW: PLAYGROUND -->
+          <div id="view-playground" class="view-section space-y-6">
+            <div class="bg-surface border border-border rounded-2xl p-6 shadow-soft dark:shadow-soft-dark">
+              <h2 class="text-xs font-bold uppercase tracking-wider text-muted mb-4">Extraction Request</h2>
+              
+              <form id="extractForm" class="space-y-4">
+                <!-- URL Input (Fixed https://) -->
+                <div>
+                  <label class="block text-xs font-semibold text-muted mb-1.5">Target URL</label>
+                  <div class="relative flex items-center border border-border rounded-xl bg-surface-hover overflow-hidden focus-within:ring-2 focus-within:ring-accent-soft focus-within:border-accent transition-all">
+                    <span class="pl-4 pr-1 text-muted font-mono text-sm select-none">https://</span>
+                    <input type="text" id="urlInput" required class="w-full h-12 bg-transparent text-text pr-3 outline-none placeholder-transparent font-mono" placeholder="domain.com" />
+                    <!-- Animated Placeholder Overlay -->
+                    <div id="urlPlaceholder" class="absolute left-[78px] font-mono pointer-events-none text-muted transition-opacity"></div>
                   </div>
                 </div>
 
-                <!-- Custom Multi-Format Select -->
-                <div class="relative" id="formatContainer">
-                  <label class="block text-xs font-semibold text-muted mb-1.5">Formats</label>
-                  <button type="button" id="formatTrigger" class="w-full h-12 flex items-center justify-between px-4 border border-border rounded-xl bg-surface-hover font-medium focus:ring-2 focus:ring-accent-soft focus:border-accent transition-all">
-                    <span id="formatDisplay">Markdown</span>
-                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                  </button>
-                  <!-- Format Dropdown -->
-                  <div id="formatDropdown" class="hidden absolute top-[72px] left-0 w-full bg-surface border border-border rounded-xl shadow-soft dark:shadow-soft-dark z-30 p-2 fade-in max-h-60 overflow-y-auto">
-                    <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
-                      <input type="checkbox" value="markdown" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent" checked>
-                      <span class="text-sm font-medium">Markdown</span>
-                    </label>
-                    <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
-                      <input type="checkbox" value="html" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
-                      <span class="text-sm font-medium">Clean HTML</span>
-                    </label>
-                    <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
-                      <input type="checkbox" value="summary" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
-                      <span class="text-sm font-medium">Summary (AI)</span>
-                    </label>
-                    <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
-                      <input type="checkbox" value="questions" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
-                      <span class="text-sm font-medium">Q&A (AI)</span>
-                    </label>
-                    <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
-                      <input type="checkbox" value="json" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
-                      <span class="text-sm font-medium">Structured JSON</span>
-                    </label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Custom Mode Select -->
+                  <div class="relative">
+                    <label class="block text-xs font-semibold text-muted mb-1.5">Mode</label>
+                    <button type="button" id="modeTrigger" class="w-full h-12 flex items-center justify-between px-4 border border-border rounded-xl bg-surface-hover font-medium focus:ring-2 focus:ring-accent-soft focus:border-accent transition-all">
+                      <span id="modeDisplay" class="flex items-center gap-2">Scrape</span>
+                      <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <!-- Mode Dropdown -->
+                    <div id="modeDropdown" class="hidden absolute top-[72px] left-0 w-full bg-surface border border-border rounded-xl shadow-soft dark:shadow-soft-dark z-30 p-1 fade-in">
+                      <button type="button" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface-hover font-medium text-sm mode-option active" data-val="scrape">Scrape</button>
+                      <button type="button" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface-hover font-medium text-sm mode-option" data-val="crawl">Crawl</button>
+                      <button type="button" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface-hover font-medium text-sm mode-option" data-val="map">Map</button>
+                    </div>
+                  </div>
+
+                  <!-- Custom Multi-Format Select -->
+                  <div class="relative" id="formatContainer">
+                    <label class="block text-xs font-semibold text-muted mb-1.5">Formats</label>
+                    <button type="button" id="formatTrigger" class="w-full h-12 flex items-center justify-between px-4 border border-border rounded-xl bg-surface-hover font-medium focus:ring-2 focus:ring-accent-soft focus:border-accent transition-all">
+                      <span id="formatDisplay">Markdown</span>
+                      <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <!-- Format Dropdown -->
+                    <div id="formatDropdown" class="hidden absolute top-[72px] left-0 w-full bg-surface border border-border rounded-xl shadow-soft dark:shadow-soft-dark z-30 p-2 fade-in max-h-60 overflow-y-auto">
+                      <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
+                        <input type="checkbox" value="markdown" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent" checked>
+                        <span class="text-sm font-medium">Markdown</span>
+                      </label>
+                      <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
+                        <input type="checkbox" value="html" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
+                        <span class="text-sm font-medium">Clean HTML</span>
+                      </label>
+                      <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
+                        <input type="checkbox" value="summary" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
+                        <span class="text-sm font-medium">Summary (AI)</span>
+                      </label>
+                      <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
+                        <input type="checkbox" value="questions" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
+                        <span class="text-sm font-medium">Q&A (AI)</span>
+                      </label>
+                      <label class="flex items-center gap-3 px-2 py-2 rounded hover:bg-surface-hover cursor-pointer">
+                        <input type="checkbox" value="json" class="format-cb w-4 h-4 rounded text-accent focus:ring-accent">
+                        <span class="text-sm font-medium">Structured JSON</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Conditional Q&A Input -->
-              <div id="qaWrap" class="hidden fade-in">
-                <label class="block text-xs font-semibold text-muted mb-1.5">Question / Prompt</label>
-                <input type="text" id="qaInput" class="w-full h-12 border border-border rounded-xl bg-surface-hover text-text px-4 outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent transition-all" placeholder="What are the key takeaways?" />
-              </div>
+                <!-- Conditional Q&A Input -->
+                <div id="qaWrap" class="hidden fade-in">
+                  <label class="block text-xs font-semibold text-muted mb-1.5">Question / Prompt</label>
+                  <input type="text" id="qaInput" class="w-full h-12 border border-border rounded-xl bg-surface-hover text-text px-4 outline-none focus:ring-2 focus:ring-accent-soft focus:border-accent transition-all" placeholder="What are the key takeaways?" />
+                </div>
 
-              <!-- Submit -->
-              <button type="submit" id="executeBtn" class="w-full h-12 mt-2 bg-accent text-bg rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                Execute Pipeline
-              </button>
-            </form>
-          </div>
-
-          <!-- Get Then Write: Output Container -->
-          <div id="outputContainer" class="hidden fade-in">
-            <!-- Loading State -->
-            <div id="outputLoading" class="bg-surface border border-border rounded-2xl p-10 flex flex-col items-center justify-center text-center shadow-soft dark:shadow-soft-dark">
-              <svg class="w-8 h-8 text-accent animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-              <h3 class="font-bold text-lg mb-1">Extracting Intelligence</h3>
-              <p class="text-sm text-muted">Running dynamic fallback and parsing data...</p>
+                <!-- Submit -->
+                <button type="submit" id="executeBtn" class="w-full h-12 mt-2 bg-accent text-bg rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  Execute Pipeline
+                </button>
+              </form>
             </div>
 
-            <!-- Result State -->
-            <div id="outputResult" class="hidden bg-surface border border-border rounded-2xl overflow-hidden shadow-soft dark:shadow-soft-dark flex flex-col max-h-[800px]">
-              <div class="h-14 border-b border-border bg-surface-hover flex items-center justify-between px-5">
-                <div class="flex items-center gap-3 overflow-hidden">
-                  <div class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
-                  <span class="font-medium text-sm truncate max-w-[200px] md:max-w-md" id="resUrl">https://...</span>
-                </div>
-                <div class="flex items-center gap-2 text-xs font-bold text-muted bg-surface border border-border px-3 py-1.5 rounded-lg">
-                  Cost: <span id="resCost" class="text-accent">--</span>
-                </div>
+            <!-- Get Then Write: Output Container -->
+            <div id="outputContainer" class="hidden fade-in">
+              <!-- Loading State -->
+              <div id="outputLoading" class="bg-surface border border-border rounded-2xl p-10 flex flex-col items-center justify-center text-center shadow-soft dark:shadow-soft-dark">
+                <svg class="w-8 h-8 text-accent animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <h3 class="font-bold text-lg mb-1">Extracting Intelligence</h3>
+                <p class="text-sm text-muted">Running dynamic fallback and parsing data...</p>
               </div>
-              <div class="p-5 overflow-y-auto flex-1 font-mono text-sm leading-relaxed text-muted bg-[#F8F9FA] dark:bg-[#121212] whitespace-pre-wrap break-words" id="resContent">
-                <!-- Content Injected Here -->
+
+              <!-- Result State -->
+              <div id="outputResult" class="hidden bg-surface border border-border rounded-2xl overflow-hidden shadow-soft dark:shadow-soft-dark flex flex-col max-h-[800px]">
+                <div class="h-14 border-b border-border bg-surface-hover flex items-center justify-between px-5">
+                  <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
+                    <span class="font-medium text-sm truncate max-w-[200px] md:max-w-md" id="resUrl">https://...</span>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs font-bold text-muted bg-surface border border-border px-3 py-1.5 rounded-lg">
+                    Cost: <span id="resCost" class="text-accent">--</span>
+                  </div>
+                </div>
+                <!-- Replaced textContent with innerHTML and updated styling for parsed Markdown -->
+                <div class="p-5 overflow-y-auto flex-1 font-mono text-sm leading-relaxed text-muted bg-[#F8F9FA] dark:bg-[#121212] break-words" id="resContent">
+                  <!-- Content Injected Here -->
+                </div>
               </div>
             </div>
           </div>
+
+          <!-- VIEW: BATCH OPS -->
+          <div id="view-batch" class="view-section hidden space-y-6 fade-in">
+            <div class="bg-surface border border-border rounded-2xl p-6 shadow-soft dark:shadow-soft-dark">
+              <h2 class="text-xs font-bold uppercase tracking-wider text-muted mb-4">Batch Operations</h2>
+              <p class="text-sm text-muted mb-6">Process multiple domains concurrently. Paste URLs below (one per line) without the protocol.</p>
+              
+              <div class="space-y-4">
+                <div class="relative flex border border-border rounded-xl bg-surface-hover focus-within:ring-2 focus-within:ring-accent-soft focus-within:border-accent transition-all">
+                  <div class="px-3 pt-3 text-muted font-mono text-sm border-r border-border bg-surface-hover rounded-l-xl select-none leading-[1.6]">
+                    https://<br>https://<br>https://
+                  </div>
+                  <textarea id="batchInput" class="w-full h-40 bg-transparent text-text p-3 outline-none font-mono text-sm leading-[1.6] resize-none" placeholder="news.ycombinator.com&#10;en.wikipedia.org/wiki/API&#10;github.com/trending"></textarea>
+                </div>
+                
+                <button type="button" class="w-full h-12 bg-accent text-bg rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                  Execute Batch Pipeline
+                </button>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Right: Recent Extractions -->
@@ -266,8 +309,8 @@
   </main>
 
   <script>
-    // --- 1. CONFIG & SESSION MANAGEMENT (From source 12) ---
-    const API_BASE = "https://reclaire-api.onrender.com"; // Assuming backend URL based on convention
+    // --- 1. CONFIG & SESSION MANAGEMENT ---
+    const API_BASE = "https://reclaire-api.onrender.com"; 
     const SESSION_KEY = 'rc_session';
     
     let session = null;
@@ -276,8 +319,6 @@
 
     function initSession() {
       try { session = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch(e) {}
-      
-      // Update UI with Session Data
       if (session && session.user) {
         const username = session.user.username || session.user.email?.split('@')[0] || 'User';
         document.getElementById('topUsername').textContent = username;
@@ -306,11 +347,65 @@
       setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 4000);
     }
 
-    // --- 3. CUSTOM UI COMPONENTS ---
-    // URL Placeholder Animation
+    // --- 3. UI BEHAVIORS ---
+
+    // Sidebar Toggle Logic
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const openSidebarBtn = document.getElementById('openSidebarBtn');
+    const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+
+    function toggleSidebar(forceOpen) {
+      const isOpen = !sidebar.classList.contains('-translate-x-full');
+      const newState = forceOpen !== undefined ? forceOpen : !isOpen;
+      
+      if (newState) {
+        sidebar.classList.remove('-translate-x-full');
+        sidebarOverlay.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        sidebarOverlay.classList.add('hidden');
+      }
+    }
+    openSidebarBtn.addEventListener('click', () => toggleSidebar(true));
+    closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+    sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+
+    // View Switching Logic (Nav)
+    const navLinks = document.querySelectorAll('.nav-link');
+    const viewSections = document.querySelectorAll('.view-section');
+    const headerTitle = document.getElementById('headerTitle');
+
+    navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetView = link.getAttribute('data-view');
+        
+        // Update Nav UI
+        navLinks.forEach(l => {
+          l.classList.remove('bg-accent-soft', 'text-accent');
+          l.classList.add('text-muted');
+        });
+        link.classList.remove('text-muted');
+        link.classList.add('bg-accent-soft', 'text-accent');
+        
+        // Update Title
+        headerTitle.textContent = link.textContent.trim();
+
+        // Switch Views
+        viewSections.forEach(v => v.classList.add('hidden'));
+        const activeView = document.getElementById(`view-${targetView}`);
+        if(activeView) activeView.classList.remove('hidden');
+
+        // Close sidebar on mobile after clicking
+        if (window.innerWidth < 1024) toggleSidebar(false);
+      });
+    });
+
+    // URL Placeholder Animation (Domain only)
     const urlInput = document.getElementById('urlInput');
     const urlPlaceholder = document.getElementById('urlPlaceholder');
-    const examples = ['https://news.ycombinator.com', 'https://en.wikipedia.org/wiki/API', 'https://github.com/trending'];
+    const examples = ['news.ycombinator.com', 'en.wikipedia.org/wiki/API', 'github.com/trending'];
     let exIdx = 0, charIdx = 0, isDeleting = false;
 
     function typeEffect() {
@@ -349,33 +444,54 @@
     setupDropdown('modeTrigger', 'modeDropdown');
     setupDropdown('formatTrigger', 'formatDropdown');
 
-    // Mode Select Handle
-    document.querySelectorAll('.mode-option').forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        selectedMode = e.target.dataset.val;
-        document.getElementById('modeDisplay').innerHTML = e.target.innerText;
-        document.getElementById('modeDropdown').classList.add('hidden');
-        
-        // Hide format panel if map is selected (Map doesn't use formats)
-        document.getElementById('formatContainer').style.display = selectedMode === 'map' ? 'none' : 'block';
-      });
-    });
-
-    // Format Select Handle (Multi)
+    // Format Logic and Validation
     const formatCbs = document.querySelectorAll('.format-cb');
     const qaWrap = document.getElementById('qaWrap');
     
     function updateFormatDisplay() {
       const selected = Array.from(formatCbs).filter(cb => cb.checked).map(cb => cb.value);
       const display = document.getElementById('formatDisplay');
-      if(selected.length === 0) display.textContent = 'None';
-      else if (selected.length === 1) display.textContent = selected[0].charAt(0).toUpperCase() + selected[0].slice(1);
-      else display.textContent = `${selected.length} Formats Selected`;
+      
+      if (selectedMode !== 'scrape') {
+        display.textContent = 'N/A';
+      } else {
+        if(selected.length === 0) display.textContent = 'None';
+        else if (selected.length === 1) display.textContent = selected[0].charAt(0).toUpperCase() + selected[0].slice(1);
+        else display.textContent = `${selected.length} Formats Selected`;
+      }
 
-      // Show QA input conditionally
-      qaWrap.style.display = selected.includes('questions') ? 'block' : 'none';
+      // Show QA input conditionally only in scrape mode
+      qaWrap.style.display = (selected.includes('questions') && selectedMode === 'scrape') ? 'block' : 'none';
     }
+    
     formatCbs.forEach(cb => cb.addEventListener('change', updateFormatDisplay));
+
+    // Mode Select Handle - WITH RESET LOGIC
+    document.querySelectorAll('.mode-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        selectedMode = e.target.dataset.val;
+        document.getElementById('modeDisplay').innerHTML = e.target.innerText;
+        document.getElementById('modeDropdown').classList.add('hidden');
+        
+        // Mode conditional logic to purge/restore formats UI
+        if (selectedMode === 'map' || selectedMode === 'crawl') {
+          document.getElementById('formatContainer').style.display = 'none';
+          document.getElementById('qaWrap').style.display = 'none';
+          
+          // Clear all checked formats
+          formatCbs.forEach(cb => cb.checked = false);
+          document.getElementById('qaInput').value = ''; 
+        } else {
+          document.getElementById('formatContainer').style.display = 'block';
+          // Ensure at least markdown is selected when returning to scrape
+          if (!Array.from(formatCbs).some(cb => cb.checked)) {
+            formatCbs[0].checked = true;
+          }
+        }
+        updateFormatDisplay();
+      });
+    });
+
     updateFormatDisplay();
 
 
@@ -403,7 +519,11 @@
           </div>
           <div class="text-[10px] font-bold text-accent bg-accent-soft px-2 py-1 rounded-md shrink-0">Open</div>
         `;
-        el.addEventListener('click', () => loadOutputData(item));
+        el.addEventListener('click', () => {
+           // If on mobile/tablet and recent is clicked, ensure we are on playground view
+           document.querySelector('[data-view="playground"]').click();
+           loadOutputData(item);
+        });
         recentList.appendChild(el);
       });
     }
@@ -416,12 +536,23 @@
     }
 
 
-    // --- 5. "GET THEN WRITE" API LOGIC ---
+    // --- 5. "GET THEN WRITE" & MARKDOWN PARSER LOGIC ---
     const extractForm = document.getElementById('extractForm');
     const outputContainer = document.getElementById('outputContainer');
     const outputLoading = document.getElementById('outputLoading');
     const outputResult = document.getElementById('outputResult');
     
+    function parseMarkdown(text) {
+      if (!text) return 'No readable text returned.';
+      // Convert Markdown headers to stylized bold HTML and handle line breaks
+      return text
+        .replace(/^### (.*$)/gim, '<strong class="text-base text-text block mt-5 mb-2">$1</strong>')
+        .replace(/^## (.*$)/gim, '<strong class="text-lg text-text block mt-5 mb-2">$1</strong>')
+        .replace(/^# (.*$)/gim, '<strong class="text-xl text-text block mt-6 mb-2">$1</strong>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-text">$1</strong>')
+        .replace(/\n/g, '<br>');
+    }
+
     function loadOutputData(data) {
       outputContainer.classList.remove('hidden');
       outputLoading.classList.add('hidden');
@@ -430,7 +561,7 @@
       document.getElementById('resUrl').textContent = data.url;
       document.getElementById('resCost').textContent = data.cost !== undefined ? data.cost : '--';
       
-      // Parse output for display
+      // Aggregate string for parsing
       let displayStr = '';
       if(data.markdown) displayStr += `### MARKDOWN ###\n\n${data.markdown}\n\n`;
       if(data.summary) displayStr += `### SUMMARY ###\n\n${data.summary}\n\n`;
@@ -438,12 +569,16 @@
       if(data.links) displayStr += `### MAPPED LINKS (${data.links.length}) ###\n\n${data.links.join('\n')}`;
       if(data.data) displayStr += JSON.stringify(data.data, null, 2);
       
-      document.getElementById('resContent').textContent = displayStr || 'No readable text returned.';
+      // Inject parsed HTML
+      document.getElementById('resContent').innerHTML = parseMarkdown(displayStr);
     }
 
     extractForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const targetUrl = urlInput.value;
+      // Concatenate the protocol since input only holds domain
+      const rawInput = urlInput.value.replace(/^https?:\/\//, '');
+      const targetUrl = 'https://' + rawInput; 
+      
       const formats = Array.from(formatCbs).filter(cb => cb.checked).map(cb => cb.value);
       const question = document.getElementById('qaInput').value;
 
@@ -456,7 +591,6 @@
       outputLoading.classList.remove('hidden');
       outputResult.classList.add('hidden');
       
-      // Build payload based on backend `main.py` specs
       let endpoint = `/v1/${selectedMode}`;
       let payload = { url: targetUrl };
       
@@ -464,7 +598,7 @@
         payload.formats = formats;
         if(formats.includes('questions')) payload.user_question = question;
       } else if (selectedMode === 'map' || selectedMode === 'crawl') {
-        payload.limit = 5; // Default safety limit
+        payload.limit = 5; 
       }
 
       const apiKey = session?.api_key || localStorage.getItem('rc_temp_key');
@@ -480,10 +614,8 @@
         });
 
         const data = await res.json();
-        
         if (!res.ok) throw new Error(data.detail || 'API request failed');
         
-        // Success
         showToast('Extraction successful');
         if(data.tokens_remaining !== undefined) {
           document.getElementById('navTokens').textContent = data.tokens_remaining;
@@ -499,7 +631,7 @@
           summary: data.summary,
           answer: data.answer,
           links: data.links,
-          data: data.data // Used in crawl
+          data: data.data
         };
 
         addRecent(resultObj);
